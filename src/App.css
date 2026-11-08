@@ -54,15 +54,10 @@
 }
 
 .brand-mark {
-  display: grid;
-  width: 31px;
-  height: 31px;
-  place-items: center;
-  border-radius: 10px;
-  background: var(--accent);
-  color: var(--accent-ink);
-  font-size: 16px;
-  font-weight: 800;
+  display: block;
+  width: var(--tap-target-min);
+  height: var(--tap-target-min);
+  object-fit: contain;
 }
 
 .language-toggle {

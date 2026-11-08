@@ -15,7 +15,6 @@ const en: LocaleMessages = {
   welcomeBack: 'Welcome back',
   signOut: 'Sign out',
   signOutError: 'We could not sign you out. Please try again.',
-  footer: 'A clearer view of your finances.',
   emailLabel: 'Email address',
   emailPlaceholder: 'you@example.com',
   passwordLabel: 'Password',

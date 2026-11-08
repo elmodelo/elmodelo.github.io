@@ -15,7 +15,6 @@ const es: LocaleMessages = {
   welcomeBack: 'Te damos la bienvenida',
   signOut: 'Cerrar sesión',
   signOutError: 'No pudimos cerrar tu sesión. Inténtalo de nuevo.',
-  footer: 'Una visión más clara de tus finanzas.',
   emailLabel: 'Correo electrónico',
   emailPlaceholder: 'tu@ejemplo.com',
   passwordLabel: 'Contraseña',

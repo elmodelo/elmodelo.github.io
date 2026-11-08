@@ -26,7 +26,7 @@ function App() {
     <main className="app-shell" data-theme={theme}>
       <header className="app-header">
         <a className="brand" href="/" aria-label={messages.brandHome}>
-          <span className="brand-mark" aria-hidden="true">E</span>
+          <img className="brand-mark" src="/icons/brand-mark.png" alt="" aria-hidden="true" />
           <span>elModelo</span>
         </a>
         <div className="header-actions">
@@ -105,10 +105,6 @@ function App() {
       </section>
 
       <footer className="app-footer">
-        <span>{messages.footer}</span>
-        <span className="language-current" aria-label={messages.currentLanguage}>
-          {languageLabel}
-        </span>
       </footer>
     </main>
   );

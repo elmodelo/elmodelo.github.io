@@ -15,13 +15,14 @@ test('menu renders localized sections, their separator, and the active item', as
       ['es', ['Transacciones', 'Configuración', 'Mi cuenta']],
     ]) {
       const markup = renderToStaticMarkup(createElement(Menu, {
-        messages: getLocaleMessages(locale), section: 'transactions', onSelect() {},
+        messages: getLocaleMessages(locale), section: 'transactions', onSelect() {}, toggleTarget: null,
       }));
       const positions = labels.map((label) => markup.indexOf(`>${label}</button>`));
       assert.ok(positions.every((position) => position >= 0));
       assert.ok(positions[0] < positions[1] && positions[1] < positions[2]);
       assert.match(markup, /aria-current="page">(?:Transactions|Transacciones)<\/button>/);
       assert.match(markup, /menu-item-separated/);
+      assert.match(markup, /id="[^"]+" class="menu-items" data-expanded="false"/);
     }
   } finally {
     await server.close();

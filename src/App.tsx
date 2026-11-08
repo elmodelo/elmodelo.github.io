@@ -14,6 +14,7 @@ function App() {
     getLocaleMessages(typeof navigator !== 'undefined' ? navigator.language : 'en'),
   );
   const [showRegistration, setShowRegistration] = useState(false);
+  const [headerMenuTarget, setHeaderMenuTarget] = useState<HTMLDivElement | null>(null);
   const { user, status: authStatus, signOutFailed, signOut, retrySessionCheck } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
@@ -26,10 +27,13 @@ function App() {
   return (
     <main className="app-shell" data-theme={theme}>
       <header className="app-header">
-        <a className="brand" href="/" aria-label={messages.brandHome}>
-          <img className="brand-mark" src="/icons/brand-mark.png" alt="" aria-hidden="true" />
-          <span>elModelo</span>
-        </a>
+        <div className={user && authStatus === 'ready' ? 'header-brand has-menu' : 'header-brand'}>
+          <div className="header-menu" ref={setHeaderMenuTarget} />
+          <a className="brand" href="/" aria-label={messages.brandHome}>
+            <img className="brand-mark" src="/icons/brand-mark.png" alt="" aria-hidden="true" />
+            <span>elModelo</span>
+          </a>
+        </div>
         <div className="header-actions">
           <button
             className="language-toggle"
@@ -84,6 +88,7 @@ function App() {
             email={user.email}
             signOutFailed={signOutFailed}
             signOut={signOut}
+            headerMenuTarget={headerMenuTarget}
           />
         ) : showRegistration ? (
           <RegistrationForm
@@ -109,14 +114,15 @@ interface DashboardProps {
   email: string | undefined;
   signOutFailed: boolean;
   signOut: () => void;
+  headerMenuTarget: HTMLDivElement | null;
 }
 
-function Dashboard({ messages, email, signOutFailed, signOut }: DashboardProps) {
+function Dashboard({ messages, email, signOutFailed, signOut, headerMenuTarget }: DashboardProps) {
   const [section, setSection] = useState<AppSection>('transactions');
 
   return (
     <>
-      <Menu messages={messages} section={section} onSelect={setSection} />
+      <Menu messages={messages} section={section} onSelect={setSection} toggleTarget={headerMenuTarget} />
       <div className="dashboard-content">
         {section === 'transactions' ? (
           <TransactionsPanel messages={messages} />

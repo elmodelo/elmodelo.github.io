@@ -1,4 +1,5 @@
 .app-shell {
+  --app-max-width: 1600px;
   min-height: 100svh;
   display: flex;
   flex-direction: column;
@@ -25,7 +26,7 @@
 
 .app-header,
 .app-footer {
-  width: min(100% - 64px, 1120px);
+  width: min(100% - 64px, var(--app-max-width));
   margin-inline: auto;
   display: flex;
   align-items: center;
@@ -40,6 +41,15 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+}
+
+.header-menu {
+  display: none;
 }
 
 .brand {
@@ -366,7 +376,7 @@
 }
 
 .dashboard-layout {
-  width: min(100% - 64px, 1120px);
+  width: min(100% - 64px, var(--app-max-width));
   flex: 1;
   display: grid;
   grid-template-columns: 190px minmax(0, 1fr);
@@ -375,10 +385,35 @@
   margin: 24px auto 0;
 }
 
-.main-menu {
+.menu-items {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.menu-toggle {
+  display: none;
+  width: var(--tap-target-min);
+  height: var(--tap-target-min);
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.menu-toggle:hover {
+  border-color: var(--accent);
+  background: var(--surface-raised);
+}
+
+.menu-toggle svg {
+  width: 22px;
+  height: 22px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 2;
 }
 
 .menu-item-separated {
@@ -539,25 +574,46 @@
 
 @media (max-width: 760px) {
   .dashboard-layout {
+    position: relative;
     grid-template-columns: minmax(0, 1fr);
     gap: 20px;
   }
 
+  .header-brand.has-menu {
+    gap: 11px;
+  }
+
+  .header-brand.has-menu .header-menu {
+    display: block;
+  }
+
+  .header-brand.has-menu .brand-mark {
+    display: none;
+  }
+
   .main-menu {
-    flex-direction: row;
-    align-items: stretch;
-    overflow-x: auto;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: min(240px, 100%);
+    z-index: 1;
   }
 
-  .menu-item {
-    flex: 0 0 auto;
+  .menu-toggle {
+    display: grid;
   }
 
-  .menu-item-separated {
-    margin: 0 0 0 8px;
-    padding: 0 0 0 12px;
-    border-top: 0;
-    border-left: 1px solid var(--border);
+  .menu-items {
+    display: none;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+
+  .menu-items[data-expanded='true'] {
+    display: flex;
   }
 }
 

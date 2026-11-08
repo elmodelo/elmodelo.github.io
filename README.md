@@ -16,7 +16,8 @@ Run `npm run build` to generate `dist/` and `npm run preview` to preview it.
 Run `npm test` for the local component and transaction-query checks.
 
 After signing in, use the main menu to browse transactions, view the account
-email and sign out. Settings is a placeholder. Transactions are sorted and
+email and sign out. Settings sets the theme and language. A value saved in the browser's local
+storage is always used; otherwise the system preference applies. Transactions are sorted and
 paginated by the database, initially showing the newest 50; the page size and
 sort column can be changed in the panel. Dates are displayed in UTC and amounts
 use the account currency.

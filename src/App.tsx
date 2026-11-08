@@ -1,102 +1,26 @@
 import { useEffect, useState } from 'react';
-import type { User } from '@supabase/supabase-js';
-import { supabase } from './lib/supabaseClient';
 import { getLocaleMessages } from './locales';
 import type { LocaleMessages } from './locales/types';
 import RegistrationForm from './components/RegistrationForm';
 import SignIn from './components/SignIn';
+import { useAuth } from './hooks/useAuth';
+import { useTheme } from './hooks/useTheme';
 import './App.css';
-
-type AuthStatus = 'loading' | 'ready' | 'error';
-type Theme = 'light' | 'dark';
-
-function getSystemTheme(): Theme {
-  return typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-color-scheme: dark)').matches
-    ? 'dark'
-    : 'light';
-}
 
 function App() {
   const [messages, setMessages] = useState<LocaleMessages>(() =>
     getLocaleMessages(typeof navigator !== 'undefined' ? navigator.language : 'en'),
   );
-  const [user, setUser] = useState<User | null>(null);
-  const [authStatus, setAuthStatus] = useState<AuthStatus>('loading');
-  const [authError, setAuthError] = useState<'signOut' | null>(null);
   const [showRegistration, setShowRegistration] = useState(false);
-  const [theme, setTheme] = useState<Theme>(getSystemTheme);
-  const [themeOverridden, setThemeOverridden] = useState(false);
+  const { user, status: authStatus, signOutFailed, signOut, retrySessionCheck } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     document.documentElement.lang = messages.language;
   }, [messages.language]);
 
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const updateSystemTheme = (event: MediaQueryListEvent) => {
-      if (!themeOverridden) {
-        setTheme(event.matches ? 'dark' : 'light');
-      }
-    };
-
-    mediaQuery.addEventListener('change', updateSystemTheme);
-    return () => mediaQuery.removeEventListener('change', updateSystemTheme);
-  }, [themeOverridden]);
-
-  useEffect(() => {
-    let active = true;
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (active) {
-        setUser(session?.user ?? null);
-        setAuthStatus('ready');
-        setAuthError(null);
-      }
-    });
-
-    supabase.auth
-      .getSession()
-      .then(({ data, error }) => {
-        if (!active) return;
-        if (error) {
-          setAuthStatus('error');
-          return;
-        }
-        setUser(data.session?.user ?? null);
-        setAuthStatus('ready');
-      })
-      .catch(() => {
-        if (active) {
-          setAuthStatus('error');
-        }
-      });
-
-    return () => {
-      active = false;
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  const handleSignOut = async () => {
-    setAuthError(null);
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        setAuthError('signOut');
-      }
-    } catch {
-      setAuthError('signOut');
-    }
-  };
-
   const languageLabel = messages.language === 'es' ? 'Español' : 'English';
   const otherLanguageLabel = messages.language === 'es' ? 'English' : 'Español';
-  const toggleTheme = () => {
-    setTheme(theme === 'dark' ? 'light' : 'dark');
-    setThemeOverridden(true);
-  };
 
   return (
     <main className="app-shell" data-theme={theme}>
@@ -148,7 +72,7 @@ function App() {
             <button
               className="button button-primary"
               type="button"
-              onClick={() => window.location.reload()}
+              onClick={retrySessionCheck}
             >
               {messages.retry}
             </button>
@@ -158,12 +82,12 @@ function App() {
             <span className="eyebrow">{messages.signedInEyebrow}</span>
             <h1>{messages.welcomeBack}</h1>
             <p>{user.email}</p>
-            {authError && (
+            {signOutFailed && (
               <p className="form-message form-message-error" role="alert">
                 {messages.signOutError}
               </p>
             )}
-            <button className="button button-secondary" type="button" onClick={handleSignOut}>
+            <button className="button button-secondary" type="button" onClick={signOut}>
               {messages.signOut}
             </button>
           </div>

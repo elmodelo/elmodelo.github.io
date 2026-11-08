@@ -1,0 +1,34 @@
+import type { LocaleMessages } from './types';
+
+const en: LocaleMessages = {
+  language: 'en',
+  brandHome: 'elModelo home',
+  switchLanguage: 'Switch language',
+  switchToLightTheme: 'Switch to light theme',
+  switchToDarkTheme: 'Switch to dark theme',
+  currentLanguage: 'Current language',
+  checkingSession: 'Checking your session…',
+  authErrorTitle: 'We could not check your session',
+  authCheckError: 'There was a problem checking your sign-in status. Please try again.',
+  retry: 'Try again',
+  signedInEyebrow: 'ELMODELO ACCOUNT',
+  welcomeBack: 'Welcome back',
+  signOut: 'Sign out',
+  signOutError: 'We could not sign you out. Please try again.',
+  emailLabel: 'Email address',
+  emailPlaceholder: 'you@example.com',
+  passwordLabel: 'Password',
+  signInButton: 'Sign in',
+  signingIn: 'Signing in…',
+  signInError: 'We could not sign you in with those details. Please check them and try again.',
+  registerLink: 'Register new user',
+  registerButton: 'Create account',
+  registering: 'Creating account…',
+  registrationSuccess: 'Welcome to elModelo! Your account has been created.',
+  registrationConfirmation: 'Registration successful! Check your inbox to confirm your email.',
+  registrationError: 'We could not create your account. Please check your details and try again.',
+  unexpectedError: 'A connection error occurred. Please try again.',
+  signInLink: 'Sign in',
+};
+
+export default en;

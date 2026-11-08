@@ -1,0 +1,37 @@
+export interface LocaleMessages {
+  language: 'en' | 'es';
+  brandHome: string;
+  switchLanguage: string;
+  switchToLightTheme: string;
+  switchToDarkTheme: string;
+  currentLanguage: string;
+  checkingSession: string;
+  authErrorTitle: string;
+  authCheckError: string;
+  retry: string;
+  signedInEyebrow: string;
+  welcomeBack: string;
+  signOut: string;
+  signOutError: string;
+  footer: string;
+  signInTitle: string;
+  signInDescription: string;
+  emailLabel: string;
+  emailPlaceholder: string;
+  passwordLabel: string;
+  signInButton: string;
+  signingIn: string;
+  signInError: string;
+  registerPrompt: string;
+  registerLink: string;
+  registrationTitle: string;
+  registrationDescription: string;
+  registerButton: string;
+  registering: string;
+  registrationSuccess: string;
+  registrationConfirmation: string;
+  registrationError: string;
+  unexpectedError: string;
+  signInPrompt: string;
+  signInLink: string;
+}

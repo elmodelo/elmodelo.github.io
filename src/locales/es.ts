@@ -1,0 +1,34 @@
+import type { LocaleMessages } from './types';
+
+const es: LocaleMessages = {
+  language: 'es',
+  brandHome: 'Inicio de elModelo',
+  switchLanguage: 'Cambiar idioma',
+  switchToLightTheme: 'Cambiar al tema claro',
+  switchToDarkTheme: 'Cambiar al tema oscuro',
+  currentLanguage: 'Idioma actual',
+  checkingSession: 'Comprobando tu sesión…',
+  authErrorTitle: 'No pudimos comprobar tu sesión',
+  authCheckError: 'Hubo un problema al comprobar tu inicio de sesión. Inténtalo de nuevo.',
+  retry: 'Intentar de nuevo',
+  signedInEyebrow: 'CUENTA ELMODELO',
+  welcomeBack: 'Te damos la bienvenida',
+  signOut: 'Cerrar sesión',
+  signOutError: 'No pudimos cerrar tu sesión. Inténtalo de nuevo.',
+  emailLabel: 'Correo electrónico',
+  emailPlaceholder: 'tu@ejemplo.com',
+  passwordLabel: 'Contraseña',
+  signInButton: 'Iniciar sesión',
+  signingIn: 'Iniciando sesión…',
+  signInError: 'No pudimos iniciar sesión con esos datos. Revísalos e inténtalo de nuevo.',
+  registerLink: 'Registrar nuevo usuario',
+  registerButton: 'Crear cuenta',
+  registering: 'Creando cuenta…',
+  registrationSuccess: '¡Te damos la bienvenida a elModelo! Tu cuenta ha sido creada.',
+  registrationConfirmation: '¡Registro exitoso! Revisa tu correo para confirmar tu dirección.',
+  registrationError: 'No pudimos crear tu cuenta. Revisa tus datos e inténtalo de nuevo.',
+  unexpectedError: 'Se produjo un error de conexión. Inténtalo de nuevo.',
+  signInLink: 'Iniciar sesión',
+};
+
+export default es;

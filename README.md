@@ -1,16 +1,46 @@
-# React + Vite
+# elModelo
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React app built with Vite and Supabase.
 
-Currently, two official plugins are available:
+## Local development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Use Node.js 24. Copy `.env.example` to `.env.local` and fill in your Supabase
+project URL and public anon key, then run:
 
-## React Compiler
+```sh
+npm ci
+npm run dev
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Run `npm run build` to generate `dist/` and `npm run preview` to preview it.
 
-## Expanding the ESLint configuration
+## GitHub Pages
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+[The deployment workflow](.github/workflows/deploy.yml) builds and deploys the
+site on every push to `main`. It can also be started manually from the repository's
+Actions tab using **Run workflow**.
+
+One-time repository configuration:
+
+This repository is public and uses GitHub Pages with GitHub Actions. The two
+Supabase repository secrets are configured. For a new repository, follow these
+setup steps:
+
+1. In **Settings → Pages → Build and deployment**, select **GitHub Actions** as
+   the source.
+2. In **Settings → Secrets and variables → Actions**, create these repository
+   secrets using the same values as your local environment:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+3. Commit and push the workflow to `main`.
+
+The published site is https://elmodelo.github.io/. Vite's default base path `/`
+is correct for this repository. The workflow installs locked dependencies with
+`npm ci`, builds the app, and deploys only `dist/`; no `gh-pages` branch is needed.
+
+Vite embeds these Supabase values in the public JavaScript bundle. Use only the
+public anon key, never a Supabase service role key. Supabase row-level security
+policies must enforce data access.
+
+Deployment follows the official [Vite GitHub Pages guide](https://vite.dev/guide/static-deploy.html#github-pages)
+and [GitHub Pages workflow documentation](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).

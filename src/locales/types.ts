@@ -19,6 +19,8 @@ export interface LocaleMessages {
   emailLabel: string;
   emailPlaceholder: string;
   passwordLabel: string;
+  showPassword: string;
+  hidePassword: string;
   signInButton: string;
   signingIn: string;
   signInError: string;

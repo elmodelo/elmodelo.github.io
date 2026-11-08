@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import type { LocaleMessages } from '../locales/types';
+import PasswordField from './PasswordField';
 
 interface SignInProps {
   messages: LocaleMessages;
@@ -49,18 +50,13 @@ export default function SignIn({ messages, onRegister }: SignInProps) {
             placeholder={messages.emailPlaceholder}
           />
         </div>
-        <div className="form-field">
-          <label htmlFor="sign-in-password">{messages.passwordLabel}</label>
-          <input
-            id="sign-in-password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
-        </div>
+        <PasswordField
+          id="sign-in-password"
+          autoComplete="current-password"
+          value={password}
+          onChange={setPassword}
+          messages={messages}
+        />
 
         {error && <p className="form-message form-message-error" role="alert">{error}</p>}
 

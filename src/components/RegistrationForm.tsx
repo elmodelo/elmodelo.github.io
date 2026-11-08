@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import type { LocaleMessages } from '../locales/types';
+import PasswordField from './PasswordField';
 
 interface RegistrationFormProps {
   messages: LocaleMessages;
@@ -55,18 +56,13 @@ export default function RegistrationForm({ messages, onSignIn }: RegistrationFor
             placeholder={messages.emailPlaceholder}
           />
         </div>
-        <div className="form-field">
-          <label htmlFor="registration-password">{messages.passwordLabel}</label>
-          <input
-            id="registration-password"
-            name="password"
-            type="password"
-            autoComplete="new-password"
-            required
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
-        </div>
+        <PasswordField
+          id="registration-password"
+          autoComplete="new-password"
+          value={password}
+          onChange={setPassword}
+          messages={messages}
+        />
 
         {message && (
           <p

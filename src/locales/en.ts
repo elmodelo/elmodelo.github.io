@@ -18,6 +18,8 @@ const en: LocaleMessages = {
   emailLabel: 'Email address',
   emailPlaceholder: 'you@example.com',
   passwordLabel: 'Password',
+  showPassword: 'Show password',
+  hidePassword: 'Hide password',
   signInButton: 'Sign in',
   signingIn: 'Signing in…',
   signInError: 'We could not sign you in with those details. Please check them and try again.',

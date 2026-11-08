@@ -18,6 +18,8 @@ const es: LocaleMessages = {
   emailLabel: 'Correo electrónico',
   emailPlaceholder: 'tu@ejemplo.com',
   passwordLabel: 'Contraseña',
+  showPassword: 'Mostrar contraseña',
+  hidePassword: 'Ocultar contraseña',
   signInButton: 'Iniciar sesión',
   signingIn: 'Iniciando sesión…',
   signInError: 'No pudimos iniciar sesión con esos datos. Revísalos e inténtalo de nuevo.',

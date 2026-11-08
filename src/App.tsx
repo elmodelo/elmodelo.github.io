@@ -3,6 +3,8 @@ import { getLocaleMessages } from './locales';
 import type { LocaleMessages } from './locales/types';
 import RegistrationForm from './components/RegistrationForm';
 import SignIn from './components/SignIn';
+import Menu, { type AppSection } from './components/Menu';
+import TransactionsPanel from './components/TransactionsPanel';
 import { useAuth } from './hooks/useAuth';
 import { useTheme } from './hooks/useTheme';
 import './App.css';
@@ -19,7 +21,6 @@ function App() {
     document.documentElement.lang = messages.language;
   }, [messages.language]);
 
-  const languageLabel = messages.language === 'es' ? 'Español' : 'English';
   const otherLanguageLabel = messages.language === 'es' ? 'English' : 'Español';
 
   return (
@@ -59,7 +60,7 @@ function App() {
         </div>
       </header>
 
-      <section className="auth-layout">
+      <section className={user && authStatus === 'ready' ? 'dashboard-layout' : 'auth-layout'}>
         {authStatus === 'loading' ? (
           <div className="auth-card status-card" role="status">
             <span className="loading-indicator" aria-hidden="true" />
@@ -78,19 +79,12 @@ function App() {
             </button>
           </div>
         ) : user ? (
-          <div className="auth-card status-card">
-            <span className="eyebrow">{messages.signedInEyebrow}</span>
-            <h1>{messages.welcomeBack}</h1>
-            <p>{user.email}</p>
-            {signOutFailed && (
-              <p className="form-message form-message-error" role="alert">
-                {messages.signOutError}
-              </p>
-            )}
-            <button className="button button-secondary" type="button" onClick={signOut}>
-              {messages.signOut}
-            </button>
-          </div>
+          <Dashboard
+            messages={messages}
+            email={user.email}
+            signOutFailed={signOutFailed}
+            signOut={signOut}
+          />
         ) : showRegistration ? (
           <RegistrationForm
             messages={messages}
@@ -107,6 +101,46 @@ function App() {
       <footer className="app-footer">
       </footer>
     </main>
+  );
+}
+
+interface DashboardProps {
+  messages: LocaleMessages;
+  email: string | undefined;
+  signOutFailed: boolean;
+  signOut: () => void;
+}
+
+function Dashboard({ messages, email, signOutFailed, signOut }: DashboardProps) {
+  const [section, setSection] = useState<AppSection>('transactions');
+
+  return (
+    <>
+      <Menu messages={messages} section={section} onSelect={setSection} />
+      <div className="dashboard-content">
+        {section === 'transactions' ? (
+          <TransactionsPanel messages={messages} />
+        ) : section === 'settings' ? (
+          <section aria-labelledby="settings-title">
+            <h1 id="settings-title">{messages.settings}</h1>
+            <p>{messages.comingSoon}</p>
+          </section>
+        ) : (
+          <section aria-labelledby="account-title">
+            <h1 id="account-title">{messages.myAccount}</h1>
+            <p>{email}</p>
+            {signOutFailed && (
+              <p className="form-message form-message-error" role="alert">
+                {messages.signOutError}
+              </p>
+            )}
+            <button className="button button-secondary" type="button" onClick={signOut}>
+              {messages.signOut}
+            </button>
+          </section>
+        )}
+      </div>
+    </>
   );
 }
 

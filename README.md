@@ -13,6 +13,17 @@ npm run dev
 ```
 
 Run `npm run build` to generate `dist/` and `npm run preview` to preview it.
+Run `npm test` for the local component and transaction-query checks.
+
+After signing in, use the main menu to browse transactions, view the account
+email and sign out. Settings is a placeholder. Transactions are sorted and
+paginated by the database, initially showing the newest 50; the page size and
+sort column can be changed in the panel. Dates are displayed in UTC and amounts
+use the account currency.
+
+The Supabase Data API must expose the `finance` schema, with the finance
+migrations applied. Transaction access uses the signed-in user's existing
+database grants and row-level security policies.
 
 ## GitHub Pages
 

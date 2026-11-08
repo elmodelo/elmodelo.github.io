@@ -1,28 +1,25 @@
 import { useEffect, useState } from 'react';
-import { getLocaleMessages } from './locales';
 import type { LocaleMessages } from './locales/types';
 import RegistrationForm from './components/RegistrationForm';
 import SignIn from './components/SignIn';
 import Menu, { type AppSection } from './components/Menu';
+import SettingsPanel from './components/SettingsPanel';
 import TransactionsPanel from './components/TransactionsPanel';
 import { useAuth } from './hooks/useAuth';
-import { useTheme } from './hooks/useTheme';
+import { useLanguage, type Language } from './hooks/useLanguage';
+import { useTheme, type Theme } from './hooks/useTheme';
 import './App.css';
 
 function App() {
-  const [messages, setMessages] = useState<LocaleMessages>(() =>
-    getLocaleMessages(typeof navigator !== 'undefined' ? navigator.language : 'en'),
-  );
+  const { messages, setLanguage } = useLanguage();
   const [showRegistration, setShowRegistration] = useState(false);
   const [headerMenuTarget, setHeaderMenuTarget] = useState<HTMLDivElement | null>(null);
   const { user, status: authStatus, signOutFailed, signOut, retrySessionCheck } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     document.documentElement.lang = messages.language;
   }, [messages.language]);
-
-  const otherLanguageLabel = messages.language === 'es' ? 'English' : 'Español';
 
   return (
     <main className="app-shell" data-theme={theme}>
@@ -33,34 +30,6 @@ function App() {
             <img className="brand-mark" src="/icons/brand-mark.png" alt="" aria-hidden="true" />
             <span>elModelo</span>
           </a>
-        </div>
-        <div className="header-actions">
-          <button
-            className="language-toggle"
-            type="button"
-            onClick={() => setMessages(getLocaleMessages(messages.language === 'es' ? 'en' : 'es'))}
-            aria-label={messages.switchLanguage}
-          >
-            {otherLanguageLabel}
-          </button>
-          <button
-            className="theme-toggle"
-            type="button"
-            onClick={toggleTheme}
-            aria-label={theme === 'dark' ? messages.switchToLightTheme : messages.switchToDarkTheme}
-            title={theme === 'dark' ? messages.switchToLightTheme : messages.switchToDarkTheme}
-          >
-            {theme === 'dark' ? (
-              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="4" />
-                <path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" />
-              </svg>
-            ) : (
-              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
-                <path d="M20.2 15.3A8.6 8.6 0 0 1 8.7 3.8 8.7 8.7 0 1 0 20.2 15.3Z" />
-              </svg>
-            )}
-          </button>
         </div>
       </header>
 
@@ -89,6 +58,9 @@ function App() {
             signOutFailed={signOutFailed}
             signOut={signOut}
             headerMenuTarget={headerMenuTarget}
+            theme={theme}
+            onThemeChange={setTheme}
+            onLanguageChange={setLanguage}
           />
         ) : showRegistration ? (
           <RegistrationForm
@@ -115,9 +87,21 @@ interface DashboardProps {
   signOutFailed: boolean;
   signOut: () => void;
   headerMenuTarget: HTMLDivElement | null;
+  theme: Theme;
+  onThemeChange: (theme: Theme) => void;
+  onLanguageChange: (language: Language) => void;
 }
 
-function Dashboard({ messages, email, signOutFailed, signOut, headerMenuTarget }: DashboardProps) {
+function Dashboard({
+  messages,
+  email,
+  signOutFailed,
+  signOut,
+  headerMenuTarget,
+  theme,
+  onThemeChange,
+  onLanguageChange,
+}: DashboardProps) {
   const [section, setSection] = useState<AppSection>('transactions');
 
   return (
@@ -127,10 +111,12 @@ function Dashboard({ messages, email, signOutFailed, signOut, headerMenuTarget }
         {section === 'transactions' ? (
           <TransactionsPanel messages={messages} />
         ) : section === 'settings' ? (
-          <section aria-labelledby="settings-title">
-            <h1 id="settings-title">{messages.settings}</h1>
-            <p>{messages.comingSoon}</p>
-          </section>
+          <SettingsPanel
+            messages={messages}
+            theme={theme}
+            onThemeChange={onThemeChange}
+            onLanguageChange={onLanguageChange}
+          />
         ) : (
           <section aria-labelledby="account-title">
             <h1 id="account-title">{messages.myAccount}</h1>

@@ -1,9 +1,6 @@
 export interface LocaleMessages {
   language: 'en' | 'es';
   brandHome: string;
-  switchLanguage: string;
-  switchToLightTheme: string;
-  switchToDarkTheme: string;
   currentLanguage: string;
   checkingSession: string;
   authErrorTitle: string;
@@ -17,7 +14,10 @@ export interface LocaleMessages {
   transactions: string;
   settings: string;
   myAccount: string;
-  comingSoon: string;
+  theme: string;
+  themeLight: string;
+  themeDark: string;
+  languageSetting: string;
   transactionDate: string;
   transactionAccount: string;
   transactionName: string;

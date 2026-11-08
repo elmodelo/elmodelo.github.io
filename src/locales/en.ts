@@ -21,17 +21,13 @@ const en: LocaleMessages = {
   signInButton: 'Sign in',
   signingIn: 'Signing in…',
   signInError: 'We could not sign you in with those details. Please check them and try again.',
-  registerPrompt: 'New to elModelo?',
   registerLink: 'Register new user',
-  registrationTitle: 'Create your account',
-  registrationDescription: 'Start bringing your finances into focus.',
   registerButton: 'Create account',
   registering: 'Creating account…',
   registrationSuccess: 'Welcome to elModelo! Your account has been created.',
   registrationConfirmation: 'Registration successful! Check your inbox to confirm your email.',
   registrationError: 'We could not create your account. Please check your details and try again.',
   unexpectedError: 'A connection error occurred. Please try again.',
-  signInPrompt: 'Already have an account?',
   signInLink: 'Sign in',
 };
 

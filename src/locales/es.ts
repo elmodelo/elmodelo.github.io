@@ -21,17 +21,13 @@ const es: LocaleMessages = {
   signInButton: 'Iniciar sesión',
   signingIn: 'Iniciando sesión…',
   signInError: 'No pudimos iniciar sesión con esos datos. Revísalos e inténtalo de nuevo.',
-  registerPrompt: '¿Eres nuevo en elModelo?',
   registerLink: 'Registrar nuevo usuario',
-  registrationTitle: 'Crea tu cuenta',
-  registrationDescription: 'Empieza a tener una visión clara de tus finanzas.',
   registerButton: 'Crear cuenta',
   registering: 'Creando cuenta…',
   registrationSuccess: '¡Te damos la bienvenida a elModelo! Tu cuenta ha sido creada.',
   registrationConfirmation: '¡Registro exitoso! Revisa tu correo para confirmar tu dirección.',
   registrationError: 'No pudimos crear tu cuenta. Revisa tus datos e inténtalo de nuevo.',
   unexpectedError: 'Se produjo un error de conexión. Inténtalo de nuevo.',
-  signInPrompt: '¿Ya tienes una cuenta?',
   signInLink: 'Iniciar sesión',
 };
 

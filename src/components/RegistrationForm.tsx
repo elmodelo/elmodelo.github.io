@@ -41,9 +41,6 @@ export default function RegistrationForm({ messages, onSignIn }: RegistrationFor
   return (
     <section className="auth-card" aria-labelledby="registration-title">
       <div className="auth-card-heading">
-        <span className="eyebrow">ELMODELO</span>
-        <h1 id="registration-title">{messages.registrationTitle}</h1>
-        <p>{messages.registrationDescription}</p>
       </div>
 
       <form className="auth-form" onSubmit={handleRegister}>
@@ -88,7 +85,6 @@ export default function RegistrationForm({ messages, onSignIn }: RegistrationFor
       </form>
 
       <div className="auth-card-footer">
-        <span>{messages.signInPrompt}</span>
         <button className="text-button" type="button" onClick={onSignIn}>
           {messages.signInLink}
         </button>

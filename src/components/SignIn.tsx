@@ -70,7 +70,6 @@ export default function SignIn({ messages, onRegister }: SignInProps) {
       </form>
 
       <div className="auth-card-footer">
-        <span>{messages.registerPrompt}</span>
         <button className="text-button" type="button" onClick={onRegister}>
           {messages.registerLink}
         </button>

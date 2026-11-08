@@ -33,9 +33,6 @@ export default function SignIn({ messages, onRegister }: SignInProps) {
   return (
     <section className="auth-card" aria-labelledby="sign-in-title">
       <div className="auth-card-heading">
-        <span className="eyebrow">ELMODELO</span>
-        <h1 id="sign-in-title">{messages.signInTitle}</h1>
-        <p>{messages.signInDescription}</p>
       </div>
 
       <form className="auth-form" onSubmit={handleSignIn}>

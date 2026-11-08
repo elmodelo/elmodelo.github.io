@@ -2,6 +2,8 @@ export interface LocaleMessages {
   language: 'en' | 'es';
   brandHome: string;
   switchLanguage: string;
+  switchToLightTheme: string;
+  switchToDarkTheme: string;
   currentLanguage: string;
   checkingSession: string;
   authErrorTitle: string;

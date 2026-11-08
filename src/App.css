@@ -1,47 +1,25 @@
 .app-shell {
-  color-scheme: dark;
-  --page: #111713;
-  --surface: #19211b;
-  --surface-raised: #202a22;
-  --text: #f0f3ed;
-  --text-muted: #a4afa4;
-  --border: #303c32;
-  --accent: #c5ee8f;
-  --accent-strong: #d7ff9f;
-  --accent-ink: #17200f;
-  --error: #ffb4a9;
-  --error-surface: #38211e;
-  --success: #c5ee8f;
-  --success-surface: #24311e;
-  --shadow: 0 24px 80px rgb(0 0 0 / 28%);
   min-height: 100svh;
   display: flex;
   flex-direction: column;
   color: var(--text);
   background:
-    radial-gradient(ellipse at 50% 40%, rgb(73 101 62 / 16%), transparent 48%),
+    radial-gradient(
+      ellipse at 50% 40%,
+      color-mix(in srgb, var(--accent) 15%, transparent),
+      transparent 48%
+    ),
     var(--page);
   transition: background-color 180ms ease, color 180ms ease;
 }
 
 .app-shell[data-theme='light'] {
-  color-scheme: light;
-  --page: #f2f4ee;
-  --surface: #fff;
-  --surface-raised: #f7f9f4;
-  --text: #20291f;
-  --text-muted: #697566;
-  --border: #dce3d8;
-  --accent: #416b2b;
-  --accent-strong: #335a20;
-  --accent-ink: #fff;
-  --error: #a13d30;
-  --error-surface: #fff0ed;
-  --success: #416b2b;
-  --success-surface: #edf5e5;
-  --shadow: 0 24px 80px rgb(44 62 38 / 12%);
   background:
-    radial-gradient(ellipse at 50% 40%, rgb(166 198 139 / 20%), transparent 48%),
+    radial-gradient(
+      ellipse at 50% 40%,
+      color-mix(in srgb, var(--accent) 12%, transparent),
+      transparent 48%
+    ),
     var(--page);
 }
 
@@ -56,6 +34,12 @@
 
 .app-header {
   min-height: 88px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .brand {
@@ -83,7 +67,9 @@
 
 .language-toggle {
   border: 0;
-  padding: 8px 10px;
+  min-width: var(--tap-target-min);
+  min-height: var(--tap-target-min);
+  padding: 8px 12px;
   border-radius: 8px;
   background: transparent;
   color: var(--text-muted);
@@ -96,6 +82,33 @@
 .language-toggle:hover {
   background: var(--surface-raised);
   color: var(--text);
+}
+
+.theme-toggle {
+  display: grid;
+  width: var(--tap-target-min);
+  height: var(--tap-target-min);
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--accent);
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.theme-toggle:hover {
+  border-color: var(--accent);
+  background: var(--surface-raised);
+}
+
+.theme-toggle svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
 }
 
 .auth-layout {
@@ -247,7 +260,8 @@
 
 .text-button {
   border: 0;
-  padding: 3px;
+  min-height: var(--tap-target-min);
+  padding: 6px 8px;
   background: transparent;
   color: var(--accent);
   cursor: pointer;

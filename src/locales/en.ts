@@ -28,7 +28,7 @@ const en: LocaleMessages = {
   registering: 'Creating account…',
   registrationSuccess: 'Welcome to elModelo! Your account has been created.',
   registrationConfirmation: 'Registration successful! Check your inbox to confirm your email.',
-  registrationError: 'We could not create your account. Please check your details and try again.',
+  registrationError: 'We could not create your account.',
   unexpectedError: 'A connection error occurred. Please try again.',
   signInLink: 'Sign in',
 };

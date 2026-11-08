@@ -28,7 +28,7 @@ const es: LocaleMessages = {
   registering: 'Creando cuenta…',
   registrationSuccess: '¡Te damos la bienvenida a elModelo! Tu cuenta ha sido creada.',
   registrationConfirmation: '¡Registro exitoso! Revisa tu correo para confirmar tu dirección.',
-  registrationError: 'No pudimos crear tu cuenta. Revisa tus datos e inténtalo de nuevo.',
+  registrationError: 'No pudimos crear tu cuenta.',
   unexpectedError: 'Se produjo un error de conexión. Inténtalo de nuevo.',
   signInLink: 'Iniciar sesión',
 };

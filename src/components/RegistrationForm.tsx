@@ -26,8 +26,6 @@ export default function RegistrationForm({ messages, onSignIn }: RegistrationFor
         setMessage({ type: 'error', text: messages.registrationError });
       } else if (data.user && data.session === null) {
         setMessage({ type: 'success', text: messages.registrationConfirmation });
-        setEmail('');
-        setPassword('');
       } else {
         setMessage({ type: 'success', text: messages.registrationSuccess });
       }

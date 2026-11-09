@@ -606,16 +606,25 @@
   }
 
   .menu-items {
-    display: none;
     padding: 8px;
     border: 1px solid var(--border);
     border-radius: 10px;
     background: var(--surface);
     box-shadow: var(--shadow);
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(-16px);
+    transition:
+      transform 200ms ease,
+      opacity 150ms ease 50ms,
+      visibility 0s linear 200ms;
   }
 
   .menu-items[data-expanded='true'] {
-    display: flex;
+    visibility: visible;
+    opacity: 1;
+    transform: translateY(0);
+    transition-delay: 0s;
   }
 }
 
@@ -656,5 +665,6 @@
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
   }
 }

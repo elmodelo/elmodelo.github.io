@@ -136,7 +136,8 @@
 }
 
 .password-input-wrapper input {
-  padding-right: 52px;
+  min-height: max(48px, calc(var(--tap-target-min) + 4px));
+  padding-right: calc(var(--tap-target-min) + 8px);
 }
 
 .password-visibility-toggle {
@@ -144,8 +145,8 @@
   top: 2px;
   right: 2px;
   display: grid;
-  width: 44px;
-  height: 44px;
+  width: var(--tap-target-min);
+  height: var(--tap-target-min);
   place-items: center;
   border: 0;
   border-radius: 7px;
@@ -179,7 +180,7 @@
 
 .button {
   display: inline-flex;
-  min-height: 48px;
+  min-height: var(--tap-target-min);
   align-items: center;
   justify-content: center;
   border: 1px solid transparent;
@@ -549,6 +550,27 @@
   font-size: 14px;
 }
 
+.pagination-page-size,
+.pagination-navigation,
+.pagination-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pagination-page-size {
+  gap: 12px;
+}
+
+.pagination-navigation {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.page-count {
+  white-space: nowrap;
+}
+
 .pagination select,
 .pagination-button {
   min-height: var(--tap-target-min);
@@ -560,7 +582,21 @@
 }
 
 .pagination-button {
+  display: grid;
+  place-items: center;
+  width: var(--tap-target-min);
+  height: var(--tap-target-min);
+  padding: 8px;
   cursor: pointer;
+}
+
+.pagination-button svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .pagination-button:disabled {
@@ -656,6 +692,27 @@
 
   .dashboard-content {
     padding: 20px;
+  }
+
+  .pagination {
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 12px;
+    font-size: 12px;
+  }
+
+  .pagination-page-size,
+  .pagination-navigation,
+  .pagination-actions {
+    gap: 4px;
+  }
+
+  .pagination-page-size label {
+    max-width: 9ch;
+  }
+
+  .pagination select {
+    padding-inline: 4px;
   }
 }
 

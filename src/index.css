@@ -74,6 +74,8 @@ textarea {
 }
 
 button {
+  min-width: var(--tap-target-min);
+  min-height: var(--tap-target-min);
   touch-action: manipulation;
 }
 

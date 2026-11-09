@@ -154,26 +154,50 @@ export default function TransactionsPanel({ messages }: TransactionsPanelProps) 
           </div>
           {currentResult.count === 0 && <p className="empty-transactions">{messages.noTransactions}</p>}
           <div className="pagination">
-            <label htmlFor="page-size">{messages.rowsPerPage}</label>
-            <select
-              id="page-size"
-              value={pageSize}
-              onChange={(event) => {
-                setPageSize(Number(event.target.value));
-                setPage(0);
-              }}
-            >
-              {[25, 50, 100].map((size) => <option key={size} value={size}>{size}</option>)}
-            </select>
-            <span className="page-count">
-              {messages.pageOf.replace('{page}', String(page + 1)).replace('{total}', String(totalPages))}
-            </span>
-            <button type="button" className="pagination-button" disabled={page === 0} onClick={() => setPage(page - 1)}>
-              {messages.previousPage}
-            </button>
-            <button type="button" className="pagination-button" disabled={page + 1 >= totalPages} onClick={() => setPage(page + 1)}>
-              {messages.nextPage}
-            </button>
+            <div className="pagination-page-size">
+              <label htmlFor="page-size">{messages.rowsPerPage}</label>
+              <select
+                id="page-size"
+                value={pageSize}
+                onChange={(event) => {
+                  setPageSize(Number(event.target.value));
+                  setPage(0);
+                }}
+              >
+                {[25, 50, 100].map((size) => <option key={size} value={size}>{size}</option>)}
+              </select>
+            </div>
+            <div className="pagination-navigation">
+              <span className="page-count">
+                {messages.pageOf.replace('{page}', String(page + 1)).replace('{total}', String(totalPages))}
+              </span>
+              <div className="pagination-actions">
+                <button
+                  type="button"
+                  className="pagination-button"
+                  aria-label={messages.previousPage}
+                  title={messages.previousPage}
+                  disabled={page === 0}
+                  onClick={() => setPage(page - 1)}
+                >
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+                    <path d="M19 12H5m7-7-7 7 7 7" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  className="pagination-button"
+                  aria-label={messages.nextPage}
+                  title={messages.nextPage}
+                  disabled={page + 1 >= totalPages}
+                  onClick={() => setPage(page + 1)}
+                >
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+                    <path d="M5 12h14m-7-7 7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+            </div>
           </div>
         </>
       )}

@@ -5,6 +5,7 @@ import SignIn from './components/SignIn';
 import Menu, { type AppSection } from './components/Menu';
 import SettingsPanel from './components/SettingsPanel';
 import TransactionsPanel from './components/TransactionsPanel';
+import LoadingDialog from './components/LoadingDialog';
 import { useAuth } from './hooks/useAuth';
 import { useLanguage, type Language } from './hooks/useLanguage';
 import { useTheme, type Theme } from './hooks/useTheme';
@@ -14,7 +15,7 @@ function App() {
   const { messages, setLanguage } = useLanguage();
   const [showRegistration, setShowRegistration] = useState(false);
   const [headerMenuTarget, setHeaderMenuTarget] = useState<HTMLDivElement | null>(null);
-  const { user, status: authStatus, signOutFailed, signOut, retrySessionCheck } = useAuth();
+  const { user, status: authStatus, signOutFailed, signingOut, signOut, retrySessionCheck } = useAuth();
   const { theme, setTheme } = useTheme();
 
   useEffect(() => {
@@ -37,10 +38,7 @@ function App() {
 
       <section className={user && authStatus === 'ready' ? 'dashboard-layout' : 'auth-layout'}>
         {authStatus === 'loading' ? (
-          <div className="auth-card status-card" role="status">
-            <span className="loading-indicator" aria-hidden="true" />
-            <p>{messages.checkingSession}</p>
-          </div>
+          <LoadingDialog label={messages.checkingSession} />
         ) : authStatus === 'error' ? (
           <div className="auth-card status-card" role="alert">
             <h1>{messages.authErrorTitle}</h1>
@@ -76,6 +74,8 @@ function App() {
           />
         )}
       </section>
+
+      {signingOut && <LoadingDialog label={messages.signingOut} />}
 
       <footer className="app-footer">
       </footer>

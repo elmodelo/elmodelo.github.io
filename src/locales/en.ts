@@ -11,6 +11,7 @@ const en: LocaleMessages = {
   signedInEyebrow: 'ELMODELO ACCOUNT',
   welcomeBack: 'Welcome back',
   signOut: 'Sign out',
+  signingOut: 'Signing out…',
   signOutError: 'We could not sign you out. Please try again.',
   mainMenu: 'Main menu',
   transactions: 'Transactions',

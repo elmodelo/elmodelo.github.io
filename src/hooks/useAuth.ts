@@ -8,6 +8,7 @@ export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [signOutFailed, setSignOutFailed] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
@@ -44,12 +45,15 @@ export function useAuth() {
   }, [retryCount]);
 
   const signOut = useCallback(async () => {
+    setSigningOut(true);
     setSignOutFailed(false);
     try {
       const { error } = await supabase.auth.signOut();
       if (error) setSignOutFailed(true);
     } catch {
       setSignOutFailed(true);
+    } finally {
+      setSigningOut(false);
     }
   }, []);
 
@@ -58,5 +62,5 @@ export function useAuth() {
     setRetryCount((count) => count + 1);
   }, []);
 
-  return { user, status, signOutFailed, signOut, retrySessionCheck };
+  return { user, status, signOutFailed, signingOut, signOut, retrySessionCheck };
 }

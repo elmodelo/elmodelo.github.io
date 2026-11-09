@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import type { LocaleMessages } from '../locales/types';
 import PasswordField from './PasswordField';
+import LoadingDialog from './LoadingDialog';
 
 interface RegistrationFormProps {
   messages: LocaleMessages;
@@ -80,6 +81,7 @@ export default function RegistrationForm({ messages, onSignIn }: RegistrationFor
           {messages.signInLink}
         </button>
       </div>
+      {loading && <LoadingDialog label={messages.registering} />}
     </section>
   );
 }

@@ -9,6 +9,7 @@ export interface LocaleMessages {
   signedInEyebrow: string;
   welcomeBack: string;
   signOut: string;
+  signingOut: string;
   signOutError: string;
   mainMenu: string;
   transactions: string;

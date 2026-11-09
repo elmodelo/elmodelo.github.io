@@ -2,6 +2,8 @@
   "name": "elModelo",
   "short_name": "elModelo",
   "display": "standalone",
+  "background_color": "#100d1c",
+  "theme_color": "#100d1c",
   "icons": [
     {
       "src": "/icons/icon-192.png",

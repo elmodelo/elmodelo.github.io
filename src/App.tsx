@@ -12,11 +12,11 @@ import { useTheme, type Theme } from './hooks/useTheme';
 import './App.css';
 
 function App() {
-  const { messages, setLanguage } = useLanguage();
+  const { user, status: authStatus, signOutFailed, signingOut, signOut, retrySessionCheck } = useAuth();
+  const { messages, setLanguage } = useLanguage(user?.id);
   const [showRegistration, setShowRegistration] = useState(false);
   const [headerMenuTarget, setHeaderMenuTarget] = useState<HTMLDivElement | null>(null);
-  const { user, status: authStatus, signOutFailed, signingOut, signOut, retrySessionCheck } = useAuth();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme } = useTheme(user?.id);
 
   useEffect(() => {
     document.documentElement.lang = messages.language;
@@ -53,6 +53,8 @@ function App() {
           </div>
         ) : user ? (
           <Dashboard
+            key={user.id}
+            userId={user.id}
             messages={messages}
             email={user.email}
             signOutFailed={signOutFailed}
@@ -84,6 +86,7 @@ function App() {
 }
 
 interface DashboardProps {
+  userId: string;
   messages: LocaleMessages;
   email: string | undefined;
   signOutFailed: boolean;
@@ -95,6 +98,7 @@ interface DashboardProps {
 }
 
 function Dashboard({
+  userId,
   messages,
   email,
   signOutFailed,
@@ -111,7 +115,7 @@ function Dashboard({
       <Menu messages={messages} section={section} onSelect={setSection} toggleTarget={headerMenuTarget} />
       <div className="dashboard-content">
         {section === 'transactions' ? (
-          <TransactionsPanel messages={messages} />
+          <TransactionsPanel messages={messages} userId={userId} />
         ) : section === 'settings' ? (
           <SettingsPanel
             messages={messages}

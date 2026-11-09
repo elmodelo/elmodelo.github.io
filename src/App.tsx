@@ -23,15 +23,17 @@ function App() {
 
   return (
     <main className="app-shell" data-theme={theme}>
-      <header className="app-header">
-        <div className={user && authStatus === 'ready' ? 'header-brand has-menu' : 'header-brand'}>
-          <div className="header-menu" ref={setHeaderMenuTarget} />
-          <a className="brand" href="/" aria-label={messages.brandHome}>
-            <img className="brand-mark" src="/icons/brand-mark.png" alt="" aria-hidden="true" />
-            <span>elModelo</span>
-          </a>
-        </div>
-      </header>
+      {(user && authStatus === 'ready') && (
+        <header className="app-header">
+          <div className='header-brand has-menu'>
+            <div className="header-menu" ref={setHeaderMenuTarget} />
+            <a className="brand" href="/" aria-label={messages.brandHome}>
+              <img className="brand-mark" src="/icons/brand-mark.png" alt="" aria-hidden="true" />
+              <span>elModelo</span>
+            </a>
+          </div>
+        </header>
+      )}
 
       <section className={user && authStatus === 'ready' ? 'dashboard-layout' : 'auth-layout'}>
         {authStatus === 'loading' ? (

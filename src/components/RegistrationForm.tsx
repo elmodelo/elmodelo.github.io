@@ -39,9 +39,6 @@ export default function RegistrationForm({ messages, onSignIn }: RegistrationFor
 
   return (
     <section className="auth-card" aria-labelledby="registration-title">
-      <div className="auth-card-heading">
-      </div>
-
       <form className="auth-form" onSubmit={handleRegister}>
         <div className="form-field">
           <label htmlFor="registration-email">{messages.emailLabel}</label>

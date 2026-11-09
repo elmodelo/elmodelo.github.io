@@ -26,6 +26,19 @@ The Supabase Data API must expose the `finance` schema, with the finance
 migrations applied. Transaction access uses the signed-in user's existing
 database grants and row-level security policies.
 
+## Dashboard panels
+
+Use a `section.dashboard-panel` inside `.dashboard-content` for each panel.
+Place its heading and any footer controls directly inside the section, and wrap
+the content that should scroll in a `.panel-scroll` element. Give the scroll
+region `tabIndex={0}`, `role="region"`, and an accessible label (for example,
+`aria-labelledby` pointing to the heading).
+
+The shared dashboard layout keeps the page header and menu visible, fits the
+card to short content, and limits tall cards to the available viewport height.
+Only `.panel-scroll` scrolls; headings and footer controls stay visible. Table
+column headers inside a scroll region stay pinned automatically.
+
 ## GitHub Pages
 
 [The deployment workflow](.github/workflows/deploy.yml) builds and deploys the

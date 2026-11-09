@@ -101,7 +101,7 @@ export default function TransactionsPanel({ messages }: TransactionsPanelProps) 
   const totalPages = currentResult ? Math.max(1, Math.ceil(currentResult.count / pageSize)) : 1;
 
   return (
-    <section className="transaction-panel" aria-labelledby="transactions-title">
+    <section className="dashboard-panel" aria-labelledby="transactions-title">
       <h1 id="transactions-title">{messages.transactions}</h1>
       {!currentResult ? (
         <p role="status">{messages.loadingTransactions}</p>
@@ -114,7 +114,7 @@ export default function TransactionsPanel({ messages }: TransactionsPanelProps) 
         </div>
       ) : (
         <>
-          <div className="transaction-table-scroll">
+          <div className="panel-scroll" tabIndex={0} role="region" aria-label={messages.transactions}>
             <table className="transaction-table">
               <thead>
                 <tr>

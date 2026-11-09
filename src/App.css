@@ -216,6 +216,7 @@
   border-color: var(--border);
   background: var(--surface-raised);
   color: var(--text);
+  max-width: fit-content;
 }
 
 .button-secondary:hover {
@@ -314,11 +315,13 @@
 .dashboard-layout {
   width: min(100% - 64px, var(--app-max-width));
   flex: 1;
+  min-height: 0;
   display: grid;
   grid-template-columns: 190px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   align-items: start;
   gap: 32px;
-  margin: 24px auto 0;
+  margin: 24px auto 20px;
 }
 
 .menu-items {
@@ -382,7 +385,9 @@
 }
 
 .dashboard-content {
+  isolation: isolate;
   min-width: 0;
+  max-height: 100%;
   padding: 28px;
   border: 1px solid var(--border);
   border-radius: 16px;
@@ -432,8 +437,41 @@
   color: var(--error);
 }
 
-.transaction-table-scroll {
-  overflow-x: auto;
+.app-shell:has(.dashboard-layout) {
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.app-shell:has(.dashboard-layout) .app-header {
+  flex-shrink: 0;
+}
+
+.app-shell:has(.dashboard-layout) .app-footer {
+  display: none;
+}
+
+.dashboard-content,
+.dashboard-panel {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.dashboard-panel > :not(.panel-scroll) {
+  flex-shrink: 0;
+}
+
+.panel-scroll {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.panel-scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface);
 }
 
 .transaction-table {
@@ -501,6 +539,7 @@
 
 .pagination {
   display: flex;
+  flex-shrink: 0;
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
@@ -567,16 +606,25 @@
   }
 
   .menu-items {
-    display: none;
     padding: 8px;
     border: 1px solid var(--border);
     border-radius: 10px;
     background: var(--surface);
     box-shadow: var(--shadow);
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(-16px);
+    transition:
+      transform 200ms ease,
+      opacity 150ms ease 50ms,
+      visibility 0s linear 200ms;
   }
 
   .menu-items[data-expanded='true'] {
-    display: flex;
+    visibility: visible;
+    opacity: 1;
+    transform: translateY(0);
+    transition-delay: 0s;
   }
 }
 
@@ -617,5 +665,6 @@
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
   }
 }

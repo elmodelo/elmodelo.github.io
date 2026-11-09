@@ -44,28 +44,30 @@ export default function SettingsPanel({
   onLanguageChange,
 }: SettingsPanelProps) {
   return (
-    <section aria-labelledby="settings-title">
+    <section className="dashboard-panel" aria-labelledby="settings-title">
       <h1 id="settings-title">{messages.settings}</h1>
-      <OptionGroup
-        legend={messages.theme}
-        name="theme"
-        value={theme}
-        options={[
-          { value: 'light', label: messages.themeLight },
-          { value: 'dark', label: messages.themeDark },
-        ]}
-        onChange={onThemeChange}
-      />
-      <OptionGroup
-        legend={messages.languageSetting}
-        name="language"
-        value={messages.language}
-        options={[
-          { value: 'en', label: 'English' },
-          { value: 'es', label: 'Español' },
-        ]}
-        onChange={onLanguageChange}
-      />
+      <div className="panel-scroll" tabIndex={0} role="region" aria-labelledby="settings-title">
+        <OptionGroup
+          legend={messages.theme}
+          name="theme"
+          value={theme}
+          options={[
+            { value: 'light', label: messages.themeLight },
+            { value: 'dark', label: messages.themeDark },
+          ]}
+          onChange={onThemeChange}
+        />
+        <OptionGroup
+          legend={messages.languageSetting}
+          name="language"
+          value={messages.language}
+          options={[
+            { value: 'en', label: 'English' },
+            { value: 'es', label: 'Español' },
+          ]}
+          onChange={onLanguageChange}
+        />
+      </div>
     </section>
   );
 }

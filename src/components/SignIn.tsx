@@ -33,9 +33,6 @@ export default function SignIn({ messages, onRegister }: SignInProps) {
 
   return (
     <section className="auth-card" aria-labelledby="sign-in-title">
-      <div className="auth-card-heading">
-      </div>
-
       <form className="auth-form" onSubmit={handleSignIn}>
         <div className="form-field">
           <label htmlFor="sign-in-email">{messages.emailLabel}</label>

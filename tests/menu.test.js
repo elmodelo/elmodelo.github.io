@@ -38,6 +38,7 @@ test('transaction panel initially renders a localized loading state', async () =
     const { getLocaleMessages } = await server.ssrLoadModule('/src/locales/index.ts');
     const markup = renderToStaticMarkup(createElement(TransactionsPanel, {
       messages: getLocaleMessages('es'),
+      userId: 'test-user',
     }));
     assert.match(markup, /Transacciones/);
     assert.match(markup, /role="status"/);

@@ -3,9 +3,11 @@ import { supabase } from '../lib/supabaseClient';
 import { fetchTransactions } from '../lib/transactionQuery';
 import type { LocaleMessages } from '../locales/types';
 import LoadingDialog from './LoadingDialog';
-
-type SortColumn = 'posted_at' | 'account(name)' | 'description(name)' |
-  'description(memo)' | 'category(name)' | 'amount';
+import { usePersistedState } from '../hooks/usePersistedState';
+import {
+  DEFAULT_TRANSACTION_PREFERENCES, PAGE_SIZE_OPTIONS, isTransactionPreferences,
+  changeTransactionSort, type SortColumn,
+} from '../lib/transactionPreferences';
 
 interface Transaction {
   id: string;
@@ -29,16 +31,18 @@ interface TransactionResult {
 
 interface TransactionsPanelProps {
   messages: LocaleMessages;
+  userId: string;
 }
 
-export default function TransactionsPanel({ messages }: TransactionsPanelProps) {
-  const [sortColumn, setSortColumn] = useState<SortColumn>('posted_at');
-  const [ascending, setAscending] = useState(false);
+export default function TransactionsPanel({ messages, userId }: TransactionsPanelProps) {
+  const [preferences, setPreferences] = usePersistedState(
+    'transactions', DEFAULT_TRANSACTION_PREFERENCES, isTransactionPreferences, userId,
+  );
+  const { sortColumn, ascending, postedAtAscending, pageSize } = preferences;
   const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(20);
   const [retry, setRetry] = useState(0);
   const [result, setResult] = useState<TransactionResult | null>(null);
-  const requestKey = `${sortColumn}:${ascending}:${page}:${pageSize}:${retry}`;
+  const requestKey = `${sortColumn}:${ascending}:${postedAtAscending}:${page}:${pageSize}:${retry}`;
   const currentResult = result;
   const isLoading = result?.key !== requestKey;
 
@@ -52,6 +56,7 @@ export default function TransactionsPanel({ messages }: TransactionsPanelProps) 
         const { data, count, error } = await fetchTransactions(supabase, {
           sortColumn,
           ascending,
+          postedAtAscending,
           page,
           pageSize,
           signal: controller.signal,
@@ -82,7 +87,7 @@ export default function TransactionsPanel({ messages }: TransactionsPanelProps) 
       active = false;
       controller.abort();
     };
-  }, [sortColumn, ascending, page, pageSize, requestKey]);
+  }, [sortColumn, ascending, postedAtAscending, page, pageSize, requestKey]);
 
   const columns: { id: SortColumn; label: string }[] = [
     { id: 'posted_at', label: messages.transactionDate },
@@ -94,12 +99,7 @@ export default function TransactionsPanel({ messages }: TransactionsPanelProps) 
   ];
 
   function changeSort(column: SortColumn) {
-    if (column === sortColumn) {
-      setAscending(!ascending);
-    } else {
-      setSortColumn(column);
-      setAscending(true);
-    }
+    setPreferences((previous) => changeTransactionSort(previous, column));
     setPage(0);
   }
 
@@ -165,11 +165,12 @@ export default function TransactionsPanel({ messages }: TransactionsPanelProps) 
                 id="page-size"
                 value={currentResult.pageSize}
                 onChange={(event) => {
-                  setPageSize(Number(event.target.value));
+                  const pageSize = Number(event.target.value);
+                  setPreferences((previous) => ({ ...previous, pageSize }));
                   setPage(0);
                 }}
               >
-                {[25, 50, 100].map((size) => <option key={size} value={size}>{size}</option>)}
+                {PAGE_SIZE_OPTIONS.map((size) => <option key={size} value={size}>{size}</option>)}
               </select>
             </div>
             <div className="pagination-navigation">

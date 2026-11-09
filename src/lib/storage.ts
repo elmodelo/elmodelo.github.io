@@ -7,10 +7,25 @@ export function readStored<T extends string>(key: string, allowed: readonly T[])
   }
 }
 
-export function writeStored(key: string, value: string) {
+export function preferenceKey(key: string, userId?: string | null): string {
+  return `elmodelo:${userId ? `user:${encodeURIComponent(userId)}` : 'guest'}:${key}`;
+}
+
+export function readStoredData<T>(key: string, fallback: T, validate: (value: unknown) => value is T): T {
   try {
-    window.localStorage.setItem(key, value);
+    const stored = window.localStorage.getItem(key);
+    if (stored === null) return fallback;
+    const value: unknown = JSON.parse(stored);
+    return validate(value) ? value : fallback;
   } catch {
-    // Storage can be unavailable (e.g. private mode); the setting then lasts for the session.
+    return fallback;
+  }
+}
+
+export function writeStoredData<T>(key: string, value: T) {
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Keep the in-memory preference when storage is unavailable.
   }
 }

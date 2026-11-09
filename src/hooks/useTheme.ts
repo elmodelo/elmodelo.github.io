@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
-import { readStored, writeStored } from '../lib/storage';
+import { useEffect, useState } from 'react';
+import { readStored } from '../lib/storage';
+import { usePersistedState } from './usePersistedState';
 
 export type Theme = 'light' | 'dark';
 
@@ -13,9 +14,13 @@ function getSystemTheme(): Theme {
     : 'light';
 }
 
-export function useTheme() {
-  const [storedTheme, setStoredTheme] = useState<Theme | null>(() =>
-    readStored(STORAGE_KEY, THEMES),
+function isTheme(value: unknown): value is Theme | null {
+  return value === null || THEMES.some((theme) => theme === value);
+}
+
+export function useTheme(userId?: string | null) {
+  const [storedTheme, setTheme] = usePersistedState<Theme | null>(
+    STORAGE_KEY, !userId ? readStored(STORAGE_KEY, THEMES) : null, isTheme, userId,
   );
   const [systemTheme, setSystemTheme] = useState<Theme>(getSystemTheme);
   const theme = storedTheme ?? systemTheme;
@@ -28,11 +33,6 @@ export function useTheme() {
 
     mediaQuery.addEventListener('change', updateSystemTheme);
     return () => mediaQuery.removeEventListener('change', updateSystemTheme);
-  }, []);
-
-  const setTheme = useCallback((nextTheme: Theme) => {
-    writeStored(STORAGE_KEY, nextTheme);
-    setStoredTheme(nextTheme);
   }, []);
 
   return { theme, setTheme };

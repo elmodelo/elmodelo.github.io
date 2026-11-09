@@ -51,7 +51,7 @@
   align-items: center;
   gap: 11px;
   color: var(--text);
-  font-size: 15px;
+  font-size: 20px;
   font-weight: 700;
   letter-spacing: 0.02em;
   text-decoration: none;
@@ -59,8 +59,8 @@
 
 .brand-mark {
   display: block;
-  width: var(--tap-target-min);
-  height: var(--tap-target-min);
+  width: 100px;
+  height: 100px;
   object-fit: contain;
 }
 
@@ -599,6 +599,7 @@
     left: 0;
     width: min(240px, 100%);
     z-index: 1;
+    pointer-events: none;
   }
 
   .menu-toggle {
@@ -621,6 +622,7 @@
   }
 
   .menu-items[data-expanded='true'] {
+    pointer-events: auto;
     visibility: visible;
     opacity: 1;
     transform: translateY(0);

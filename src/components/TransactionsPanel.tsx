@@ -119,7 +119,7 @@ export default function TransactionsPanel({ messages }: TransactionsPanelProps) 
         </div>
       ) : (
         <>
-          <div className="panel-scroll" tabIndex={0} role="region" aria-label={messages.transactions}>
+          <div key={currentResult.key} className="panel-scroll" tabIndex={0} role="region" aria-label={messages.transactions}>
             <table className="transaction-table">
               <thead>
                 <tr>

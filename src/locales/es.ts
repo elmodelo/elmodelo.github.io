@@ -11,6 +11,7 @@ const es: LocaleMessages = {
   signedInEyebrow: 'CUENTA ELMODELO',
   welcomeBack: 'Te damos la bienvenida',
   signOut: 'Cerrar sesión',
+  signingOut: 'Cerrando sesión…',
   signOutError: 'No pudimos cerrar tu sesión. Inténtalo de nuevo.',
   mainMenu: 'Menú principal',
   transactions: 'Transacciones',

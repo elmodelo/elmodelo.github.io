@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { fetchTransactions } from '../lib/transactionQuery';
 import type { LocaleMessages } from '../locales/types';
+import LoadingDialog from './LoadingDialog';
 
 type SortColumn = 'posted_at' | 'account(name)' | 'description(name)' |
   'description(memo)' | 'category(name)' | 'amount';
@@ -17,6 +18,10 @@ interface Transaction {
 
 interface TransactionResult {
   key: string;
+  page: number;
+  pageSize: number;
+  sortColumn: SortColumn;
+  ascending: boolean;
   transactions: Transaction[];
   count: number;
   error: boolean;
@@ -34,11 +39,13 @@ export default function TransactionsPanel({ messages }: TransactionsPanelProps) 
   const [retry, setRetry] = useState(0);
   const [result, setResult] = useState<TransactionResult | null>(null);
   const requestKey = `${sortColumn}:${ascending}:${page}:${pageSize}:${retry}`;
-  const currentResult = result?.key === requestKey ? result : null;
+  const currentResult = result;
+  const isLoading = result?.key !== requestKey;
 
   useEffect(() => {
     let active = true;
     const controller = new AbortController();
+    const queryState = { key: requestKey, page, pageSize, sortColumn, ascending };
 
     async function loadTransactions() {
       try {
@@ -52,7 +59,7 @@ export default function TransactionsPanel({ messages }: TransactionsPanelProps) 
 
         if (!active) return;
         if (error || count === null || data === null) {
-          setResult({ key: requestKey, transactions: [], count: 0, error: true });
+          setResult({ ...queryState, transactions: [], count: 0, error: true });
           return;
         }
 
@@ -62,10 +69,10 @@ export default function TransactionsPanel({ messages }: TransactionsPanelProps) 
           return;
         }
 
-        setResult({ key: requestKey, transactions: data, count, error: false });
+        setResult({ ...queryState, transactions: data, count, error: false });
       } catch {
         if (active) {
-          setResult({ key: requestKey, transactions: [], count: 0, error: true });
+          setResult({ ...queryState, transactions: [], count: 0, error: true });
         }
       }
     }
@@ -98,14 +105,12 @@ export default function TransactionsPanel({ messages }: TransactionsPanelProps) 
 
   const locale = messages.language === 'es' ? 'es' : 'en';
   const dateFormatter = new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeZone: 'UTC' });
-  const totalPages = currentResult ? Math.max(1, Math.ceil(currentResult.count / pageSize)) : 1;
+  const totalPages = currentResult ? Math.max(1, Math.ceil(currentResult.count / currentResult.pageSize)) : 1;
 
   return (
-    <section className="dashboard-panel" aria-labelledby="transactions-title">
+    <section className="dashboard-panel transactions-panel" aria-labelledby="transactions-title">
       <h1 id="transactions-title">{messages.transactions}</h1>
-      {!currentResult ? (
-        <p role="status">{messages.loadingTransactions}</p>
-      ) : currentResult.error ? (
+      {!currentResult ? null : currentResult.error ? (
         <div role="alert">
           <p className="form-message form-message-error">{messages.transactionsError}</p>
           <button className="button button-secondary" type="button" onClick={() => setRetry(retry + 1)}>
@@ -114,7 +119,7 @@ export default function TransactionsPanel({ messages }: TransactionsPanelProps) 
         </div>
       ) : (
         <>
-          <div className="panel-scroll" tabIndex={0} role="region" aria-label={messages.transactions}>
+          <div key={currentResult.key} className="panel-scroll" tabIndex={0} role="region" aria-label={messages.transactions}>
             <table className="transaction-table">
               <thead>
                 <tr>
@@ -122,12 +127,12 @@ export default function TransactionsPanel({ messages }: TransactionsPanelProps) 
                     <th
                       key={column.id}
                       scope="col"
-                      aria-sort={column.id === sortColumn ? (ascending ? 'ascending' : 'descending') : 'none'}
+                      aria-sort={column.id === currentResult.sortColumn ? (currentResult.ascending ? 'ascending' : 'descending') : 'none'}
                     >
                       <button type="button" className="sort-button" onClick={() => changeSort(column.id)}>
                         <span>{column.label}</span>
-                        <span className={column.id === sortColumn ? 'sort-icon active' : 'sort-icon'} aria-hidden="true">
-                          {column.id === sortColumn && !ascending ? '▼' : '▲'}
+                        <span className={column.id === currentResult.sortColumn ? 'sort-icon active' : 'sort-icon'} aria-hidden="true">
+                          {column.id === currentResult.sortColumn && !currentResult.ascending ? '▼' : '▲'}
                         </span>
                       </button>
                     </th>
@@ -154,29 +159,54 @@ export default function TransactionsPanel({ messages }: TransactionsPanelProps) 
           </div>
           {currentResult.count === 0 && <p className="empty-transactions">{messages.noTransactions}</p>}
           <div className="pagination">
-            <label htmlFor="page-size">{messages.rowsPerPage}</label>
-            <select
-              id="page-size"
-              value={pageSize}
-              onChange={(event) => {
-                setPageSize(Number(event.target.value));
-                setPage(0);
-              }}
-            >
-              {[25, 50, 100].map((size) => <option key={size} value={size}>{size}</option>)}
-            </select>
-            <span className="page-count">
-              {messages.pageOf.replace('{page}', String(page + 1)).replace('{total}', String(totalPages))}
-            </span>
-            <button type="button" className="pagination-button" disabled={page === 0} onClick={() => setPage(page - 1)}>
-              {messages.previousPage}
-            </button>
-            <button type="button" className="pagination-button" disabled={page + 1 >= totalPages} onClick={() => setPage(page + 1)}>
-              {messages.nextPage}
-            </button>
+            <div className="pagination-page-size">
+              <label htmlFor="page-size">{messages.rowsPerPage}</label>
+              <select
+                id="page-size"
+                value={currentResult.pageSize}
+                onChange={(event) => {
+                  setPageSize(Number(event.target.value));
+                  setPage(0);
+                }}
+              >
+                {[25, 50, 100].map((size) => <option key={size} value={size}>{size}</option>)}
+              </select>
+            </div>
+            <div className="pagination-navigation">
+              <span className="page-count">
+                {messages.pageOf.replace('{page}', String(currentResult.page + 1)).replace('{total}', String(totalPages))}
+              </span>
+              <div className="pagination-actions">
+                <button
+                  type="button"
+                  className="pagination-button"
+                  aria-label={messages.previousPage}
+                  title={messages.previousPage}
+                  disabled={currentResult.page === 0}
+                  onClick={() => setPage(page - 1)}
+                >
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+                    <path d="M19 12H5m7-7-7 7 7 7" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  className="pagination-button"
+                  aria-label={messages.nextPage}
+                  title={messages.nextPage}
+                  disabled={currentResult.page + 1 >= totalPages}
+                  onClick={() => setPage(page + 1)}
+                >
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+                    <path d="M5 12h14m-7-7 7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+            </div>
           </div>
         </>
       )}
+      {isLoading && <LoadingDialog label={messages.loadingTransactions} />}
     </section>
   );
 }

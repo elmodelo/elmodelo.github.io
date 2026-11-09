@@ -120,14 +120,16 @@ function Dashboard({
             onLanguageChange={onLanguageChange}
           />
         ) : (
-          <section aria-labelledby="account-title">
+          <section className="dashboard-panel" aria-labelledby="account-title">
             <h1 id="account-title">{messages.myAccount}</h1>
-            <p>{email}</p>
-            {signOutFailed && (
-              <p className="form-message form-message-error" role="alert">
-                {messages.signOutError}
-              </p>
-            )}
+            <div className="panel-scroll" tabIndex={0} role="region" aria-labelledby="account-title">
+              <p>{email}</p>
+              {signOutFailed && (
+                <p className="form-message form-message-error" role="alert">
+                  {messages.signOutError}
+                </p>
+              )}
+            </div>
             <button className="button button-secondary" type="button" onClick={signOut}>
               {messages.signOut}
             </button>

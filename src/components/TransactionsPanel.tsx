@@ -108,7 +108,7 @@ export default function TransactionsPanel({ messages }: TransactionsPanelProps) 
   const totalPages = currentResult ? Math.max(1, Math.ceil(currentResult.count / currentResult.pageSize)) : 1;
 
   return (
-    <section className="dashboard-panel" aria-labelledby="transactions-title">
+    <section className="dashboard-panel transactions-panel" aria-labelledby="transactions-title">
       <h1 id="transactions-title">{messages.transactions}</h1>
       {!currentResult ? null : currentResult.error ? (
         <div role="alert">

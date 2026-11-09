@@ -432,38 +432,15 @@
   color: var(--error);
 }
 
-.app-shell:has(.transaction-panel) {
-  height: 100dvh;
-}
-
-.app-shell:has(.transaction-panel) .app-header {
-  flex-shrink: 0;
-}
-
 .app-shell:has(.transaction-panel) .app-footer {
   display: none;
 }
 
 .dashboard-layout:has(.transaction-panel) {
-  min-height: 0;
-  grid-template-rows: minmax(0, 1fr);
-  align-items: stretch;
   margin-bottom: 20px;
 }
 
-.dashboard-content:has(.transaction-panel),
-.transaction-panel {
-  display: flex;
-  min-height: 0;
-  flex-direction: column;
-}
-
-.transaction-panel {
-  flex: 1;
-}
-
 .transaction-table-scroll {
-  min-height: 0;
   overflow: auto;
 }
 

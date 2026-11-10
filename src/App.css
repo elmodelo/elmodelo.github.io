@@ -538,6 +538,10 @@
   margin: 0;
 }
 
+.transactions-heading > .button {
+  margin: 0;
+}
+
 .panel-scroll {
   min-height: 0;
   overflow: auto;

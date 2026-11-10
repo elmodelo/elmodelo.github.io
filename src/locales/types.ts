@@ -19,6 +19,10 @@ export interface LocaleMessages {
   themeLight: string;
   themeDark: string;
   languageSetting: string;
+  trackedAccounts: string;
+  loadingAccounts: string;
+  accountsError: string;
+  noAccounts: string;
   transactionDate: string;
   transactionAccount: string;
   transactionName: string;

@@ -16,7 +16,13 @@ Run `npm run build` to generate `dist/` and `npm run preview` to preview it.
 Run `npm test` for the local component and transaction-query checks.
 
 After signing in, use the main menu to browse transactions, view the account
-email and sign out. Settings sets the theme and language. A value saved in the browser's local
+email and sign out. Settings sets the theme, language, and tracked accounts. Tracked accounts
+are listed by name with checkboxes and saved per user in browser storage. All accounts are
+tracked until the first edit; unchecking every account shows no transactions.
+`Dashboard` owns `useTrackedAccounts(userId)` and passes its `trackedAccountIds: string[]`
+to panels, which can use the IDs in `.in('account', trackedAccountIds)` filters.
+Wait for the hook's `ready` status before querying, and treat an empty list as no results.
+A value saved in the browser's local
 storage is always used; otherwise the system preference applies. Transactions are sorted and
 paginated by the database, initially showing the newest 50; the page size and
 sort column can be changed in the panel. Dates are displayed in UTC and amounts

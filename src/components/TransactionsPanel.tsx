@@ -33,9 +33,10 @@ interface TransactionResult {
 interface TransactionsPanelProps {
   messages: LocaleMessages;
   userId: string;
+  trackedAccountIds: string[];
 }
 
-export default function TransactionsPanel({ messages, userId }: TransactionsPanelProps) {
+export default function TransactionsPanel({ messages, userId, trackedAccountIds }: TransactionsPanelProps) {
   const [preferences, setPreferences] = usePersistedState(
     'transactions', DEFAULT_TRANSACTION_PREFERENCES, isTransactionPreferences, userId,
   );
@@ -48,7 +49,7 @@ export default function TransactionsPanel({ messages, userId }: TransactionsPane
   const backfillPendingRef = useRef(false);
   const previousPageRef = useRef<HTMLButtonElement>(null);
   const nextPageRef = useRef<HTMLButtonElement>(null);
-  const requestKey = `${sortColumn}:${ascending}:${postedAtAscending}:${page}:${pageSize}:${retry}`;
+  const requestKey = `${JSON.stringify(trackedAccountIds)}:${sortColumn}:${ascending}:${postedAtAscending}:${page}:${pageSize}:${retry}`;
   const currentResult = result;
   const isLoading = result?.key !== requestKey;
 
@@ -79,6 +80,7 @@ export default function TransactionsPanel({ messages, userId }: TransactionsPane
     async function loadTransactions() {
       try {
         const { data, count, error } = await fetchTransactions(supabase, {
+          trackedAccountIds,
           sortColumn,
           ascending,
           postedAtAscending,
@@ -112,7 +114,7 @@ export default function TransactionsPanel({ messages, userId }: TransactionsPane
       active = false;
       controller.abort();
     };
-  }, [sortColumn, ascending, postedAtAscending, page, pageSize, requestKey]);
+  }, [trackedAccountIds, sortColumn, ascending, postedAtAscending, page, pageSize, requestKey]);
 
   const columns: { id: SortColumn; label: string }[] = [
     { id: 'posted_at', label: messages.transactionDate },

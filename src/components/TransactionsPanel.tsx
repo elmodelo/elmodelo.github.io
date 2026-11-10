@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { fetchTransactions } from '../lib/transactionQuery';
 import type { LocaleMessages } from '../locales/types';
@@ -42,9 +42,30 @@ export default function TransactionsPanel({ messages, userId }: TransactionsPane
   const [page, setPage] = useState(0);
   const [retry, setRetry] = useState(0);
   const [result, setResult] = useState<TransactionResult | null>(null);
+  const previousPageRef = useRef<HTMLButtonElement>(null);
+  const nextPageRef = useRef<HTMLButtonElement>(null);
   const requestKey = `${sortColumn}:${ascending}:${postedAtAscending}:${page}:${pageSize}:${retry}`;
   const currentResult = result;
   const isLoading = result?.key !== requestKey;
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (isLoading || event.defaultPrevented || event.repeat || event.isComposing
+        || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      if (event.target instanceof HTMLElement
+        && (event.target.isContentEditable
+          || event.target.closest('input, textarea, select, [role="textbox"], [role="combobox"], dialog'))) return;
+
+      const button = event.key === 'ArrowLeft' ? previousPageRef.current
+        : event.key === 'ArrowRight' ? nextPageRef.current : null;
+      if (!button || button.disabled) return;
+      event.preventDefault();
+      button.click();
+    }
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [isLoading]);
 
   useEffect(() => {
     let active = true;
@@ -179,11 +200,12 @@ export default function TransactionsPanel({ messages, userId }: TransactionsPane
               </span>
               <div className="pagination-actions">
                 <button
+                  ref={previousPageRef}
                   type="button"
                   className="pagination-button"
                   aria-label={messages.previousPage}
                   title={messages.previousPage}
-                  disabled={currentResult.page === 0}
+                  disabled={isLoading || currentResult.page === 0}
                   onClick={() => setPage(page - 1)}
                 >
                   <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
@@ -191,11 +213,12 @@ export default function TransactionsPanel({ messages, userId }: TransactionsPane
                   </svg>
                 </button>
                 <button
+                  ref={nextPageRef}
                   type="button"
                   className="pagination-button"
                   aria-label={messages.nextPage}
                   title={messages.nextPage}
-                  disabled={currentResult.page + 1 >= totalPages}
+                  disabled={isLoading || currentResult.page + 1 >= totalPages}
                   onClick={() => setPage(page + 1)}
                 >
                   <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">

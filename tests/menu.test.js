@@ -39,6 +39,7 @@ test('transaction panel initially renders a localized loading state', async () =
     const markup = renderToStaticMarkup(createElement(TransactionsPanel, {
       messages: getLocaleMessages('es'),
       userId: 'test-user',
+      trackedAccountIds: ['account-a'],
     }));
     assert.match(markup, /Transacciones/);
     assert.match(markup, /role="status"/);

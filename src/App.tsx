@@ -9,6 +9,7 @@ import LoadingDialog from './components/LoadingDialog';
 import { useAuth } from './hooks/useAuth';
 import { useLanguage, type Language } from './hooks/useLanguage';
 import { useTheme, type Theme } from './hooks/useTheme';
+import { useTrackedAccounts } from './hooks/useTrackedAccounts';
 import './App.css';
 
 function App() {
@@ -109,19 +110,34 @@ function Dashboard({
   onLanguageChange,
 }: DashboardProps) {
   const [section, setSection] = useState<AppSection>('transactions');
+  const { accounts, trackedAccountIds, setTrackedAccountIds, status: accountsStatus, retryAccounts } = useTrackedAccounts(userId);
 
   return (
     <>
       <Menu messages={messages} section={section} onSelect={setSection} toggleTarget={headerMenuTarget} />
       <div className="dashboard-content">
         {section === 'transactions' ? (
-          <TransactionsPanel messages={messages} userId={userId} />
+          accountsStatus === 'loading' ? <LoadingDialog label={messages.loadingAccounts} />
+            : accountsStatus === 'error' ? (
+              <section className="dashboard-panel" role="alert">
+                <h1>{messages.transactions}</h1>
+                <p className="form-message form-message-error">{messages.accountsError}</p>
+                <button className="button button-secondary" type="button" onClick={retryAccounts}>
+                  {messages.retry}
+                </button>
+              </section>
+            ) : <TransactionsPanel messages={messages} userId={userId} trackedAccountIds={trackedAccountIds} />
         ) : section === 'settings' ? (
           <SettingsPanel
             messages={messages}
             theme={theme}
             onThemeChange={onThemeChange}
             onLanguageChange={onLanguageChange}
+            accounts={accounts}
+            trackedAccountIds={trackedAccountIds}
+            onTrackedAccountIdsChange={setTrackedAccountIds}
+            accountsStatus={accountsStatus}
+            onRetryAccounts={retryAccounts}
           />
         ) : (
           <section className="dashboard-panel" aria-labelledby="account-title">

@@ -31,6 +31,7 @@ test('queries every column and direction with server-side pagination and stable 
     for (const ascending of [true, false]) {
       for (const postedAtAscending of [true, false]) {
         const { data, count, error } = await fetchTransactions(client, {
+          trackedAccountIds: ['account-a', 'account-b'],
           sortColumn: column, ascending, postedAtAscending, page: 1, pageSize: 50, signal: controller.signal,
         });
         assert.equal(error, null);
@@ -38,6 +39,7 @@ test('queries every column and direction with server-side pagination and stable 
         assert.equal(count, 127);
         const { url, options } = requests.at(-1);
         assert.equal(url.pathname, '/rest/v1/transaction');
+        assert.equal(url.searchParams.get('account'), 'in.(account-a,account-b)');
         const dateOrder = column === 'posted_at' ? '' : `,posted_at.${postedAtAscending ? 'asc' : 'desc'}.nullslast`;
         assert.equal(url.searchParams.get('order'), `${column}.${ascending ? 'asc' : 'desc'}.nullslast${dateOrder},id.asc`);
         assert.equal(url.searchParams.get('offset'), '50');
@@ -64,6 +66,7 @@ test('returns database errors instead of a successful result', async () => {
     },
   });
   const { data, error } = await fetchTransactions(client, {
+    trackedAccountIds: ['account-a'],
     sortColumn: 'posted_at',
     ascending: false,
     page: 0,
@@ -72,4 +75,12 @@ test('returns database errors instead of a successful result', async () => {
   });
   assert.equal(data, null);
   assert.equal(error.message, 'query failed');
+});
+
+test('tracking no accounts returns no transactions without querying the database', async () => {
+  const client = { schema() { assert.fail('An empty selection must not query all accounts'); } };
+  const result = await fetchTransactions(client, {
+    trackedAccountIds: [], sortColumn: 'posted_at', ascending: false, page: 0, pageSize: 25,
+  });
+  assert.deepEqual(result, { data: [], count: 0, error: null });
 });

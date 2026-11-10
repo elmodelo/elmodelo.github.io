@@ -303,7 +303,8 @@
   animation: spin 750ms linear infinite;
 }
 
-.LoadingDialog {
+.LoadingDialog,
+.result-dialog {
   position: fixed;
   inset: 0;
   max-width: calc(100% - 40px);
@@ -317,11 +318,20 @@
   text-align: center;
 }
 
-.LoadingDialog::backdrop {
+.LoadingDialog::backdrop,
+.result-dialog::backdrop {
   background: rgb(0 0 0 / 25%);
 }
 
 .LoadingDialog p {
+  margin: 0;
+}
+
+.result-dialog {
+  width: min(420px, calc(100% - 40px));
+}
+
+.result-dialog h2 {
   margin: 0;
 }
 
@@ -482,6 +492,19 @@
 
 .dashboard-panel > :not(.panel-scroll) {
   flex-shrink: 0;
+}
+
+.transactions-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 24px;
+}
+
+.transactions-panel .transactions-heading h1 {
+  margin: 0;
 }
 
 .panel-scroll {
@@ -793,7 +816,7 @@
     gap: 8px 12px;
   }
 
-  .transactions-panel h1 {
+  .transactions-panel .transactions-heading {
     grid-area: 1 / 1;
     margin: 0;
   }

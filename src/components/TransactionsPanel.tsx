@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient';
 import { fetchTransactions } from '../lib/transactionQuery';
 import type { LocaleMessages } from '../locales/types';
 import LoadingDialog from './LoadingDialog';
+import ResultDialog from './ResultDialog';
 import { usePersistedState } from '../hooks/usePersistedState';
 import {
   DEFAULT_TRANSACTION_PREFERENCES, PAGE_SIZE_OPTIONS, isTransactionPreferences,
@@ -42,6 +43,9 @@ export default function TransactionsPanel({ messages, userId }: TransactionsPane
   const [page, setPage] = useState(0);
   const [retry, setRetry] = useState(0);
   const [result, setResult] = useState<TransactionResult | null>(null);
+  const [isBackfilling, setIsBackfilling] = useState(false);
+  const [backfillResult, setBackfillResult] = useState<{ count: string } | { error: true } | null>(null);
+  const backfillPendingRef = useRef(false);
   const previousPageRef = useRef<HTMLButtonElement>(null);
   const nextPageRef = useRef<HTMLButtonElement>(null);
   const requestKey = `${sortColumn}:${ascending}:${postedAtAscending}:${page}:${pageSize}:${retry}`;
@@ -124,13 +128,40 @@ export default function TransactionsPanel({ messages, userId }: TransactionsPane
     setPage(0);
   }
 
+  async function backfillCategories() {
+    if (backfillPendingRef.current) return;
+    backfillPendingRef.current = true;
+    setIsBackfilling(true);
+    try {
+      const { data, error } = await supabase.schema('finance').rpc('backfill_transaction_categories');
+      if (error || data === null) throw new Error('Category backfill failed');
+      setBackfillResult({ count: String(data) });
+      setRetry((previous) => previous + 1);
+    } catch {
+      setBackfillResult({ error: true });
+    } finally {
+      backfillPendingRef.current = false;
+      setIsBackfilling(false);
+    }
+  }
+
   const locale = messages.language === 'es' ? 'es' : 'en';
   const dateFormatter = new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeZone: 'UTC' });
   const totalPages = currentResult ? Math.max(1, Math.ceil(currentResult.count / currentResult.pageSize)) : 1;
 
   return (
     <section className="dashboard-panel transactions-panel" aria-labelledby="transactions-title">
-      <h1 id="transactions-title">{messages.transactions}</h1>
+      <div className="transactions-heading">
+        <h1 id="transactions-title">{messages.transactions}</h1>
+        <button
+          className="button button-secondary"
+          type="button"
+          disabled={isBackfilling}
+          onClick={() => void backfillCategories()}
+        >
+          {messages.backfillCategories}
+        </button>
+      </div>
       {!currentResult ? null : currentResult.error ? (
         <div role="alert">
           <p className="form-message form-message-error">{messages.transactionsError}</p>
@@ -230,7 +261,18 @@ export default function TransactionsPanel({ messages, userId }: TransactionsPane
           </div>
         </>
       )}
-      {isLoading && <LoadingDialog label={messages.loadingTransactions} />}
+      {(isBackfilling || (isLoading && !backfillResult)) && (
+        <LoadingDialog label={isBackfilling ? messages.backfillingCategories : messages.loadingTransactions} />
+      )}
+      {backfillResult && (
+        <ResultDialog
+          title={messages.backfillCategories}
+          message={'error' in backfillResult ? messages.backfillCategoriesError
+            : messages.backfillCategoriesResult.replace('{count}', backfillResult.count)}
+          closeLabel={messages.close}
+          onClose={() => setBackfillResult(null)}
+        />
+      )}
     </section>
   );
 }

@@ -26,6 +26,11 @@ export interface LocaleMessages {
   transactionCategory: string;
   transactionAmount: string;
   loadingTransactions: string;
+  backfillCategories: string;
+  backfillingCategories: string;
+  backfillCategoriesResult: string;
+  backfillCategoriesError: string;
+  close: string;
   transactionsError: string;
   noTransactions: string;
   rowsPerPage: string;

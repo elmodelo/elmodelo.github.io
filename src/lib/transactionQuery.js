@@ -29,10 +29,11 @@ function applyTransactionFilters(query, filters) {
   return query;
 }
 
-export function fetchUncategorizedTransactions(client, trackedAccountIds, signal) {
-  if (trackedAccountIds.length === 0) return Promise.resolve({ data: [], error: null });
-  const query = client.schema('finance').from('transaction').select('id').in('account', trackedAccountIds);
-  return applyTransactionFilters(query, UNCATEGORIZED_TRANSACTION_FILTERS).limit(1).abortSignal(signal);
+export function fetchUncategorizedTransactionCount(client, trackedAccountIds, signal) {
+  if (trackedAccountIds.length === 0) return Promise.resolve({ count: 0, error: null });
+  const query = client.schema('finance').from('transaction')
+    .select('id', { count: 'exact', head: true }).in('account', trackedAccountIds);
+  return applyTransactionFilters(query, UNCATEGORIZED_TRANSACTION_FILTERS).abortSignal(signal);
 }
 
 export function fetchTransactions(client, { trackedAccountIds, sortColumn, ascending, postedAtAscending = false, page, pageSize, signal, filters = NO_TRANSACTION_FILTERS }) {

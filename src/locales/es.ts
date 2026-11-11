@@ -15,6 +15,7 @@ const es: LocaleMessages = {
   signOutError: 'No pudimos cerrar tu sesión. Inténtalo de nuevo.',
   mainMenu: 'Menú principal',
   transactions: 'Transacciones',
+  uncategorized: 'Sin categoría',
   settings: 'Configuración',
   myAccount: 'Mi cuenta',
   theme: 'Tema',

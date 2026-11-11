@@ -13,6 +13,7 @@ export interface LocaleMessages {
   signOutError: string;
   mainMenu: string;
   transactions: string;
+  uncategorized: string;
   settings: string;
   myAccount: string;
   theme: string;

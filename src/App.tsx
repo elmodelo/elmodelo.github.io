@@ -10,6 +10,8 @@ import { useAuth } from './hooks/useAuth';
 import { useLanguage, type Language } from './hooks/useLanguage';
 import { useTheme, type Theme } from './hooks/useTheme';
 import { useTrackedAccounts } from './hooks/useTrackedAccounts';
+import { fetchUncategorizedTransactions, UNCATEGORIZED_TRANSACTION_FILTERS } from './lib/transactionQuery';
+import { supabase } from './lib/supabaseClient';
 import './App.css';
 
 function App() {
@@ -111,12 +113,39 @@ function Dashboard({
 }: DashboardProps) {
   const [section, setSection] = useState<AppSection>('transactions');
   const { accounts, trackedAccountIds, setTrackedAccountIds, status: accountsStatus, retryAccounts } = useTrackedAccounts(userId);
+  const [categoryRevision, setCategoryRevision] = useState(0);
+  const [uncategorizedResult, setUncategorizedResult] = useState<{ accountIds: string[]; exists: boolean } | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const controller = new AbortController();
+    async function checkUncategorizedTransactions() {
+      try {
+        const { data, error } = await fetchUncategorizedTransactions(supabase, trackedAccountIds, controller.signal);
+        if (active) {
+          setUncategorizedResult({ accountIds: trackedAccountIds, exists: !error && !!data?.length });
+        }
+      } catch {
+        if (active) setUncategorizedResult({ accountIds: trackedAccountIds, exists: false });
+      }
+    }
+    void checkUncategorizedTransactions();
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [trackedAccountIds, section, categoryRevision]);
+
+  const hasUncategorizedTransactions = uncategorizedResult?.accountIds === trackedAccountIds && uncategorizedResult.exists;
 
   return (
     <>
-      <Menu messages={messages} section={section} onSelect={setSection} toggleTarget={headerMenuTarget} />
+      <Menu
+        messages={messages} section={section} onSelect={setSection} toggleTarget={headerMenuTarget}
+        hasUncategorizedTransactions={hasUncategorizedTransactions}
+      />
       <div className="dashboard-content">
-        {section === 'transactions' ? (
+        {section === 'transactions' || section === 'uncategorized' ? (
           accountsStatus === 'loading' ? <LoadingDialog label={messages.loadingAccounts} />
             : accountsStatus === 'error' ? (
               <section className="dashboard-panel" role="alert">
@@ -126,7 +155,15 @@ function Dashboard({
                   {messages.retry}
                 </button>
               </section>
-            ) : <TransactionsPanel messages={messages} userId={userId} trackedAccountIds={trackedAccountIds} />
+            ) : <TransactionsPanel
+              key={section}
+              messages={messages}
+              userId={userId}
+              trackedAccountIds={trackedAccountIds}
+              filters={section === 'uncategorized' ? UNCATEGORIZED_TRANSACTION_FILTERS : undefined}
+              title={section === 'uncategorized' ? messages.uncategorized : messages.transactions}
+              onCategoriesChanged={() => setCategoryRevision((previous) => previous + 1)}
+            />
         ) : section === 'settings' ? (
           <SettingsPanel
             messages={messages}

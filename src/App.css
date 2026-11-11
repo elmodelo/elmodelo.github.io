@@ -407,6 +407,11 @@
   font-weight: 600;
 }
 
+.menu-subsection {
+  padding-left: 28px;
+  font-size: 0.9em;
+}
+
 .menu-button:hover,
 .menu-button[aria-current='page'] {
   background: var(--surface-raised);

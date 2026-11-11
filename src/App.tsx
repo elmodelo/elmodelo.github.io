@@ -10,7 +10,7 @@ import { useAuth } from './hooks/useAuth';
 import { useLanguage, type Language } from './hooks/useLanguage';
 import { useTheme, type Theme } from './hooks/useTheme';
 import { useTrackedAccounts } from './hooks/useTrackedAccounts';
-import { fetchUncategorizedTransactions, UNCATEGORIZED_TRANSACTION_FILTERS } from './lib/transactionQuery';
+import { fetchUncategorizedTransactionCount, UNCATEGORIZED_TRANSACTION_FILTERS } from './lib/transactionQuery';
 import { supabase } from './lib/supabaseClient';
 import './App.css';
 
@@ -114,19 +114,19 @@ function Dashboard({
   const [section, setSection] = useState<AppSection>('transactions');
   const { accounts, trackedAccountIds, setTrackedAccountIds, status: accountsStatus, retryAccounts } = useTrackedAccounts(userId);
   const [categoryRevision, setCategoryRevision] = useState(0);
-  const [uncategorizedResult, setUncategorizedResult] = useState<{ accountIds: string[]; exists: boolean } | null>(null);
+  const [uncategorizedResult, setUncategorizedResult] = useState<{ accountIds: string[]; count: number } | null>(null);
 
   useEffect(() => {
     let active = true;
     const controller = new AbortController();
     async function checkUncategorizedTransactions() {
       try {
-        const { data, error } = await fetchUncategorizedTransactions(supabase, trackedAccountIds, controller.signal);
+        const { count, error } = await fetchUncategorizedTransactionCount(supabase, trackedAccountIds, controller.signal);
         if (active) {
-          setUncategorizedResult({ accountIds: trackedAccountIds, exists: !error && !!data?.length });
+          setUncategorizedResult({ accountIds: trackedAccountIds, count: error ? 0 : (count ?? 0) });
         }
       } catch {
-        if (active) setUncategorizedResult({ accountIds: trackedAccountIds, exists: false });
+        if (active) setUncategorizedResult({ accountIds: trackedAccountIds, count: 0 });
       }
     }
     void checkUncategorizedTransactions();
@@ -136,13 +136,13 @@ function Dashboard({
     };
   }, [trackedAccountIds, section, categoryRevision]);
 
-  const hasUncategorizedTransactions = uncategorizedResult?.accountIds === trackedAccountIds && uncategorizedResult.exists;
+  const uncategorizedCount = uncategorizedResult?.accountIds === trackedAccountIds ? uncategorizedResult.count : 0;
 
   return (
     <>
       <Menu
         messages={messages} section={section} onSelect={setSection} toggleTarget={headerMenuTarget}
-        hasUncategorizedTransactions={hasUncategorizedTransactions}
+        uncategorizedCount={uncategorizedCount}
       />
       <div className="dashboard-content">
         {section === 'transactions' || section === 'uncategorized' ? (

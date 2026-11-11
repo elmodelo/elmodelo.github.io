@@ -26,9 +26,9 @@ test('menu renders localized sections, their separator, and the active item', as
       assert.doesNotMatch(markup, /menu-subsection/);
       const filteredMarkup = renderToStaticMarkup(createElement(Menu, {
         messages: getLocaleMessages(locale), section: 'uncategorized', onSelect() {}, toggleTarget: null,
-        hasUncategorizedTransactions: true,
+        uncategorizedCount: 34,
       }));
-      const uncategorizedLabel = locale === 'es' ? 'Sin categoría' : 'Uncategorized';
+      const uncategorizedLabel = `${locale === 'es' ? 'Sin categoría' : 'Uncategorized'} (34)`;
       assert.ok(filteredMarkup.indexOf(`>${labels[0]}</button>`) < filteredMarkup.indexOf(`>${uncategorizedLabel}</button>`));
       assert.ok(filteredMarkup.indexOf(`>${uncategorizedLabel}</button>`) < filteredMarkup.indexOf(`>${labels[1]}</button>`));
       assert.ok(filteredMarkup.includes(`class="menu-button menu-subsection" aria-current="page">${uncategorizedLabel}</button>`));

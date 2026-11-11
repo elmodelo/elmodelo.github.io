@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createClient } from '@supabase/supabase-js';
-import { fetchTransactions, fetchUncategorizedTransactions, UNCATEGORIZED_TRANSACTION_FILTERS } from '../src/lib/transactionQuery.js';
+import { fetchTransactions, fetchUncategorizedTransactionCount, UNCATEGORIZED_TRANSACTION_FILTERS } from '../src/lib/transactionQuery.js';
 
 const columns = [
   'posted_at',
@@ -84,15 +84,21 @@ test('tracking no accounts returns no transactions without querying the database
     trackedAccountIds: [], sortColumn: 'posted_at', ascending: false, page: 0, pageSize: 25,
   });
   assert.deepEqual(result, { data: [], count: 0, error: null });
-  assert.deepEqual(await fetchUncategorizedTransactions(client, []), { data: [], error: null });
+  assert.deepEqual(await fetchUncategorizedTransactionCount(client, []), { count: 0, error: null });
 });
 
-test('uncategorized queries filter null categories within tracked accounts before pagination', async () => {
+test('uncategorized count includes all matching rows in tracked accounts without fetching them', async () => {
   const requests = [];
   const client = createClient('http://127.0.0.1:54321', 'test-key', {
     global: {
-      fetch: async (url) => {
+      fetch: async (url, options) => {
         requests.push(new URL(url));
+        if (options.method === 'HEAD') {
+          assert.match(new Headers(options.headers).get('prefer'), /count=exact/);
+          return new Response(null, {
+            status: 200, headers: { 'content-range': '*/1234' },
+          });
+        }
         return new Response('[{"id":"uncategorized-transaction"}]', {
           status: 200,
           headers: { 'content-range': '0-0/1', 'content-type': 'application/json' },
@@ -101,13 +107,15 @@ test('uncategorized queries filter null categories within tracked accounts befor
     },
   });
   const signal = new AbortController().signal;
-  const result = await fetchUncategorizedTransactions(client, ['tracked-account'], signal);
+  const result = await fetchUncategorizedTransactionCount(client, ['tracked-account'], signal);
   assert.equal(result.error, null);
-  assert.equal(result.data.length, 1);
+  assert.equal(result.count, 1234);
+  assert.equal(result.data, null);
   const existenceUrl = requests.at(-1);
   assert.equal(existenceUrl.searchParams.get('account'), 'in.(tracked-account)');
   assert.equal(existenceUrl.searchParams.get('category'), 'is.null');
-  assert.equal(existenceUrl.searchParams.get('limit'), '1');
+  assert.equal(existenceUrl.searchParams.has('limit'), false);
+  assert.equal(existenceUrl.searchParams.has('offset'), false);
 
   const page = await fetchTransactions(client, {
     trackedAccountIds: ['tracked-account'], filters: UNCATEGORIZED_TRANSACTION_FILTERS,

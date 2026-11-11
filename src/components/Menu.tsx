@@ -9,10 +9,10 @@ interface MenuProps {
   section: AppSection;
   onSelect: (section: AppSection) => void;
   toggleTarget: HTMLElement | null;
-  hasUncategorizedTransactions?: boolean;
+  uncategorizedCount?: number;
 }
 
-export default function Menu({ messages, section, onSelect, toggleTarget, hasUncategorizedTransactions = false }: MenuProps) {
+export default function Menu({ messages, section, onSelect, toggleTarget, uncategorizedCount = 0 }: MenuProps) {
   const [expanded, setExpanded] = useState(false);
   const menuId = useId();
   const items: { id: AppSection; label: string }[] = [
@@ -49,7 +49,7 @@ export default function Menu({ messages, section, onSelect, toggleTarget, hasUnc
             >
               {item.label}
             </button>
-            {item.id === 'transactions' && hasUncategorizedTransactions && (
+            {item.id === 'transactions' && uncategorizedCount > 0 && (
               <button
                 type="button"
                 className="menu-button menu-subsection"
@@ -59,7 +59,7 @@ export default function Menu({ messages, section, onSelect, toggleTarget, hasUnc
                   setExpanded(false);
                 }}
               >
-                {messages.uncategorized}
+                {messages.uncategorized} ({uncategorizedCount})
               </button>
             )}
           </div>

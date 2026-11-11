@@ -5,7 +5,9 @@ import type { TransactionFilters } from '../lib/transactionFilters';
 import type { LocaleMessages } from '../locales/types';
 import LoadingDialog from './LoadingDialog';
 import ResultDialog from './ResultDialog';
+import CategorizePanel from './CategorizePanel';
 import { usePersistedState } from '../hooks/usePersistedState';
+import { usePermissions } from '../hooks/usePermissions';
 import {
   DEFAULT_TRANSACTION_PREFERENCES, PAGE_SIZE_OPTIONS, isTransactionPreferences,
   changeTransactionSort, type SortColumn,
@@ -41,6 +43,7 @@ interface TransactionsPanelProps {
 }
 
 export default function TransactionsPanel({ messages, userId, trackedAccountIds, filters = NO_TRANSACTION_FILTERS, title = messages.transactions, onCategoriesChanged }: TransactionsPanelProps) {
+  const { canWrite: canCategorize } = usePermissions();
   const [preferences, setPreferences] = usePersistedState(
     'transactions', DEFAULT_TRANSACTION_PREFERENCES, isTransactionPreferences, userId,
   );
@@ -62,13 +65,27 @@ export default function TransactionsPanel({ messages, userId, trackedAccountIds,
   const backfillPendingRef = useRef(false);
   const previousPageRef = useRef<HTMLButtonElement>(null);
   const nextPageRef = useRef<HTMLButtonElement>(null);
-  const requestKey = `${JSON.stringify(trackedAccountIds)}:${filtersKey}:${sortColumn}:${ascending}:${postedAtAscending}:${page}:${pageSize}:${retry}`;
+  const requestKey = `${canCategorize}:${JSON.stringify(trackedAccountIds)}:${filtersKey}:${sortColumn}:${ascending}:${postedAtAscending}:${page}:${pageSize}:${retry}`;
   const currentResult = result;
   const isLoading = result?.key !== requestKey;
+  const [selection, setSelection] = useState<{ key: string; ids: string[] }>({ key: requestKey, ids: [] });
+  const selectedIds = selection.key === requestKey ? selection.ids : [];
+  if (selection.key !== requestKey) setSelection({ key: requestKey, ids: [] });
+  const [categorizing, setCategorizing] = useState<{ ids: string[]; isSelection: boolean; anchorRow: HTMLTableRowElement; anchorCell: HTMLTableCellElement } | null>(null);
+  if (!canCategorize && categorizing) setCategorizing(null);
+  const selectPageRef = useRef<HTMLInputElement>(null);
+  const allPageSelected = !!currentResult?.transactions.length
+    && currentResult.transactions.every((transaction) => selectedIds.includes(transaction.id));
+
+  useEffect(() => {
+    if (selectPageRef.current) {
+      selectPageRef.current.indeterminate = selectedIds.length > 0 && !allPageSelected;
+    }
+  }, [selectedIds.length, allPageSelected]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (isLoading || event.defaultPrevented || event.repeat || event.isComposing
+      if (isLoading || categorizing || event.defaultPrevented || event.repeat || event.isComposing
         || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
       if (event.target instanceof HTMLElement
         && (event.target.isContentEditable
@@ -83,7 +100,7 @@ export default function TransactionsPanel({ messages, userId, trackedAccountIds,
 
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [isLoading]);
+  }, [isLoading, categorizing]);
 
   useEffect(() => {
     let active = true;
@@ -145,7 +162,7 @@ export default function TransactionsPanel({ messages, userId, trackedAccountIds,
   }
 
   async function backfillCategories() {
-    if (backfillPendingRef.current) return;
+    if (!canCategorize || backfillPendingRef.current) return;
     backfillPendingRef.current = true;
     setIsBackfilling(true);
     try {
@@ -170,14 +187,14 @@ export default function TransactionsPanel({ messages, userId, trackedAccountIds,
     <section className="dashboard-panel transactions-panel" aria-labelledby="transactions-title">
       <div className="transactions-heading">
         <h1 id="transactions-title">{title}</h1>
-        <button
+        {canCategorize && <button
           className="button button-secondary"
           type="button"
-          disabled={isBackfilling}
+          disabled={isBackfilling || isLoading || !!categorizing}
           onClick={() => void backfillCategories()}
         >
           {messages.backfillCategories}
-        </button>
+        </button>}
       </div>
       {!currentResult ? null : currentResult.error ? (
         <div role="alert">
@@ -192,6 +209,16 @@ export default function TransactionsPanel({ messages, userId, trackedAccountIds,
             <table className="transaction-table">
               <thead>
                 <tr>
+                  {canCategorize && <th scope="col" className="transaction-selection">
+                    <input
+                      ref={selectPageRef}
+                      type="checkbox"
+                      aria-label={messages.selectPage}
+                      checked={allPageSelected}
+                      disabled={isLoading || currentResult.transactions.length === 0}
+                      onChange={(event) => setSelection({ key: requestKey, ids: event.target.checked ? currentResult.transactions.map((transaction) => transaction.id) : [] })}
+                    />
+                  </th>}
                   {columns.map((column) => (
                     <th
                       key={column.id}
@@ -211,11 +238,33 @@ export default function TransactionsPanel({ messages, userId, trackedAccountIds,
               <tbody>
                 {currentResult.transactions.map((transaction) => (
                   <tr key={transaction.id}>
+                    {canCategorize && <td className="transaction-selection">
+                      <input
+                        type="checkbox"
+                        aria-label={messages.selectTransaction.replace('{description}', transaction.description?.name ?? transaction.description?.memo ?? '—').replace('{date}', dateFormatter.format(new Date(transaction.posted_at)))}
+                        checked={selectedIds.includes(transaction.id)}
+                        disabled={isLoading}
+                        onChange={(event) => setSelection({ key: requestKey, ids: event.target.checked ? [...selectedIds, transaction.id] : selectedIds.filter((id) => id !== transaction.id) })}
+                      />
+                    </td>}
                     <td>{dateFormatter.format(new Date(transaction.posted_at))}</td>
                     <td>{transaction.account?.name ?? '—'}</td>
                     <td>{transaction.description?.name ?? '—'}</td>
                     <td>{transaction.description?.memo ?? '—'}</td>
-                    <td>{transaction.category?.name ?? '—'}</td>
+                    <td>
+                      {canCategorize ? <button
+                        type="button"
+                        className="category-cell-button"
+                        disabled={isLoading}
+                        aria-label={`${messages.categorizeTransaction}: ${transaction.category?.name ?? messages.uncategorized}`}
+                        onClick={(event) => {
+                          const anchorRow = event.currentTarget.closest('tr');
+                          const anchorCell = event.currentTarget.closest('td');
+                          if (anchorRow && anchorCell) setCategorizing({ ids: selectedIds.length ? [...selectedIds] : [transaction.id], isSelection: selectedIds.length > 0, anchorRow, anchorCell });
+                        }}
+                      >{transaction.category?.name ?? messages.uncategorized}</button>
+                        : transaction.category?.name ?? messages.uncategorized}
+                    </td>
                     <td className="transaction-amount">
                       {transaction.account
                         ? new Intl.NumberFormat(locale, { style: 'currency', currency: transaction.account.currency }).format(transaction.amount)
@@ -228,55 +277,78 @@ export default function TransactionsPanel({ messages, userId, trackedAccountIds,
           </div>
           {currentResult.count === 0 && <p className="empty-transactions">{messages.noTransactions}</p>}
           <div className="pagination">
-            <div className="pagination-page-size">
-              <label htmlFor="page-size">{messages.rowsPerPage}</label>
-              <select
-                id="page-size"
-                value={currentResult.pageSize}
-                onChange={(event) => {
-                  const pageSize = Number(event.target.value);
-                  setPreferences((previous) => ({ ...previous, pageSize }));
-                  setPage(0);
-                }}
-              >
-                {PAGE_SIZE_OPTIONS.map((size) => <option key={size} value={size}>{size}</option>)}
-              </select>
-            </div>
-            <div className="pagination-navigation">
-              <span className="page-count">
-                {messages.pageOf.replace('{page}', String(currentResult.page + 1)).replace('{total}', String(totalPages))}
+            {canCategorize && selectedIds.length > 0 && (
+              <span className="pagination-selection" role="status">
+                {messages.selectedTransactions.replace('{count}', String(selectedIds.length))}
               </span>
-              <div className="pagination-actions">
-                <button
-                  ref={previousPageRef}
-                  type="button"
-                  className="pagination-button"
-                  aria-label={messages.previousPage}
-                  title={messages.previousPage}
-                  disabled={isLoading || currentResult.page === 0}
-                  onClick={() => setPage(page - 1)}
+            )}
+            <div className="pagination-controls">
+              <div className="pagination-page-size">
+                <label htmlFor="page-size">{messages.rowsPerPage}</label>
+                <select
+                  id="page-size"
+                  value={currentResult.pageSize}
+                  onChange={(event) => {
+                    const pageSize = Number(event.target.value);
+                    setPreferences((previous) => ({ ...previous, pageSize }));
+                    setPage(0);
+                  }}
                 >
-                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
-                    <path d="M19 12H5m7-7-7 7 7 7" />
-                  </svg>
-                </button>
-                <button
-                  ref={nextPageRef}
-                  type="button"
-                  className="pagination-button"
-                  aria-label={messages.nextPage}
-                  title={messages.nextPage}
-                  disabled={isLoading || currentResult.page + 1 >= totalPages}
-                  onClick={() => setPage(page + 1)}
-                >
-                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
-                    <path d="M5 12h14m-7-7 7 7-7 7" />
-                  </svg>
-                </button>
+                  {PAGE_SIZE_OPTIONS.map((size) => <option key={size} value={size}>{size}</option>)}
+                </select>
+              </div>
+              <div className="pagination-navigation">
+                <span className="page-count">
+                  {messages.pageOf.replace('{page}', String(currentResult.page + 1)).replace('{total}', String(totalPages))}
+                </span>
+                <div className="pagination-actions">
+                  <button
+                    ref={previousPageRef}
+                    type="button"
+                    className="pagination-button"
+                    aria-label={messages.previousPage}
+                    title={messages.previousPage}
+                    disabled={isLoading || currentResult.page === 0}
+                    onClick={() => setPage(page - 1)}
+                  >
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+                      <path d="M19 12H5m7-7-7 7 7 7" />
+                    </svg>
+                  </button>
+                  <button
+                    ref={nextPageRef}
+                    type="button"
+                    className="pagination-button"
+                    aria-label={messages.nextPage}
+                    title={messages.nextPage}
+                    disabled={isLoading || currentResult.page + 1 >= totalPages}
+                    onClick={() => setPage(page + 1)}
+                  >
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+                      <path d="M5 12h14m-7-7 7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </>
+      )}
+      {canCategorize && categorizing && (
+        <CategorizePanel
+          messages={messages}
+          transactionIds={categorizing.ids}
+          isSelection={categorizing.isSelection}
+          anchorRow={categorizing.anchorRow}
+          anchorCell={categorizing.anchorCell}
+          onClose={(changed) => {
+            setCategorizing(null);
+            if (changed) {
+              setRetry((previous) => previous + 1);
+              onCategoriesChanged?.();
+            }
+          }}
+        />
       )}
       {(isBackfilling || (isLoading && !backfillResult)) && (
         <LoadingDialog label={isBackfilling ? messages.backfillingCategories : messages.loadingTransactions} />

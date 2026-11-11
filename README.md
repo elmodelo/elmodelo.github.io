@@ -55,6 +55,39 @@ The Supabase Data API must expose the `finance` schema, with the finance
 migrations applied. Transaction access uses the signed-in user's existing
 database grants and row-level security policies.
 
+## UI permissions
+
+Any component inside the app can use the shared permissions hook:
+
+```tsx
+import { usePermissions } from './hooks/usePermissions';
+
+function EditButton() {
+  const { canWrite } = usePermissions();
+  return canWrite ? <button>Edit</button> : null;
+}
+```
+
+`usePermissions()` returns `role` (`READER`, `WRITER`, or `null`), `isReader`,
+`isWriter`, `canRead`, and `canWrite`. Both roles can read; only writers can
+write. Prefer `canRead` / `canWrite` for access checks, and use the role flags
+when behavior depends on the exact role.
+
+`App` supplies the role once through `PermissionsProvider`, using the current
+session's access-token hook claim. Permissions update when the session refreshes
+or signs out. Loading, authentication errors, missing or unknown roles, and
+components outside the provider grant no permissions. Components do not need to
+receive role props or create their own auth subscriptions. In isolated component
+tests, wrap components with `<PermissionsProvider role="WRITER">` (or `READER`).
+These checks control the UI; database grants, RLS, and RPC checks enforce access.
+
+Categorization sends the complete selection in one call to
+`finance.set_transaction_categories`, requiring migration `0026`. Category updates,
+optional rule creation, and optional application to existing uncategorized
+transactions are atomic for the entire selection. Database failures leave the
+selection available for retry. Network failures may leave the result unknown;
+retrying the same request is safe and does not duplicate rules or history.
+
 ## Dashboard panels
 
 Use a `section.dashboard-panel` inside `.dashboard-content` for each panel.

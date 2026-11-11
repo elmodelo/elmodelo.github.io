@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { User } from '@supabase/supabase-js';
+import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabaseClient';
+import { getSessionAppRole } from '../lib/permissions';
 
 export type AuthStatus = 'loading' | 'ready' | 'error';
 
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const user = session?.user ?? null;
+  const appRole = getSessionAppRole(session);
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [signOutFailed, setSignOutFailed] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
@@ -17,7 +20,7 @@ export function useAuth() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (active) {
-        setUser(session?.user ?? null);
+        setSession(session);
         setStatus('ready');
         setSignOutFailed(false);
       }
@@ -31,7 +34,7 @@ export function useAuth() {
           setStatus('error');
           return;
         }
-        setUser(data.session?.user ?? null);
+        setSession(data.session);
         setStatus('ready');
       })
       .catch(() => {
@@ -62,5 +65,5 @@ export function useAuth() {
     setRetryCount((count) => count + 1);
   }, []);
 
-  return { user, status, signOutFailed, signingOut, signOut, retrySessionCheck };
+  return { user, appRole, status, signOutFailed, signingOut, signOut, retrySessionCheck };
 }

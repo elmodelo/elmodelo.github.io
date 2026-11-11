@@ -62,3 +62,50 @@ test('transaction panel initially renders a localized loading state', async () =
     await server.close();
   }
 });
+
+test('categorization dialog distinguishes single clicks from selections and defaults rule creation off', async () => {
+  env.VITE_SUPABASE_URL = 'http://127.0.0.1:54321';
+  env.VITE_SUPABASE_ANON_KEY = 'test-key';
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' });
+  try {
+    const { default: CategorizePanel } = await server.ssrLoadModule('/src/components/CategorizePanel.tsx');
+    const { getLocaleMessages } = await server.ssrLoadModule('/src/locales/index.ts');
+    for (const [ids, isSelection, title] of [
+      [['a'], false, 'Categorize transaction'],
+      [['a'], true, 'Categorize (1 selected transactions)'],
+      [['a', 'b'], true, 'Categorize (2 selected transactions)'],
+    ]) {
+      const markup = renderToStaticMarkup(createElement(CategorizePanel, {
+        messages: getLocaleMessages('en'), transactionIds: ids, isSelection, onClose() {},
+      }));
+      assert.ok(markup.includes(`<h2 id="categorize-title">${title}</h2>`));
+      assert.match(markup, /type="checkbox"[^>]*aria-describedby="category-rule-help"/);
+      assert.doesNotMatch(markup, /type="checkbox"[^>]*checked/);
+      assert.match(markup, /Leaving this unchecked changes only these transactions/);
+      assert.match(markup, /type="checkbox"[^>]*disabled=""[^>]*aria-describedby="apply-category-rule-help"/);
+      assert.match(markup, /Apply this rule to existing uncategorized transactions/);
+      assert.match(markup, /type="submit"[^>]*disabled/);
+    }
+  } finally {
+    await server.close();
+  }
+});
+
+test('category actions use shared permissions and are hidden without a provider', async () => {
+  env.VITE_SUPABASE_URL = 'http://127.0.0.1:54321';
+  env.VITE_SUPABASE_ANON_KEY = 'test-key';
+  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' });
+  try {
+    const { default: TransactionsPanel } = await server.ssrLoadModule('/src/components/TransactionsPanel.tsx');
+    const { getLocaleMessages } = await server.ssrLoadModule('/src/locales/index.ts');
+    const props = { messages: getLocaleMessages('en'), userId: 'test-user', trackedAccountIds: [] };
+    const { PermissionsProvider } = await server.ssrLoadModule('/src/hooks/usePermissions.tsx');
+    assert.ok(!renderToStaticMarkup(createElement(TransactionsPanel, props)).includes('Auto-categorize'));
+    for (const role of [null, 'READER', 'WRITER']) {
+      const markup = renderToStaticMarkup(createElement(PermissionsProvider, { role }, createElement(TransactionsPanel, props)));
+      assert.equal(markup.includes('Auto-categorize'), role === 'WRITER');
+    }
+  } finally {
+    await server.close();
+  }
+});

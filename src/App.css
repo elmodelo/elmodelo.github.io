@@ -635,6 +635,22 @@
   font-size: 14px;
 }
 
+.pagination-selection {
+  margin-inline-end: auto;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.pagination-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  min-width: 0;
+  margin-inline-start: auto;
+}
+
 .pagination-page-size,
 .pagination-navigation,
 .pagination-actions {
@@ -786,6 +802,7 @@
     font-size: 12px;
   }
 
+  .pagination-controls,
   .pagination-page-size,
   .pagination-navigation,
   .pagination-actions {
@@ -840,6 +857,7 @@
     font-size: 12px;
   }
 
+  .pagination-controls,
   .pagination-page-size,
   .pagination-navigation,
   .pagination-actions {
@@ -847,34 +865,15 @@
   }
 }
 
-@media (min-width: 600px) and (max-height: 500px) and (orientation: landscape) {
-  .transactions-panel {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-rows: auto minmax(0, 1fr);
-    align-items: center;
-    gap: 8px 12px;
+@media (max-width: 560px) {
+  .pagination-selection {
+    flex-basis: 100%;
   }
 
-  .transactions-panel .transactions-heading {
-    grid-area: 1 / 1;
-    margin: 0;
-  }
-
-  .transactions-panel .pagination {
-    grid-area: 1 / 2;
-    margin: 0;
-  }
-
-  .transactions-panel .panel-scroll,
-  .transactions-panel > [role='alert'] {
-    grid-area: 2 / 1 / 3 / -1;
-    align-self: stretch;
-  }
-
-  .transactions-panel .empty-transactions {
-    grid-column: 1 / -1;
-    margin-block: 0;
+  .pagination-controls {
+    flex: 1 1 100%;
+    justify-content: space-between;
+    gap: 8px;
   }
 }
 
@@ -889,3 +888,44 @@
     transition-delay: 0s !important;
   }
 }
+
+.categorize-dialog {
+  position: fixed;
+  inset: auto;
+  width: min(480px, calc(100% - 40px));
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  margin: 0;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+.categorize-dialog::backdrop {
+  background: rgb(0 0 0 / 25%);
+}
+
+.categorize-dialog h2 { margin: 0 0 24px; }
+.categorize-dialog select { display: block; width: 100%; margin: 8px 0 20px; padding: 10px; background: var(--surface-raised); color: var(--text); border: 1px solid var(--border); border-radius: 8px; }
+.category-rule-option { display: flex; align-items: flex-start; gap: 10px; }
+.category-rule-option:has(input:disabled) { opacity: 0.6; }
+.category-rule-help { color: var(--text-muted); font-size: 0.875rem; }
+.categorize-actions .button { margin-top: 0; }
+.categorize-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+.transaction-table .transaction-selection {
+  width: 44px;
+  padding-block: 0;
+  text-align: center;
+  vertical-align: middle;
+}
+.transaction-selection input, .category-rule-option input { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+.transaction-selection input {
+  display: block;
+  margin: 0 auto;
+  padding: 0;
+}
+.category-cell-button { min-width: 0; min-height: 0; font: inherit; color: var(--accent); background: none; border: 0; padding: 0; text-align: left; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.category-cell-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }

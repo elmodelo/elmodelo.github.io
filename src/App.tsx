@@ -7,6 +7,7 @@ import SettingsPanel from './components/SettingsPanel';
 import TransactionsPanel from './components/TransactionsPanel';
 import LoadingDialog from './components/LoadingDialog';
 import { useAuth } from './hooks/useAuth';
+import { PermissionsProvider } from './hooks/usePermissions';
 import { useLanguage, type Language } from './hooks/useLanguage';
 import { useTheme, type Theme } from './hooks/useTheme';
 import { useTrackedAccounts } from './hooks/useTrackedAccounts';
@@ -15,7 +16,7 @@ import { supabase } from './lib/supabaseClient';
 import './App.css';
 
 function App() {
-  const { user, status: authStatus, signOutFailed, signingOut, signOut, retrySessionCheck } = useAuth();
+  const { user, appRole, status: authStatus, signOutFailed, signingOut, signOut, retrySessionCheck } = useAuth();
   const { messages, setLanguage } = useLanguage(user?.id);
   const [showRegistration, setShowRegistration] = useState(false);
   const [headerMenuTarget, setHeaderMenuTarget] = useState<HTMLDivElement | null>(null);
@@ -26,65 +27,67 @@ function App() {
   }, [messages.language]);
 
   return (
-    <main className="app-shell" data-theme={theme}>
-      {(user && authStatus === 'ready') && (
-        <header className="app-header">
-          <div className='header-brand has-menu'>
-            <div className="header-menu" ref={setHeaderMenuTarget} />
-            <a className="brand" href="/" aria-label={messages.brandHome}>
-              <img className="brand-mark" src="/icons/brand-mark.png" alt="" aria-hidden="true" />
-              <span>elModelo</span>
-            </a>
-          </div>
-        </header>
-      )}
-
-      <section className={user && authStatus === 'ready' ? 'dashboard-layout' : 'auth-layout'}>
-        {authStatus === 'loading' ? (
-          <LoadingDialog label={messages.checkingSession} />
-        ) : authStatus === 'error' ? (
-          <div className="auth-card status-card" role="alert">
-            <h1>{messages.authErrorTitle}</h1>
-            <p>{messages.authCheckError}</p>
-            <button
-              className="button button-primary"
-              type="button"
-              onClick={retrySessionCheck}
-            >
-              {messages.retry}
-            </button>
-          </div>
-        ) : user ? (
-          <Dashboard
-            key={user.id}
-            userId={user.id}
-            messages={messages}
-            email={user.email}
-            signOutFailed={signOutFailed}
-            signOut={signOut}
-            headerMenuTarget={headerMenuTarget}
-            theme={theme}
-            onThemeChange={setTheme}
-            onLanguageChange={setLanguage}
-          />
-        ) : showRegistration ? (
-          <RegistrationForm
-            messages={messages}
-            onSignIn={() => setShowRegistration(false)}
-          />
-        ) : (
-          <SignIn
-            messages={messages}
-            onRegister={() => setShowRegistration(true)}
-          />
+    <PermissionsProvider role={authStatus === 'ready' ? appRole : null}>
+      <main className="app-shell" data-theme={theme}>
+        {(user && authStatus === 'ready') && (
+          <header className="app-header">
+            <div className='header-brand has-menu'>
+              <div className="header-menu" ref={setHeaderMenuTarget} />
+              <a className="brand" href="/" aria-label={messages.brandHome}>
+                <img className="brand-mark" src="/icons/brand-mark.png" alt="" aria-hidden="true" />
+                <span>elModelo</span>
+              </a>
+            </div>
+          </header>
         )}
-      </section>
 
-      {signingOut && <LoadingDialog label={messages.signingOut} />}
+        <section className={user && authStatus === 'ready' ? 'dashboard-layout' : 'auth-layout'}>
+          {authStatus === 'loading' ? (
+            <LoadingDialog label={messages.checkingSession} />
+          ) : authStatus === 'error' ? (
+            <div className="auth-card status-card" role="alert">
+              <h1>{messages.authErrorTitle}</h1>
+              <p>{messages.authCheckError}</p>
+              <button
+                className="button button-primary"
+                type="button"
+                onClick={retrySessionCheck}
+              >
+                {messages.retry}
+              </button>
+            </div>
+          ) : user ? (
+            <Dashboard
+              key={user.id}
+              userId={user.id}
+              messages={messages}
+              email={user.email}
+              signOutFailed={signOutFailed}
+              signOut={signOut}
+              headerMenuTarget={headerMenuTarget}
+              theme={theme}
+              onThemeChange={setTheme}
+              onLanguageChange={setLanguage}
+            />
+          ) : showRegistration ? (
+            <RegistrationForm
+              messages={messages}
+              onSignIn={() => setShowRegistration(false)}
+            />
+          ) : (
+            <SignIn
+              messages={messages}
+              onRegister={() => setShowRegistration(true)}
+            />
+          )}
+        </section>
 
-      <footer className="app-footer">
-      </footer>
-    </main>
+        {signingOut && <LoadingDialog label={messages.signingOut} />}
+
+        <footer className="app-footer">
+        </footer>
+      </main>
+    </PermissionsProvider>
   );
 }
 

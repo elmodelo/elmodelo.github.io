@@ -2,16 +2,17 @@ import { useId, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { LocaleMessages } from '../locales/types';
 
-export type AppSection = 'transactions' | 'settings' | 'account';
+export type AppSection = 'transactions' | 'uncategorized' | 'settings' | 'account';
 
 interface MenuProps {
   messages: LocaleMessages;
   section: AppSection;
   onSelect: (section: AppSection) => void;
   toggleTarget: HTMLElement | null;
+  hasUncategorizedTransactions?: boolean;
 }
 
-export default function Menu({ messages, section, onSelect, toggleTarget }: MenuProps) {
+export default function Menu({ messages, section, onSelect, toggleTarget, hasUncategorizedTransactions = false }: MenuProps) {
   const [expanded, setExpanded] = useState(false);
   const menuId = useId();
   const items: { id: AppSection; label: string }[] = [
@@ -48,6 +49,19 @@ export default function Menu({ messages, section, onSelect, toggleTarget }: Menu
             >
               {item.label}
             </button>
+            {item.id === 'transactions' && hasUncategorizedTransactions && (
+              <button
+                type="button"
+                className="menu-button menu-subsection"
+                aria-current={section === 'uncategorized' ? 'page' : undefined}
+                onClick={() => {
+                  onSelect('uncategorized');
+                  setExpanded(false);
+                }}
+              >
+                {messages.uncategorized}
+              </button>
+            )}
           </div>
         ))}
       </div>

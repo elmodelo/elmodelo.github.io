@@ -28,6 +28,29 @@ paginated by the database, initially showing the newest 50; the page size and
 sort column can be changed in the panel. Dates are displayed in UTC and amounts
 use the account currency.
 
+`TransactionsPanel` accepts `filters?: TransactionFilters` (defined in
+`src/lib/transactionFilters.ts`) and an optional localized `title`. Filters are
+serializable conditions combined with AND and applied by the database before
+counting, sorting, and pagination. For example, a filtering panel can pass:
+
+```tsx
+const filters: TransactionFilters = [
+  { field: 'category', operator: 'is', value: null },
+  { field: 'posted_at', operator: 'gte', value: '2026-01-01' },
+  { field: 'amount', operator: 'lt', value: 0 },
+];
+<TransactionsPanel messages={messages} userId={userId}
+  trackedAccountIds={trackedAccountIds} filters={filters} />
+```
+
+Supported fields are `id`, `account`, `description`, `category`, `posted_at`, and
+`amount`; relationship fields use IDs rather than display names. Operators are
+`eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `in` (an array), and `is` / `not.is` (null).
+Omitting filters or passing `[]` shows all tracked transactions. Filters always
+intersect with tracked accounts. Changing filter values resets to the first page;
+passing a new array with the same values keeps the current page. The Uncategorized
+menu item uses the shared `UNCATEGORIZED_TRANSACTION_FILTERS` preset.
+
 The Supabase Data API must expose the `finance` schema, with the finance
 migrations applied. Transaction access uses the signed-in user's existing
 database grants and row-level security policies.

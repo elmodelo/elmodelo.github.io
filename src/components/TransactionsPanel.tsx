@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { fetchTransactions } from '../lib/transactionQuery';
+import { fetchTransactions, NO_TRANSACTION_FILTERS } from '../lib/transactionQuery';
+import type { TransactionFilters } from '../lib/transactionFilters';
 import type { LocaleMessages } from '../locales/types';
 import LoadingDialog from './LoadingDialog';
 import ResultDialog from './ResultDialog';
@@ -34,14 +35,26 @@ interface TransactionsPanelProps {
   messages: LocaleMessages;
   userId: string;
   trackedAccountIds: string[];
+  filters?: TransactionFilters;
+  title?: string;
+  onCategoriesChanged?: () => void;
 }
 
-export default function TransactionsPanel({ messages, userId, trackedAccountIds }: TransactionsPanelProps) {
+export default function TransactionsPanel({ messages, userId, trackedAccountIds, filters = NO_TRANSACTION_FILTERS, title = messages.transactions, onCategoriesChanged }: TransactionsPanelProps) {
   const [preferences, setPreferences] = usePersistedState(
     'transactions', DEFAULT_TRANSACTION_PREFERENCES, isTransactionPreferences, userId,
   );
   const { sortColumn, ascending, postedAtAscending, pageSize } = preferences;
-  const [page, setPage] = useState(0);
+  // Compare serialized values so newly allocated, equivalent filters do not reload the panel.
+  const filtersKey = JSON.stringify(filters);
+  const [pagination, setPagination] = useState({ filtersKey, page: 0 });
+  const page = pagination.filtersKey === filtersKey ? pagination.page : 0;
+  if (pagination.filtersKey !== filtersKey) {
+    setPagination({ filtersKey, page: 0 });
+  }
+  function setPage(nextPage: number) {
+    setPagination({ filtersKey, page: nextPage });
+  }
   const [retry, setRetry] = useState(0);
   const [result, setResult] = useState<TransactionResult | null>(null);
   const [isBackfilling, setIsBackfilling] = useState(false);
@@ -49,7 +62,7 @@ export default function TransactionsPanel({ messages, userId, trackedAccountIds 
   const backfillPendingRef = useRef(false);
   const previousPageRef = useRef<HTMLButtonElement>(null);
   const nextPageRef = useRef<HTMLButtonElement>(null);
-  const requestKey = `${JSON.stringify(trackedAccountIds)}:${sortColumn}:${ascending}:${postedAtAscending}:${page}:${pageSize}:${retry}`;
+  const requestKey = `${JSON.stringify(trackedAccountIds)}:${filtersKey}:${sortColumn}:${ascending}:${postedAtAscending}:${page}:${pageSize}:${retry}`;
   const currentResult = result;
   const isLoading = result?.key !== requestKey;
 
@@ -81,6 +94,7 @@ export default function TransactionsPanel({ messages, userId, trackedAccountIds 
       try {
         const { data, count, error } = await fetchTransactions(supabase, {
           trackedAccountIds,
+          filters: JSON.parse(filtersKey) as TransactionFilters,
           sortColumn,
           ascending,
           postedAtAscending,
@@ -114,7 +128,7 @@ export default function TransactionsPanel({ messages, userId, trackedAccountIds 
       active = false;
       controller.abort();
     };
-  }, [trackedAccountIds, sortColumn, ascending, postedAtAscending, page, pageSize, requestKey]);
+  }, [trackedAccountIds, filtersKey, sortColumn, ascending, postedAtAscending, page, pageSize, requestKey]);
 
   const columns: { id: SortColumn; label: string }[] = [
     { id: 'posted_at', label: messages.transactionDate },
@@ -139,6 +153,7 @@ export default function TransactionsPanel({ messages, userId, trackedAccountIds 
       if (error || data === null) throw new Error('Category backfill failed');
       setBackfillResult({ count: String(data) });
       setRetry((previous) => previous + 1);
+      onCategoriesChanged?.();
     } catch {
       setBackfillResult({ error: true });
     } finally {
@@ -154,7 +169,7 @@ export default function TransactionsPanel({ messages, userId, trackedAccountIds 
   return (
     <section className="dashboard-panel transactions-panel" aria-labelledby="transactions-title">
       <div className="transactions-heading">
-        <h1 id="transactions-title">{messages.transactions}</h1>
+        <h1 id="transactions-title">{title}</h1>
         <button
           className="button button-secondary"
           type="button"
@@ -173,7 +188,7 @@ export default function TransactionsPanel({ messages, userId, trackedAccountIds 
         </div>
       ) : (
         <>
-          <div key={currentResult.key} className="panel-scroll" tabIndex={0} role="region" aria-label={messages.transactions}>
+          <div key={currentResult.key} className="panel-scroll" tabIndex={0} role="region" aria-label={title}>
             <table className="transaction-table">
               <thead>
                 <tr>

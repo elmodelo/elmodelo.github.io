@@ -15,6 +15,7 @@ const en: LocaleMessages = {
   signOutError: 'We could not sign you out. Please try again.',
   mainMenu: 'Main menu',
   transactions: 'Transactions',
+  uncategorized: 'Uncategorized',
   settings: 'Settings',
   myAccount: 'My Account',
   theme: 'Theme',

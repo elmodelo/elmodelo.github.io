@@ -587,6 +587,16 @@
   background: var(--surface-raised);
 }
 
+.transaction-selectable-row {
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .transaction-table tbody tr:hover {
+    background: var(--surface-raised);
+  }
+}
+
 .sort-button {
   width: 100%;
   min-height: var(--tap-target-min);

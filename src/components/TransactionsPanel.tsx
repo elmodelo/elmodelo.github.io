@@ -74,6 +74,7 @@ export default function TransactionsPanel({ messages, userId, trackedAccountIds,
   const [categorizing, setCategorizing] = useState<{ ids: string[]; isSelection: boolean; anchorRow: HTMLTableRowElement; anchorCell: HTMLTableCellElement } | null>(null);
   if (!canCategorize && categorizing) setCategorizing(null);
   const selectPageRef = useRef<HTMLInputElement>(null);
+  const rowPointerRef = useRef<{ x: number; y: number; dragged: boolean } | null>(null);
   const allPageSelected = !!currentResult?.transactions.length
     && currentResult.transactions.every((transaction) => selectedIds.includes(transaction.id));
 
@@ -237,7 +238,40 @@ export default function TransactionsPanel({ messages, userId, trackedAccountIds,
               </thead>
               <tbody>
                 {currentResult.transactions.map((transaction) => (
-                  <tr key={transaction.id} data-categorize-target={canCategorize && categorizing?.ids.includes(transaction.id) ? '' : undefined}>
+                  <tr
+                    key={transaction.id}
+                    className={canCategorize && !isLoading ? 'transaction-selectable-row' : undefined}
+                    data-categorize-target={canCategorize && categorizing?.ids.includes(transaction.id) ? '' : undefined}
+                    onPointerDown={(event) => {
+                      rowPointerRef.current = canCategorize && !isLoading && event.isPrimary && event.button === 0
+                        ? { x: event.clientX, y: event.clientY, dragged: false } : null;
+                    }}
+                    onPointerMove={(event) => {
+                      const pointer = rowPointerRef.current;
+                      if (pointer && Math.hypot(event.clientX - pointer.x, event.clientY - pointer.y) > 4) {
+                        pointer.dragged = true;
+                      }
+                    }}
+                    onPointerCancel={() => { rowPointerRef.current = null; }}
+                    onClick={(event) => {
+                      const pointer = rowPointerRef.current;
+                      rowPointerRef.current = null;
+                      if (!canCategorize || isLoading || event.defaultPrevented) return;
+                      // Interactive controls handle their own clicks. In particular,
+                      // checkbox clicks must not toggle selection a second time.
+                      if (event.target instanceof Element
+                        && event.target.closest('input, button, a, select, textarea, .transaction-category-cell')) return;
+                      if (pointer && (pointer.dragged
+                        || Math.hypot(event.clientX - pointer.x, event.clientY - pointer.y) > 4)) return;
+                      const textSelection = window.getSelection();
+                      if (textSelection && !textSelection.isCollapsed) return;
+                      setSelection((previous) => {
+                        const ids = previous.key === requestKey ? previous.ids : [];
+                        return { key: requestKey, ids: ids.includes(transaction.id)
+                          ? ids.filter((id) => id !== transaction.id) : [...ids, transaction.id] };
+                      });
+                    }}
+                  >
                     {canCategorize && <td className="transaction-selection">
                       <input
                         type="checkbox"

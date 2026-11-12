@@ -237,7 +237,7 @@ export default function TransactionsPanel({ messages, userId, trackedAccountIds,
               </thead>
               <tbody>
                 {currentResult.transactions.map((transaction) => (
-                  <tr key={transaction.id}>
+                  <tr key={transaction.id} data-categorize-target={canCategorize && categorizing?.ids.includes(transaction.id) ? '' : undefined}>
                     {canCategorize && <td className="transaction-selection">
                       <input
                         type="checkbox"
@@ -251,7 +251,7 @@ export default function TransactionsPanel({ messages, userId, trackedAccountIds,
                     <td>{transaction.account?.name ?? '—'}</td>
                     <td>{transaction.description?.name ?? '—'}</td>
                     <td>{transaction.description?.memo ?? '—'}</td>
-                    <td>
+                    <td className={canCategorize ? 'transaction-category-cell' : undefined}>
                       {canCategorize ? <button
                         type="button"
                         className="category-cell-button"
@@ -262,8 +262,8 @@ export default function TransactionsPanel({ messages, userId, trackedAccountIds,
                           const anchorCell = event.currentTarget.closest('td');
                           if (anchorRow && anchorCell) setCategorizing({ ids: selectedIds.length ? [...selectedIds] : [transaction.id], isSelection: selectedIds.length > 0, anchorRow, anchorCell });
                         }}
-                      >{transaction.category?.name ?? messages.uncategorized}</button>
-                        : transaction.category?.name ?? messages.uncategorized}
+                      >{transaction.category?.name ?? '—'}</button>
+                        : transaction.category?.name ?? '—'}
                     </td>
                     <td className="transaction-amount">
                       {transaction.account

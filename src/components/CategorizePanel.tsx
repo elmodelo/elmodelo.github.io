@@ -1,8 +1,9 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { categorizeTransactions, fetchCategories } from '../lib/transactionCategorization';
 import type { LocaleMessages } from '../locales/types';
 import { getAnchoredPanelPosition } from '../lib/anchoredPanelPosition';
+import { getCategorizeBackdrop } from '../lib/categorizeBackdrop';
 
 interface CategorizePanelProps {
   messages: LocaleMessages;
@@ -14,6 +15,7 @@ interface CategorizePanelProps {
 }
 
 export default function CategorizePanel({ messages, transactionIds, isSelection, anchorRow, anchorCell, onClose }: CategorizePanelProps) {
+  const dialogId = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const pendingRef = useRef(false);
   const [categories, setCategories] = useState<{ id: string; name: string }[] | null>(null);
@@ -29,6 +31,11 @@ export default function CategorizePanel({ messages, transactionIds, isSelection,
     const dialog = dialogRef.current;
     if (!dialog) return;
     anchorRow.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+    const targetRows = Array.from(anchorRow.closest('tbody')?.querySelectorAll<HTMLTableRowElement>('[data-categorize-target]') ?? []);
+    // Style this backdrop directly rather than relying on pseudo-element
+    // inheritance of custom properties from the dialog.
+    const backdropStyle = document.createElement('style');
+    document.head.append(backdropStyle);
 
     function positionDialog() {
       if (!dialog || !anchorRow.isConnected) return;
@@ -58,6 +65,19 @@ export default function CategorizePanel({ messages, transactionIds, isSelection,
       dialog.style.left = `${position.left}px`;
       dialog.style.top = `${position.top}px`;
       dialog.style.maxHeight = `${position.maxHeight}px`;
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const bounds = scroller?.getBoundingClientRect();
+      const clip = bounds && scroller ? {
+        left: bounds.left + scroller.clientLeft,
+        right: bounds.left + scroller.clientLeft + scroller.clientWidth,
+        top: Math.max(bounds.top + scroller.clientTop, scroller.querySelector('thead')?.getBoundingClientRect().bottom ?? bounds.top),
+        bottom: bounds.top + scroller.clientTop + scroller.clientHeight,
+      } : { left: 0, right: width, top: 0, bottom: height };
+      const backdrop = getCategorizeBackdrop(
+        { width, height }, targetRows.map((target) => target.getBoundingClientRect()), clip,
+      );
+      backdropStyle.textContent = `#${CSS.escape(dialogId)}::backdrop { background: ${backdrop}; }`;
     }
 
     dialog.showModal();
@@ -65,6 +85,7 @@ export default function CategorizePanel({ messages, transactionIds, isSelection,
     const observer = new ResizeObserver(positionDialog);
     observer.observe(anchorRow);
     observer.observe(anchorCell);
+    targetRows.forEach((target) => observer.observe(target));
     if (dialog.firstElementChild) observer.observe(dialog.firstElementChild);
     const form = dialog.querySelector('form');
     if (form) observer.observe(form);
@@ -78,13 +99,14 @@ export default function CategorizePanel({ messages, transactionIds, isSelection,
     window.visualViewport?.addEventListener('scroll', positionDialog);
     return () => {
       observer.disconnect();
+      backdropStyle.remove();
       document.removeEventListener('scroll', onScroll, true);
       window.removeEventListener('resize', positionDialog);
       window.visualViewport?.removeEventListener('resize', positionDialog);
       window.visualViewport?.removeEventListener('scroll', positionDialog);
       dialog.close();
     };
-  }, [anchorRow, anchorCell]);
+  }, [anchorRow, anchorCell, dialogId]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -115,6 +137,7 @@ export default function CategorizePanel({ messages, transactionIds, isSelection,
 
   return (
     <dialog
+      id={dialogId}
       ref={dialogRef}
       className="categorize-dialog"
       aria-labelledby="categorize-title"

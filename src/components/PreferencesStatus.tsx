@@ -1,5 +1,6 @@
 import type { LocaleMessages } from '../locales/types';
 import type { PreferencesStatus as Status } from '../hooks/usePreferences';
+import StatusMessage from './StatusMessage';
 
 interface PreferencesStatusProps {
   messages: LocaleMessages;
@@ -7,17 +8,21 @@ interface PreferencesStatusProps {
   onRetry: () => void;
 }
 
+/** Translate the preferences workflow into generic inline status feedback. */
 export default function PreferencesStatus({ messages, status, onRetry }: PreferencesStatusProps) {
   const error = status === 'load-error' || status === 'save-error';
-  return (
-    <div className={`dashboard-status${error ? ' dashboard-status-error' : ''}`} role="status" aria-live="polite" aria-atomic="true">
-      {status === 'loading' && <span>{messages.loadingPreferences}</span>}
-      {status === 'saving' && <span>{messages.savingPreferences}</span>}
-      {status === 'saved' && <span>✓ {messages.preferencesSaved}</span>}
-      {error && <>
-        <span>{status === 'load-error' ? messages.preferencesLoadError : messages.preferencesSaveError}</span>
-        <button className="button button-secondary" type="button" onClick={onRetry}>{messages.retry}</button>
-      </>}
-    </div>
-  );
+  const message = {
+    idle: null,
+    loading: messages.loadingPreferences,
+    saving: messages.savingPreferences,
+    saved: messages.preferencesSaved,
+    'load-error': messages.preferencesLoadError,
+    'save-error': messages.preferencesSaveError,
+  }[status];
+
+  return <StatusMessage
+    message={message}
+    tone={error ? 'error' : status === 'saved' ? 'success' : 'info'}
+    action={error ? { label: messages.retry, onClick: onRetry } : undefined}
+  />;
 }

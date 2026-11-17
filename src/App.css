@@ -958,7 +958,7 @@
   max-height: 100%;
 }
 
-.dashboard-status {
+.status-message {
   flex-shrink: 0;
   min-width: 0;
   color: var(--text-muted);
@@ -967,11 +967,11 @@
   overflow-wrap: anywhere;
 }
 
-.dashboard-status:empty {
+.status-message:empty {
   display: none;
 }
 
-.dashboard-status:not(:empty) {
+.status-message:not(:empty) {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -979,11 +979,11 @@
   gap: 8px 12px;
 }
 
-.dashboard-status-error {
+.status-message-error {
   color: var(--error);
 }
 
-.dashboard-status .button {
+.status-message .button {
   flex-shrink: 0;
   max-width: 100%;
   margin: 0;

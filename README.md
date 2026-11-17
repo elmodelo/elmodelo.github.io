@@ -29,6 +29,22 @@ existing preferences with defaults. Both currently allowlisted readers and write
 preferences; RLS prevents access to anyone else's preferences and denies access
 after allowlist removal. Anonymous clients and importers have no access.
 
+Other workflows can reuse `src/components/StatusMessage.tsx` for inline feedback:
+
+```tsx
+<StatusMessage
+  message={error ? messages.uploadFailed : uploading ? messages.uploading : null}
+  tone={error ? 'error' : 'info'}
+  action={error ? { label: messages.retry, onClick: retryUpload } : undefined}
+/>
+```
+
+Pass no message while idle. The component keeps an empty, visually hidden live
+region mounted for accessible announcements. It supports `info`, `success`, and
+`error` tones plus an optional action with a label, handler, and disabled state.
+The workflow controls message lifetime and localization; `PreferencesStatus`
+adapts preference state to this shared component.
+
 The local-storage audit found these preferences, now stored in the JSON object:
 
 - `theme`: light/dark (system default until selected).

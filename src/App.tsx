@@ -3,10 +3,12 @@ import type { LocaleMessages } from './locales/types';
 import RegistrationForm from './components/RegistrationForm';
 import SignIn from './components/SignIn';
 import Menu, { type AppSection } from './components/Menu';
-import SettingsPanel from './components/SettingsPanel';
+import PreferencesPanel from './components/PreferencesPanel';
+import PreferencesStatus from './components/PreferencesStatus';
 import TransactionsPanel from './components/TransactionsPanel';
 import LoadingDialog from './components/LoadingDialog';
 import { useAuth } from './hooks/useAuth';
+import { PreferencesProvider, usePreferences } from './hooks/usePreferences';
 import { PermissionsProvider } from './hooks/usePermissions';
 import { useLanguage, type Language } from './hooks/useLanguage';
 import { useTheme, type Theme } from './hooks/useTheme';
@@ -16,11 +18,18 @@ import { supabase } from './lib/supabaseClient';
 import './App.css';
 
 function App() {
-  const { user, appRole, status: authStatus, signOutFailed, signingOut, signOut, retrySessionCheck } = useAuth();
-  const { messages, setLanguage } = useLanguage(user?.id);
+  const auth = useAuth();
+  const userId = auth.status === 'ready' ? auth.user?.id : undefined;
+  return <PreferencesProvider key={userId ?? 'guest'} userId={userId}><Application auth={auth} /></PreferencesProvider>;
+}
+
+function Application({ auth }: { auth: ReturnType<typeof useAuth> }) {
+  const { user, appRole, status: authStatus, signOutFailed, signingOut, signOut, retrySessionCheck } = auth;
+  const { status: preferencesStatus, retry: retryPreferences } = usePreferences();
+  const { messages, setLanguage } = useLanguage();
   const [showRegistration, setShowRegistration] = useState(false);
   const [headerMenuTarget, setHeaderMenuTarget] = useState<HTMLDivElement | null>(null);
-  const { theme, setTheme } = useTheme(user?.id);
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     document.documentElement.lang = messages.language;
@@ -55,6 +64,11 @@ function App() {
               >
                 {messages.retry}
               </button>
+            </div>
+          ) : user && (preferencesStatus === 'loading' || preferencesStatus === 'load-error') ? (
+            <div className="dashboard-main">
+              <div className="dashboard-content" aria-busy={preferencesStatus === 'loading'} />
+              <PreferencesStatus messages={messages} status={preferencesStatus} onRetry={retryPreferences} />
             </div>
           ) : user ? (
             <Dashboard
@@ -114,6 +128,7 @@ function Dashboard({
   onThemeChange,
   onLanguageChange,
 }: DashboardProps) {
+  const { status: preferencesStatus, retry: retryPreferences } = usePreferences();
   const [section, setSection] = useState<AppSection>('transactions');
   const { accounts, trackedAccountIds, setTrackedAccountIds, status: accountsStatus, retryAccounts } = useTrackedAccounts(userId);
   const [categoryRevision, setCategoryRevision] = useState(0);
@@ -147,54 +162,56 @@ function Dashboard({
         messages={messages} section={section} onSelect={setSection} toggleTarget={headerMenuTarget}
         uncategorizedCount={uncategorizedCount}
       />
-      <div className="dashboard-content">
-        {section === 'transactions' || section === 'uncategorized' ? (
-          accountsStatus === 'loading' ? <LoadingDialog label={messages.loadingAccounts} />
-            : accountsStatus === 'error' ? (
-              <section className="dashboard-panel" role="alert">
-                <h1>{messages.transactions}</h1>
-                <p className="form-message form-message-error">{messages.accountsError}</p>
-                <button className="button button-secondary" type="button" onClick={retryAccounts}>
-                  {messages.retry}
-                </button>
-              </section>
-            ) : <TransactionsPanel
-              key={section}
+      <div className="dashboard-main">
+        <div className="dashboard-content">
+          {section === 'transactions' || section === 'uncategorized' ? (
+            accountsStatus === 'loading' ? <LoadingDialog label={messages.loadingAccounts} />
+              : accountsStatus === 'error' ? (
+                <section className="dashboard-panel" role="alert">
+                  <h1>{messages.transactions}</h1>
+                  <p className="form-message form-message-error">{messages.accountsError}</p>
+                  <button className="button button-secondary" type="button" onClick={retryAccounts}>
+                    {messages.retry}
+                  </button>
+                </section>
+              ) : <TransactionsPanel
+                key={section}
+                messages={messages}
+                trackedAccountIds={trackedAccountIds}
+                filters={section === 'uncategorized' ? UNCATEGORIZED_TRANSACTION_FILTERS : undefined}
+                title={section === 'uncategorized' ? messages.uncategorized : messages.transactions}
+                onCategoriesChanged={() => setCategoryRevision((previous) => previous + 1)}
+              />
+          ) : section === 'preferences' ? (
+            <PreferencesPanel
               messages={messages}
-              userId={userId}
+              theme={theme}
+              onThemeChange={onThemeChange}
+              onLanguageChange={onLanguageChange}
+              accounts={accounts}
               trackedAccountIds={trackedAccountIds}
-              filters={section === 'uncategorized' ? UNCATEGORIZED_TRANSACTION_FILTERS : undefined}
-              title={section === 'uncategorized' ? messages.uncategorized : messages.transactions}
-              onCategoriesChanged={() => setCategoryRevision((previous) => previous + 1)}
+              onTrackedAccountIdsChange={setTrackedAccountIds}
+              accountsStatus={accountsStatus}
+              onRetryAccounts={retryAccounts}
             />
-        ) : section === 'settings' ? (
-          <SettingsPanel
-            messages={messages}
-            theme={theme}
-            onThemeChange={onThemeChange}
-            onLanguageChange={onLanguageChange}
-            accounts={accounts}
-            trackedAccountIds={trackedAccountIds}
-            onTrackedAccountIdsChange={setTrackedAccountIds}
-            accountsStatus={accountsStatus}
-            onRetryAccounts={retryAccounts}
-          />
-        ) : (
-          <section className="dashboard-panel" aria-labelledby="account-title">
-            <h1 id="account-title">{messages.myAccount}</h1>
-            <div className="panel-scroll" tabIndex={0} role="region" aria-labelledby="account-title">
-              <p>{email}</p>
-              {signOutFailed && (
-                <p className="form-message form-message-error" role="alert">
-                  {messages.signOutError}
-                </p>
-              )}
-            </div>
-            <button className="button button-secondary" type="button" onClick={signOut}>
-              {messages.signOut}
-            </button>
-          </section>
-        )}
+          ) : (
+            <section className="dashboard-panel" aria-labelledby="account-title">
+              <h1 id="account-title">{messages.myAccount}</h1>
+              <div className="panel-scroll" tabIndex={0} role="region" aria-labelledby="account-title">
+                <p>{email}</p>
+                {signOutFailed && (
+                  <p className="form-message form-message-error" role="alert">
+                    {messages.signOutError}
+                  </p>
+                )}
+              </div>
+              <button className="button button-secondary" type="button" onClick={signOut}>
+                {messages.signOut}
+              </button>
+            </section>
+          )}
+        </div>
+        <PreferencesStatus messages={messages} status={preferencesStatus} onRetry={retryPreferences} />
       </div>
     </>
   );

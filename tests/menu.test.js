@@ -11,7 +11,7 @@ test('menu renders localized sections, their separator, and the active item', as
     const { default: Menu } = await server.ssrLoadModule('/src/components/Menu.tsx');
     const { getLocaleMessages } = await server.ssrLoadModule('/src/locales/index.ts');
     for (const [locale, labels] of [
-      ['en', ['Transactions', 'Settings', 'My Account']],
+      ['en', ['Transactions', 'Preferences', 'My Account']],
       ['es', ['Transacciones', 'Configuración', 'Mi cuenta']],
     ]) {
       const markup = renderToStaticMarkup(createElement(Menu, {
@@ -43,18 +43,19 @@ test('transaction panel initially renders a localized loading state', async () =
   env.VITE_SUPABASE_ANON_KEY = 'test-key';
   const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' });
   try {
-    const { default: TransactionsPanel } = await server.ssrLoadModule('/src/components/TransactionsPanel.tsx');
+    const { default: Panel } = await server.ssrLoadModule('/src/components/TransactionsPanel.tsx');
+    const { PreferencesProvider } = await server.ssrLoadModule('/src/hooks/usePreferences.tsx');
+    const TransactionsPanel = (props) => createElement(PreferencesProvider, {}, createElement(Panel, props));
     const { getLocaleMessages } = await server.ssrLoadModule('/src/locales/index.ts');
     const markup = renderToStaticMarkup(createElement(TransactionsPanel, {
       messages: getLocaleMessages('es'),
-      userId: 'test-user',
       trackedAccountIds: ['account-a'],
     }));
     assert.match(markup, /Transacciones/);
     assert.match(markup, /role="status"/);
     assert.match(markup, /Cargando transacciones/);
     const filteredMarkup = renderToStaticMarkup(createElement(TransactionsPanel, {
-      messages: getLocaleMessages('es'), userId: 'test-user', trackedAccountIds: ['account-a'],
+      messages: getLocaleMessages('es'), trackedAccountIds: ['account-a'],
       filters: [{ field: 'category', operator: 'is', value: null }], title: 'Sin categoría',
     }));
     assert.match(filteredMarkup, /<h1 id="transactions-title">Sin categoría<\/h1>/);
@@ -96,7 +97,9 @@ test('transaction panel has no auto-categorize button for any role', async () =>
   env.VITE_SUPABASE_ANON_KEY = 'test-key';
   const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' });
   try {
-    const { default: TransactionsPanel } = await server.ssrLoadModule('/src/components/TransactionsPanel.tsx');
+    const { default: Panel } = await server.ssrLoadModule('/src/components/TransactionsPanel.tsx');
+    const { PreferencesProvider } = await server.ssrLoadModule('/src/hooks/usePreferences.tsx');
+    const TransactionsPanel = (props) => createElement(PreferencesProvider, {}, createElement(Panel, props));
     const { getLocaleMessages } = await server.ssrLoadModule('/src/locales/index.ts');
     const props = { messages: getLocaleMessages('en'), userId: 'test-user', trackedAccountIds: [] };
     const { PermissionsProvider } = await server.ssrLoadModule('/src/hooks/usePermissions.tsx');

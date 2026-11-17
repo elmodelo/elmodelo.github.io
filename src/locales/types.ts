@@ -14,7 +14,12 @@ export interface LocaleMessages {
   mainMenu: string;
   transactions: string;
   uncategorized: string;
-  settings: string;
+  preferences: string;
+  loadingPreferences: string;
+  preferencesLoadError: string;
+  savingPreferences: string;
+  preferencesSaved: string;
+  preferencesSaveError: string;
   myAccount: string;
   theme: string;
   themeLight: string;

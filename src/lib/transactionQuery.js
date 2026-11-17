@@ -10,6 +10,13 @@ export const UNCATEGORIZED_TRANSACTION_FILTERS = Object.freeze([
 function applyTransactionFilters(query, filters) {
   for (const { field, operator, value } of filters) {
     switch (operator) {
+      case 'search': {
+        // Quote the complete pattern so punctuation cannot inject PostgREST logic.
+        const pattern = '%' + value.trim().split(/\s+/).map((word) => word.replace(/[\\%_*]/g, '\\$&')).join('%') + '%';
+        const quoted = '"' + pattern.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+        query = query.or(`name.ilike.${quoted},memo.ilike.${quoted}`, { referencedTable: 'description' });
+        break;
+      }
       case 'in':
         query = query.in(field, value);
         break;
@@ -38,10 +45,14 @@ export function fetchUncategorizedTransactionCount(client, trackedAccountIds, si
 
 export function fetchTransactions(client, { trackedAccountIds, sortColumn, ascending, postedAtAscending = false, page, pageSize, signal, filters = NO_TRANSACTION_FILTERS }) {
   if (trackedAccountIds.length === 0) return Promise.resolve({ data: [], count: 0, error: null });
+  if (filters.some((filter) => filter.operator === 'in' && filter.value.length === 0)) {
+    return Promise.resolve({ data: [], count: 0, error: null });
+  }
+  const descriptionJoin = filters.some((filter) => filter.operator === 'search') ? '!inner' : '';
   let query = client
     .schema('finance')
     .from('transaction')
-    .select('id, posted_at, amount, account:account(name, currency), description:transaction_description(name, memo), category:category(name)', { count: 'exact' })
+    .select(`id, posted_at, amount, account:account(name, currency), description:transaction_description${descriptionJoin}(name, memo), category:category(name)`, { count: 'exact' })
     .in('account', trackedAccountIds);
   query = applyTransactionFilters(query, filters);
   query = query.order(sortColumn, { ascending, nullsFirst: false });

@@ -182,3 +182,45 @@ test('filters do not query transactions when no accounts are tracked', async () 
   });
   assert.deepEqual(result, { data: [], count: 0, error: null });
 });
+
+test('shared description search filters parent rows and keeps count and all other restrictions server-side', async () => {
+  let request;
+  const client = createClient('http://127.0.0.1:54321', 'test-key', {
+    global: { fetch: async (url) => {
+      request = new URL(url);
+      return new Response('[]', { status: 200, headers: { 'content-range': '*/0', 'content-type': 'application/json' } });
+    } },
+  });
+  const result = await fetchTransactions(client, {
+    trackedAccountIds: ['tracked'], filters: [
+      ...UNCATEGORIZED_TRANSACTION_FILTERS,
+      { field: 'description', operator: 'search', value: 'coffee shop' },
+      { field: 'amount', operator: 'lt', value: 0 },
+    ], sortColumn: 'posted_at', ascending: false, page: 0, pageSize: 25,
+  });
+  assert.equal(result.error, null);
+  assert.equal(result.count, 0);
+  assert.match(request.searchParams.get('select'), /description:transaction_description!inner\(name,memo\)/);
+  assert.equal(request.searchParams.get('description.or'), '(name.ilike."%coffee%shop%",memo.ilike."%coffee%shop%")');
+  assert.equal(request.searchParams.get('account'), 'in.(tracked)');
+  assert.equal(request.searchParams.get('category'), 'is.null');
+  assert.equal(request.searchParams.get('amount'), 'lt.0');
+  assert.equal(request.searchParams.get('limit'), '25');
+
+  await fetchTransactions(client, {
+    trackedAccountIds: ['tracked'], filters: [{ field: 'description', operator: 'search', value: 'a",memo.is.null)\\b_%' }],
+    sortColumn: 'posted_at', ascending: false, page: 0, pageSize: 25,
+  });
+  const expression = request.searchParams.get('description.or');
+  assert.ok(expression.includes('a\\",memo.is.null)\\\\\\\\b\\\\_\\\\%'));
+});
+
+test('explicit empty account or category filters match nothing without issuing a request', async () => {
+  const client = { schema() { assert.fail('An empty filter must match nothing'); } };
+  for (const field of ['account', 'category']) {
+    assert.deepEqual(await fetchTransactions(client, {
+      trackedAccountIds: ['tracked'], filters: [{ field, operator: 'in', value: [] }],
+      sortColumn: 'posted_at', ascending: false, page: 0, pageSize: 25,
+    }), { data: [], count: 0, error: null });
+  }
+});

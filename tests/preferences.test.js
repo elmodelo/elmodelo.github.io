@@ -12,13 +12,13 @@ test('database preferences validate fields, retain unknown keys, and preserve da
   try {
     const { parsePreferences } = await server.ssrLoadModule('/src/lib/preferences.ts');
     const { DEFAULT_TRANSACTION_PREFERENCES: defaults, isTransactionPreferences: validate, changeTransactionSort } = await server.ssrLoadModule('/src/lib/transactionPreferences.ts');
-    assert.deepEqual(parsePreferences(null), { theme: null, language: null, trackedAccounts: null, transactions: defaults });
-    const saved = { theme: 'dark', language: 'es', trackedAccounts: [], transactions: { ...defaults, pageSize: 100 }, future: { enabled: true } };
+    assert.deepEqual(parsePreferences(null), { theme: null, language: null, trackedAccounts: null, transactions: defaults, transaction_filters: [] });
+    const saved = { transaction_filters: [], theme: 'dark', language: 'es', trackedAccounts: [], transactions: { ...defaults, pageSize: 100 }, future: { enabled: true } };
     assert.deepEqual(parsePreferences(saved), saved);
     assert.deepEqual(parsePreferences({ ...saved, theme: 'unknown', trackedAccounts: [1] }), { ...saved, theme: null, trackedAccounts: null });
     for (const invalid of [null, [], { ...defaults, pageSize: 20 }, { ...defaults, sortColumn: 'unknown' }, { ...defaults, ascending: 'false' }, { ...defaults, postedAtAscending: 1 }, { ...defaults, postedAtAscending: true }]) {
       assert.equal(validate(invalid), false);
-      assert.deepEqual(parsePreferences({ ...saved, transactions: invalid }), { ...saved, transactions: defaults });
+      assert.deepEqual(parsePreferences({ ...saved, transactions: invalid }), { ...saved, transactions: defaults, transaction_filters: [] });
     }
     for (const dateAscending of [true, false]) {
       let preferences = { ...defaults, ascending: dateAscending, postedAtAscending: dateAscending };

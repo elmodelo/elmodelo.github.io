@@ -19,8 +19,9 @@ export function PreferencesProvider({ userId, children }: { userId?: string; chi
   const [failedRevision, setFailedRevision] = useState<number | null>(null);
   const [attempt, setAttempt] = useState(0);
   const write = useMemo(() => createPreferencesWriter(async (preferences) => {
+    const { transaction_filters, ...otherPreferences } = preferences;
     const { error } = await supabase.schema('app').from('preferences')
-      .upsert({ user: userId, preferences }, { onConflict: 'user' });
+      .upsert({ user: userId, preferences: otherPreferences, transaction_filters }, { onConflict: 'user' });
     if (error) throw error;
   }), [userId]);
 
@@ -31,10 +32,10 @@ export function PreferencesProvider({ userId, children }: { userId?: string; chi
     async function load() {
       try {
         const { data, error } = await supabase.schema('app').from('preferences')
-          .select('preferences').eq('user', userId).abortSignal(controller.signal).maybeSingle();
+          .select('preferences, transaction_filters').eq('user', userId).abortSignal(controller.signal).maybeSingle();
         if (!active) return;
         if (error) throw error;
-        setState({ preferences: parsePreferences(data?.preferences), revision: 0 });
+        setState({ preferences: parsePreferences({ ...data?.preferences, transaction_filters: data?.transaction_filters }), revision: 0 });
         setLoadStatus('ready');
       } catch {
         if (active) setLoadStatus('error');

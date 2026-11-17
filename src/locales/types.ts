@@ -1,4 +1,32 @@
 export interface LocaleMessages {
+  loadingTransactionTotal: string;
+  transactionTotal: string;
+  transactionTotalEstimated: string;
+  transactionTotalError: string;
+  transactionTotalConversionError: string;
+
+  filterTransactions: string;
+  filterAll: string;
+  savedFilters: string;
+  loadFilter: string;
+  chooseFilter: string;
+  filterName: string;
+  saveFilter: string;
+  deleteFilter: string;
+  filterSaveHelp: string;
+  filterOptionsError: string;
+  filterScopeHelp: string;
+  filterFrom: string;
+  filterTo: string;
+  filterSearch: string;
+  filterSearchHelp: string;
+  filterMinimum: string;
+  filterMaximum: string;
+  filterAmountHelp: string;
+  filterInvalid: string;
+  resetFilters: string;
+  applyFilters: string;
+
   language: 'en' | 'es';
   brandHome: string;
   currentLanguage: string;

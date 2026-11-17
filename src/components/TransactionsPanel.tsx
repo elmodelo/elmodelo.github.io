@@ -3,6 +3,9 @@ import { supabase } from '../lib/supabaseClient';
 import { fetchTransactions, NO_TRANSACTION_FILTERS } from '../lib/transactionQuery';
 import type { TransactionFilters } from '../lib/transactionFilters';
 import type { LocaleMessages } from '../locales/types';
+import TransactionFilterPanel from './TransactionFilterPanel';
+import TransactionTotalStatus from './TransactionTotalStatus';
+import { buildTransactionFilters, EMPTY_TRANSACTION_FILTER } from '../lib/transactionFilterPresets';
 import LoadingDialog from './LoadingDialog';
 import CategorizePanel from './CategorizePanel';
 import { useStatusMessage } from '../hooks/useStatusMessages';
@@ -44,13 +47,16 @@ interface TransactionsPanelProps {
 }
 
 export default function TransactionsPanel({ messages, trackedAccountIds, filters = NO_TRANSACTION_FILTERS, title = messages.transactions, onCategoriesChanged }: TransactionsPanelProps) {
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterValues, setFilterValues] = useState(EMPTY_TRANSACTION_FILTER);
+  const filterButtonRef = useRef<HTMLButtonElement>(null);
   const { canWrite: canCategorize } = usePermissions();
   const { preferences: applicationPreferences, update } = usePreferences();
   const preferences = applicationPreferences.transactions;
   const setPreferences = (value: SetStateAction<TransactionPreferences>) => update('transactions', value);
   const { sortColumn, ascending, postedAtAscending, pageSize } = preferences;
   // Compare serialized values so newly allocated, equivalent filters do not reload the panel.
-  const filtersKey = JSON.stringify(filters);
+  const filtersKey = JSON.stringify([...filters, ...buildTransactionFilters(filterValues)]);
   const [pagination, setPagination] = useState({ filtersKey, page: 0 });
   const page = pagination.filtersKey === filtersKey ? pagination.page : 0;
   if (pagination.filtersKey !== filtersKey) {
@@ -84,7 +90,7 @@ export default function TransactionsPanel({ messages, trackedAccountIds, filters
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (isLoading || categorizing || event.defaultPrevented || event.repeat || event.isComposing
+      if (isLoading || filterOpen || categorizing || event.defaultPrevented || event.repeat || event.isComposing
         || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
       if (event.target instanceof HTMLElement
         && (event.target.isContentEditable
@@ -99,7 +105,7 @@ export default function TransactionsPanel({ messages, trackedAccountIds, filters
 
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [isLoading, categorizing]);
+  }, [isLoading, filterOpen, categorizing]);
 
   useEffect(() => {
     let active = true;
@@ -174,6 +180,12 @@ export default function TransactionsPanel({ messages, trackedAccountIds, filters
   return (
     <section className="dashboard-panel transactions-panel" aria-labelledby="transactions-title">
       <div className="transactions-heading">
+        <button ref={filterButtonRef} type="button" className="button button-secondary transaction-filter-trigger"
+          aria-label={messages.filterTransactions} title={messages.filterTransactions} aria-expanded={filterOpen}
+          aria-haspopup="dialog" data-active={filtersKey !== JSON.stringify(filters) ? '' : undefined}
+          onClick={() => setFilterOpen(true)}>
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M3 4h18l-7 8v7l-4 2v-9L3 4Z" /></svg>
+        </button>
         <h1 id="transactions-title">{title}</h1>
       </div>
       {!currentResult ? null : currentResult.error ? (
@@ -363,6 +375,12 @@ export default function TransactionsPanel({ messages, trackedAccountIds, filters
           }}
         />
       )}
+      {filtersKey !== '[]' && <TransactionTotalStatus messages={messages} trackedAccountIds={trackedAccountIds}
+        filtersKey={filtersKey} revision={retry} />}
+      {filterOpen && <TransactionFilterPanel messages={messages} trackedAccountIds={trackedAccountIds}
+        values={filterValues}
+        onClose={() => { setFilterOpen(false); filterButtonRef.current?.focus(); }}
+        onApply={(values) => { setFilterValues(values); setRetry((previous) => previous + 1); setFilterOpen(false); filterButtonRef.current?.focus(); }} />}
       {isLoading && <LoadingDialog label={messages.loadingTransactions} />}
     </section>
   );

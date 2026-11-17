@@ -1,3 +1,4 @@
+import { parseSavedTransactionFilters, type SavedTransactionFilter } from './transactionFilterPresets';
 import { DEFAULT_TRANSACTION_PREFERENCES, isTransactionPreferences, type TransactionPreferences } from './transactionPreferences';
 
 export interface ApplicationPreferences extends Record<string, unknown> {
@@ -5,6 +6,7 @@ export interface ApplicationPreferences extends Record<string, unknown> {
   language: 'en' | 'es' | null;
   trackedAccounts: string[] | null;
   transactions: TransactionPreferences;
+  transaction_filters: SavedTransactionFilter[];
 }
 
 /** Validate individual fields so one invalid preference doesn't discard the rest. */
@@ -13,6 +15,7 @@ export function parsePreferences(value: unknown): ApplicationPreferences {
     ? value as Record<string, unknown> : {};
   return {
     ...data,
+    transaction_filters: parseSavedTransactionFilters(data.transaction_filters),
     theme: data.theme === 'light' || data.theme === 'dark' ? data.theme : null,
     language: data.language === 'en' || data.language === 'es' ? data.language : null,
     trackedAccounts: Array.isArray(data.trackedAccounts) && data.trackedAccounts.every((id) => typeof id === 'string')

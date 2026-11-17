@@ -533,7 +533,7 @@
 .transactions-heading {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   flex-wrap: wrap;
   gap: 8px 16px;
   margin-bottom: 24px;
@@ -1006,3 +1006,50 @@
     grid-column: 1;
   }
 }
+
+.transaction-filter-trigger { position: relative; padding: 8px; min-width: var(--tap-target-min); }
+.transaction-filter-trigger svg { display: block; width: 24px; height: 24px; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+.transaction-filter-trigger[data-active] { color: var(--accent); border-color: var(--accent); }
+.transaction-filter-trigger[data-active]::after { content: ''; position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.transaction-filter-panel {
+  position: fixed;
+  inset: 0;
+  box-sizing: border-box;
+  width: min(680px, calc(100vw - 32px));
+  height: fit-content;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: clamp(12px, 2vw, 20px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  animation: transaction-filter-expand 160ms ease-out;
+}
+.transaction-filter-panel::backdrop { background: rgb(0 0 0 / 55%); }
+.transaction-filter-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+.transaction-filter-heading h2 { margin: 0; font-size: 1.25rem; }
+.transaction-filter-close { flex-shrink: 0; min-width: var(--tap-target-min); margin-top: 0; padding: 8px; }
+.transaction-filter-close svg { display: block; width: 20px; height: 20px; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.transaction-filter-panel form { margin: 0; }
+.transaction-filter-panel label { display: block; }
+.transaction-filter-panel input:not([type="checkbox"]), .transaction-filter-panel select {
+  box-sizing: border-box; display: block; width: 100%; min-height: var(--tap-target-min); margin: 4px 0 10px;
+  padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface-raised); color: var(--text); font: inherit;
+}
+.transaction-filter-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.transaction-filter-options, .transaction-filter-saved { min-width: 0; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin: 0 0 12px; }
+.transaction-filter-saved legend, .transaction-filter-options legend { font-weight: 700; }
+.transaction-filter-panel .preferences-option { display: flex; }
+.transaction-filter-option-list { max-height: 180px; overflow: auto; }
+.transaction-filter-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+.transaction-filter-actions .button { margin-top: 0; }
+.transaction-filter-help { font-size: 0.875rem; color: var(--text-muted); margin: 0 0 12px; }
+@keyframes transaction-filter-expand { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .transaction-filter-panel { animation: none; } }
+@media (max-width: 600px) { .transaction-filter-grid { grid-template-columns: minmax(0, 1fr); gap: 0; } }

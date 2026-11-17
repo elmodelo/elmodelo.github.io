@@ -48,10 +48,6 @@ export interface LocaleMessages {
   cancel: string;
   transactionAmount: string;
   loadingTransactions: string;
-  backfillCategories: string;
-  backfillingCategories: string;
-  backfillCategoriesResult: string;
-  backfillCategoriesError: string;
   close: string;
   transactionsError: string;
   noTransactions: string;

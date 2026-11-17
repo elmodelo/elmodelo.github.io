@@ -91,7 +91,7 @@ test('categorization dialog distinguishes single clicks from selections and defa
   }
 });
 
-test('category actions use shared permissions and are hidden without a provider', async () => {
+test('transaction panel has no auto-categorize button for any role', async () => {
   env.VITE_SUPABASE_URL = 'http://127.0.0.1:54321';
   env.VITE_SUPABASE_ANON_KEY = 'test-key';
   const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' });
@@ -103,7 +103,7 @@ test('category actions use shared permissions and are hidden without a provider'
     assert.ok(!renderToStaticMarkup(createElement(TransactionsPanel, props)).includes('Auto-categorize'));
     for (const role of [null, 'READER', 'WRITER']) {
       const markup = renderToStaticMarkup(createElement(PermissionsProvider, { role }, createElement(TransactionsPanel, props)));
-      assert.equal(markup.includes('Auto-categorize'), role === 'WRITER');
+      assert.ok(!markup.includes('Auto-categorize'));
     }
   } finally {
     await server.close();

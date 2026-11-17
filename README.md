@@ -29,21 +29,27 @@ existing preferences with defaults. Both currently allowlisted readers and write
 preferences; RLS prevents access to anyone else's preferences and denies access
 after allowlist removal. Anonymous clients and importers have no access.
 
-Other workflows can reuse `src/components/StatusMessage.tsx` for inline feedback:
+The shared status strip displays messages from all active workflows, newest first,
+separated by dividers. Transactions publishes the full matching query count across
+all pages (including zero), respecting tracked accounts and filters. Counts are
+hidden during reloads or errors and removed when leaving the transactions panel.
+
+Wrap the application in `StatusMessagesProvider`, mount `StatusBar` beneath the
+panel, and publish from a workflow using `useStatusMessage`:
 
 ```tsx
-<StatusMessage
-  message={error ? messages.uploadFailed : uploading ? messages.uploading : null}
-  tone={error ? 'error' : 'info'}
-  action={error ? { label: messages.retry, onClick: retryUpload } : undefined}
-/>
+useStatusMessage({ message: `${count} transactions` }); // Until this panel unmounts.
+useStatusMessage({ message: 'Upload complete', tone: 'success', durationSeconds: 4 });
 ```
 
-Pass no message while idle. The component keeps an empty, visually hidden live
-region mounted for accessible announcements. It supports `info`, `success`, and
-`error` tones plus an optional action with a label, handler, and disabled state.
-The workflow controls message lifetime and localization; `PreferencesStatus`
-adapts preference state to this shared component.
+Each hook owns one message; changing it replaces that workflow's previous status
+and places the new message first. Omit the message while idle. Omit `durationSeconds`
+for panel lifetime, or supply a duration for timed expiry, including after leaving
+the panel. Removing a message moves remaining messages left. Info, success, and
+error tones and optional actions (`label`, `onClick`, `disabled`) are supported.
+Keep action callbacks stable to avoid republishing unchanged messages. Workflows
+own localization; the strip provides a shared polite live region and wraps on
+narrow screens. `PreferencesStatus` adapts preference state to this system.
 
 The local-storage audit found these preferences, now stored in the JSON object:
 

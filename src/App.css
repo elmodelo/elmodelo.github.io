@@ -958,25 +958,36 @@
   max-height: 100%;
 }
 
-.status-message {
+.status-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 0;
   flex-shrink: 0;
   min-width: 0;
   color: var(--text-muted);
   font-size: 14px;
   text-align: left;
-  overflow-wrap: anywhere;
 }
 
-.status-message:empty {
+.status-bar:empty, .status-message:empty {
   display: none;
 }
 
-.status-message:not(:empty) {
-  display: flex;
+.status-message {
+  display: inline-flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-start;
   gap: 8px 12px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.status-bar > .status-message + .status-message {
+  border-inline-start: 1px solid var(--border);
+  padding-inline-start: 12px;
+  margin-inline-start: 12px;
 }
 
 .status-message-error {

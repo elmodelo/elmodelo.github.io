@@ -5,6 +5,8 @@ import SignIn from './components/SignIn';
 import Menu, { type AppSection } from './components/Menu';
 import PreferencesPanel from './components/PreferencesPanel';
 import PreferencesStatus from './components/PreferencesStatus';
+import StatusBar from './components/StatusBar';
+import { StatusMessagesProvider } from './hooks/useStatusMessages';
 import TransactionsPanel from './components/TransactionsPanel';
 import LoadingDialog from './components/LoadingDialog';
 import { useAuth } from './hooks/useAuth';
@@ -20,7 +22,7 @@ import './App.css';
 function App() {
   const auth = useAuth();
   const userId = auth.status === 'ready' ? auth.user?.id : undefined;
-  return <PreferencesProvider key={userId ?? 'guest'} userId={userId}><Application auth={auth} /></PreferencesProvider>;
+  return <StatusMessagesProvider key={userId ?? 'guest'}><PreferencesProvider userId={userId}><Application auth={auth} /></PreferencesProvider></StatusMessagesProvider>;
 }
 
 function Application({ auth }: { auth: ReturnType<typeof useAuth> }) {
@@ -37,6 +39,7 @@ function Application({ auth }: { auth: ReturnType<typeof useAuth> }) {
 
   return (
     <PermissionsProvider role={authStatus === 'ready' ? appRole : null}>
+      <PreferencesStatus messages={messages} status={preferencesStatus} onRetry={retryPreferences} />
       <main className="app-shell" data-theme={theme}>
         {(user && authStatus === 'ready') && (
           <header className="app-header">
@@ -68,7 +71,7 @@ function Application({ auth }: { auth: ReturnType<typeof useAuth> }) {
           ) : user && (preferencesStatus === 'loading' || preferencesStatus === 'load-error') ? (
             <div className="dashboard-main">
               <div className="dashboard-content" aria-busy={preferencesStatus === 'loading'} />
-              <PreferencesStatus messages={messages} status={preferencesStatus} onRetry={retryPreferences} />
+              <StatusBar />
             </div>
           ) : user ? (
             <Dashboard
@@ -128,7 +131,6 @@ function Dashboard({
   onThemeChange,
   onLanguageChange,
 }: DashboardProps) {
-  const { status: preferencesStatus, retry: retryPreferences } = usePreferences();
   const [section, setSection] = useState<AppSection>('transactions');
   const { accounts, trackedAccountIds, setTrackedAccountIds, status: accountsStatus, retryAccounts } = useTrackedAccounts(userId);
   const [categoryRevision, setCategoryRevision] = useState(0);
@@ -211,7 +213,7 @@ function Dashboard({
             </section>
           )}
         </div>
-        <PreferencesStatus messages={messages} status={preferencesStatus} onRetry={retryPreferences} />
+        <StatusBar />
       </div>
     </>
   );

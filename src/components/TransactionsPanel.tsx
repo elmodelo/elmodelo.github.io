@@ -5,6 +5,7 @@ import type { TransactionFilters } from '../lib/transactionFilters';
 import type { LocaleMessages } from '../locales/types';
 import LoadingDialog from './LoadingDialog';
 import CategorizePanel from './CategorizePanel';
+import { useStatusMessage } from '../hooks/useStatusMessages';
 import { usePreferences } from '../hooks/usePreferences';
 import type { SetStateAction } from 'react';
 import type { TransactionPreferences } from '../lib/transactionPreferences';
@@ -144,6 +145,13 @@ export default function TransactionsPanel({ messages, trackedAccountIds, filters
       controller.abort();
     };
   }, [trackedAccountIds, filtersKey, sortColumn, ascending, postedAtAscending, page, pageSize, requestKey]);
+
+  // This is the complete matching query count, across all pages, not checked rows.
+  useStatusMessage({
+    message: !isLoading && result && !result.error
+      ? messages.transactionCount.replace('{count}', new Intl.NumberFormat(messages.language).format(result.count))
+      : null,
+  });
 
   const columns: { id: SortColumn; label: string }[] = [
     { id: 'posted_at', label: messages.transactionDate },

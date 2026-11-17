@@ -55,6 +55,7 @@ export interface LocaleMessages {
   loadingTransactions: string;
   close: string;
   transactionsError: string;
+  transactionCount: string;
   noTransactions: string;
   rowsPerPage: string;
   pageOf: string;

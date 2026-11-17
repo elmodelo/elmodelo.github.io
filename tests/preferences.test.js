@@ -65,10 +65,11 @@ test('preferences saves run in order, recover after errors, and isolate writers'
   } finally { await server.close(); }
 });
 
-test('dashboard status shows only load/save activity, with localized feedback and retries', async () => {
+test('preferences maps activity to localized messages, retries, and timed success', async () => {
   const server = await makeServer();
   try {
-    const { default: PreferencesStatus } = await server.ssrLoadModule('/src/components/PreferencesStatus.tsx');
+    const { preferencesStatusMessage } = await server.ssrLoadModule('/src/components/PreferencesStatus.tsx');
+    const { default: StatusMessage } = await server.ssrLoadModule('/src/components/StatusMessage.tsx');
     const { getLocaleMessages } = await server.ssrLoadModule('/src/locales/index.ts');
     for (const language of ['en', 'es']) {
       const messages = getLocaleMessages(language);
@@ -77,15 +78,16 @@ test('dashboard status shows only load/save activity, with localized feedback an
         ['saved', messages.preferencesSaved], ['save-error', messages.preferencesSaveError],
         ['load-error', messages.preferencesLoadError],
       ]) {
-        const markup = renderToStaticMarkup(createElement(PreferencesStatus, { messages, status, onRetry() {} }));
+        const markup = renderToStaticMarkup(createElement(StatusMessage, preferencesStatusMessage({ messages, status, onRetry() {} })));
         assert.ok(markup.includes(text));
-        assert.match(markup, /role="status" aria-live="polite"/);
         if (status.endsWith('error')) assert.ok(markup.includes(messages.retry));
         else assert.ok(!markup.includes('<button'));
       }
-      const idle = renderToStaticMarkup(createElement(PreferencesStatus, { messages, status: 'idle', onRetry() {} }));
+      const idle = renderToStaticMarkup(createElement(StatusMessage, preferencesStatusMessage({ messages, status: 'idle', onRetry() {} })));
       assert.match(idle, /><\/div>$/);
       assert.ok(!idle.includes(messages.preferencesSaved));
+      assert.equal(preferencesStatusMessage({ messages, status: 'saved', onRetry() {} }).durationSeconds, 4);
+      assert.equal(preferencesStatusMessage({ messages, status: 'save-error', onRetry() {} }).durationSeconds, undefined);
     }
   } finally { await server.close(); }
 });

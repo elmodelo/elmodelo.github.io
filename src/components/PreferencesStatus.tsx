@@ -1,6 +1,6 @@
 import type { LocaleMessages } from '../locales/types';
 import type { PreferencesStatus as Status } from '../hooks/usePreferences';
-import StatusMessage from './StatusMessage';
+import { useStatusMessage } from '../hooks/useStatusMessages';
 
 interface PreferencesStatusProps {
   messages: LocaleMessages;
@@ -9,7 +9,7 @@ interface PreferencesStatusProps {
 }
 
 /** Translate the preferences workflow into generic inline status feedback. */
-export default function PreferencesStatus({ messages, status, onRetry }: PreferencesStatusProps) {
+export function preferencesStatusMessage({ messages, status, onRetry }: PreferencesStatusProps) {
   const error = status === 'load-error' || status === 'save-error';
   const message = {
     idle: null,
@@ -20,9 +20,15 @@ export default function PreferencesStatus({ messages, status, onRetry }: Prefere
     'save-error': messages.preferencesSaveError,
   }[status];
 
-  return <StatusMessage
-    message={message}
-    tone={error ? 'error' : status === 'saved' ? 'success' : 'info'}
-    action={error ? { label: messages.retry, onClick: onRetry } : undefined}
-  />;
+  return {
+    message,
+    tone: error ? 'error' as const : status === 'saved' ? 'success' as const : 'info' as const,
+    action: error ? { label: messages.retry, onClick: onRetry } : undefined,
+    durationSeconds: status === 'saved' ? 4 : undefined,
+  };
+}
+
+export default function PreferencesStatus(props: PreferencesStatusProps) {
+  useStatusMessage(preferencesStatusMessage(props));
+  return null;
 }

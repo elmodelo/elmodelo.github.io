@@ -57,6 +57,7 @@ const es: LocaleMessages = {
   loadingTransactions: 'Cargando transacciones…',
   close: 'Cerrar',
   transactionsError: 'No pudimos cargar las transacciones. Inténtalo de nuevo.',
+  transactionCount: '{count} transacciones',
   noTransactions: 'No se encontraron transacciones.',
   rowsPerPage: 'Filas por página',
   pageOf: 'Página {page} de {total}',

@@ -45,7 +45,8 @@ test('transaction panel initially renders a localized loading state', async () =
   try {
     const { default: Panel } = await server.ssrLoadModule('/src/components/TransactionsPanel.tsx');
     const { PreferencesProvider } = await server.ssrLoadModule('/src/hooks/usePreferences.tsx');
-    const TransactionsPanel = (props) => createElement(PreferencesProvider, {}, createElement(Panel, props));
+    const { StatusMessagesProvider } = await server.ssrLoadModule('/src/hooks/useStatusMessages.tsx');
+    const TransactionsPanel = (props) => createElement(StatusMessagesProvider, {}, createElement(PreferencesProvider, {}, createElement(Panel, props)));
     const { getLocaleMessages } = await server.ssrLoadModule('/src/locales/index.ts');
     const markup = renderToStaticMarkup(createElement(TransactionsPanel, {
       messages: getLocaleMessages('es'),
@@ -99,7 +100,8 @@ test('transaction panel has no auto-categorize button for any role', async () =>
   try {
     const { default: Panel } = await server.ssrLoadModule('/src/components/TransactionsPanel.tsx');
     const { PreferencesProvider } = await server.ssrLoadModule('/src/hooks/usePreferences.tsx');
-    const TransactionsPanel = (props) => createElement(PreferencesProvider, {}, createElement(Panel, props));
+    const { StatusMessagesProvider } = await server.ssrLoadModule('/src/hooks/useStatusMessages.tsx');
+    const TransactionsPanel = (props) => createElement(StatusMessagesProvider, {}, createElement(PreferencesProvider, {}, createElement(Panel, props)));
     const { getLocaleMessages } = await server.ssrLoadModule('/src/locales/index.ts');
     const props = { messages: getLocaleMessages('en'), userId: 'test-user', trackedAccountIds: [] };
     const { PermissionsProvider } = await server.ssrLoadModule('/src/hooks/usePermissions.tsx');

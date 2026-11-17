@@ -1,22 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { usePersistedState } from './usePersistedState';
+import { usePreferences } from './usePreferences';
 
 export interface Account {
   id: string;
   name: string;
 }
 
-function isAccountSelection(value: unknown): value is string[] | null {
-  return value === null || (Array.isArray(value) && value.every((id) => typeof id === 'string'));
-}
-
 /** Own this in the dashboard and pass trackedAccountIds to panels that query finance data. */
 export function useTrackedAccounts(userId: string) {
   // Until the first edit, track all available accounts. An empty array tracks none.
-  const [selection, setTrackedAccountIds] = usePersistedState<string[] | null>(
-    'trackedAccounts', null, isAccountSelection, userId,
-  );
+  const { preferences, update } = usePreferences();
+  const selection = preferences.trackedAccounts;
+  const setTrackedAccountIds = (ids: string[]) => update('trackedAccounts', ids);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [attempt, setAttempt] = useState(0);

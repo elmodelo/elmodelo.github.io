@@ -1,108 +1,93 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createElement, useState } from 'react';
+import { setImmediate } from 'node:timers';
+import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createServer } from 'vite';
 
-test('preferences validate stored data, isolate users, and retain independent date ordering', async () => {
-  const server = await createServer({ server: { middlewareMode: true, ws: false }, appType: 'custom' });
-  const originalWindow = Object.getOwnPropertyDescriptor(globalThis, 'window');
+const makeServer = () => createServer({ server: { middlewareMode: true, ws: false }, appType: 'custom' });
+
+test('database preferences validate fields, retain unknown keys, and preserve date ordering', async () => {
+  const server = await makeServer();
   try {
-    const storage = new Map();
-    Object.defineProperty(globalThis, 'window', {
-      configurable: true,
-      value: { localStorage: {
-        getItem: (key) => storage.get(key) ?? null,
-        setItem: (key, value) => storage.set(key, value),
-      } },
-    });
-    const { preferenceKey, readStoredData, writeStoredData } = await server.ssrLoadModule('/src/lib/storage.ts');
-    const { usePersistedState } = await server.ssrLoadModule('/src/hooks/usePersistedState.ts');
-    const {
-      DEFAULT_TRANSACTION_PREFERENCES: defaults, DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS,
-      isTransactionPreferences: validate, changeTransactionSort,
-    } = await server.ssrLoadModule('/src/lib/transactionPreferences.ts');
-
-    assert.equal(DEFAULT_PAGE_SIZE, 25);
-    assert.ok(PAGE_SIZE_OPTIONS.includes(DEFAULT_PAGE_SIZE));
-    const aliceKey = preferenceKey('transactions', 'alice');
-    const bobKey = preferenceKey('transactions', 'bob');
-    const guestKey = preferenceKey('transactions');
-    assert.equal(new Set([aliceKey, bobKey, guestKey]).size, 3);
-    const saved = { ...defaults, pageSize: 100, sortColumn: 'amount', ascending: true };
-    writeStoredData(aliceKey, saved);
-    assert.deepEqual(readStoredData(aliceKey, defaults, validate), saved);
-    assert.deepEqual(readStoredData(bobKey, defaults, validate), defaults);
-
-    function PreferenceProbe({ userId }) {
-      const [value] = usePersistedState('transactions', defaults, validate, userId);
-      return createElement('span', null, String(value.pageSize));
+    const { parsePreferences } = await server.ssrLoadModule('/src/lib/preferences.ts');
+    const { DEFAULT_TRANSACTION_PREFERENCES: defaults, isTransactionPreferences: validate, changeTransactionSort } = await server.ssrLoadModule('/src/lib/transactionPreferences.ts');
+    assert.deepEqual(parsePreferences(null), { theme: null, language: null, trackedAccounts: null, transactions: defaults });
+    const saved = { theme: 'dark', language: 'es', trackedAccounts: [], transactions: { ...defaults, pageSize: 100 }, future: { enabled: true } };
+    assert.deepEqual(parsePreferences(saved), saved);
+    assert.deepEqual(parsePreferences({ ...saved, theme: 'unknown', trackedAccounts: [1] }), { ...saved, theme: null, trackedAccounts: null });
+    for (const invalid of [null, [], { ...defaults, pageSize: 20 }, { ...defaults, sortColumn: 'unknown' }, { ...defaults, ascending: 'false' }, { ...defaults, postedAtAscending: 1 }, { ...defaults, postedAtAscending: true }]) {
+      assert.equal(validate(invalid), false);
+      assert.deepEqual(parsePreferences({ ...saved, transactions: invalid }), { ...saved, transactions: defaults });
     }
-    assert.equal(renderToStaticMarkup(createElement(PreferenceProbe, { userId: 'alice' })), '<span>100</span>');
-    assert.equal(renderToStaticMarkup(createElement(PreferenceProbe, { userId: 'bob' })), '<span>25</span>');
-
-    function AccountSwitchProbe() {
-      const [userId, setUserId] = useState('alice');
-      const [value] = usePersistedState('transactions', defaults, validate, userId);
-      if (userId === 'alice') setUserId('bob');
-      return createElement('span', null, String(value.pageSize));
-    }
-    assert.equal(renderToStaticMarkup(createElement(AccountSwitchProbe)), '<span>25</span>');
-    assert.deepEqual(readStoredData(aliceKey, defaults, validate), saved);
-
-    const { useLanguage } = await server.ssrLoadModule('/src/hooks/useLanguage.ts');
-    const { useTheme } = await server.ssrLoadModule('/src/hooks/useTheme.ts');
-    window.matchMedia = () => ({ matches: false });
-    storage.set('language', 'en');
-    storage.set('theme', 'light');
-    writeStoredData(preferenceKey('language', 'alice'), 'es');
-    writeStoredData(preferenceKey('theme', 'alice'), 'dark');
-    function AppearanceProbe({ userId }) {
-      const { messages } = useLanguage(userId);
-      const { theme } = useTheme(userId);
-      return createElement('span', null, `${messages.language}:${theme}`);
-    }
-    assert.equal(renderToStaticMarkup(createElement(AppearanceProbe, { userId: 'alice' })), '<span>es:dark</span>');
-    assert.equal(renderToStaticMarkup(createElement(AppearanceProbe)), '<span>en:light</span>');
-
-    for (const invalid of [
-      null, [], { ...defaults, pageSize: 20 }, { ...defaults, sortColumn: 'unknown' },
-      { ...defaults, ascending: 'false' }, { ...defaults, postedAtAscending: 1 },
-      { ...defaults, postedAtAscending: true },
-    ]) {
-      storage.set(aliceKey, JSON.stringify(invalid));
-      assert.deepEqual(readStoredData(aliceKey, defaults, validate), defaults);
-    }
-    storage.set(aliceKey, '{broken json');
-    assert.deepEqual(readStoredData(aliceKey, defaults, validate), defaults);
-
     for (const dateAscending of [true, false]) {
-      let settings = { ...defaults, ascending: dateAscending, postedAtAscending: dateAscending };
-      settings = changeTransactionSort(settings, 'amount');
-      assert.equal(settings.ascending, true);
-      assert.equal(settings.postedAtAscending, dateAscending);
-      settings = changeTransactionSort(settings, 'amount');
-      assert.equal(settings.ascending, false);
-      assert.equal(settings.postedAtAscending, dateAscending);
-      settings = changeTransactionSort(settings, 'account(name)');
-      assert.equal(settings.postedAtAscending, dateAscending);
-      settings = changeTransactionSort(settings, 'posted_at');
-      assert.equal(settings.ascending, dateAscending);
-      settings = changeTransactionSort(settings, 'posted_at');
-      assert.equal(settings.ascending, !dateAscending);
-      assert.equal(settings.postedAtAscending, !dateAscending);
+      let preferences = { ...defaults, ascending: dateAscending, postedAtAscending: dateAscending };
+      preferences = changeTransactionSort(preferences, 'amount');
+      assert.equal(preferences.ascending, true);
+      assert.equal(preferences.postedAtAscending, dateAscending);
+      preferences = changeTransactionSort(preferences, 'amount');
+      assert.equal(preferences.ascending, false);
+      preferences = changeTransactionSort(preferences, 'account(name)');
+      preferences = changeTransactionSort(preferences, 'posted_at');
+      assert.equal(preferences.ascending, dateAscending);
+      preferences = changeTransactionSort(preferences, 'posted_at');
+      assert.equal(preferences.ascending, !dateAscending);
+      assert.equal(preferences.postedAtAscending, !dateAscending);
     }
+  } finally { await server.close(); }
+});
 
-    window.localStorage.getItem = () => { throw new Error('Storage blocked'); };
-    window.localStorage.setItem = () => { throw new Error('Storage full'); };
-    assert.deepEqual(readStoredData(aliceKey, defaults, validate), defaults);
-    assert.doesNotThrow(() => writeStoredData(aliceKey, saved));
-    Reflect.deleteProperty(globalThis, 'window');
-    assert.deepEqual(readStoredData(aliceKey, defaults, validate), defaults);
-    assert.doesNotThrow(() => writeStoredData(aliceKey, saved));
-  } finally {
-    if (originalWindow) Object.defineProperty(globalThis, 'window', originalWindow);
-    else Reflect.deleteProperty(globalThis, 'window');
-    await server.close();
-  }
+test('preferences saves run in order, recover after errors, and isolate writers', async () => {
+  const server = await makeServer();
+  try {
+    const { createPreferencesWriter, parsePreferences } = await server.ssrLoadModule('/src/lib/preferences.ts');
+    let finishFirst;
+    const firstPending = new Promise((resolve) => { finishFirst = resolve; });
+    const writes = [];
+    const writer = createPreferencesWriter(async (preferences) => {
+      writes.push(preferences.language);
+      if (writes.length === 1) await firstPending;
+      if (preferences.language === 'es') throw new Error('Save failed');
+    });
+    const first = writer(parsePreferences({ language: 'en' }));
+    const second = writer(parsePreferences({ language: 'es' }));
+    const rejected = assert.rejects(second, /Save failed/);
+    const third = writer(parsePreferences({ language: 'en' }));
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.deepEqual(writes, ['en']);
+    const otherWrites = [];
+    const otherWriter = createPreferencesWriter(async (preferences) => { otherWrites.push(preferences.theme); });
+    await otherWriter(parsePreferences({ theme: 'dark' }));
+    assert.deepEqual(otherWrites, ['dark']);
+    finishFirst();
+    await Promise.all([first, rejected, third]);
+    assert.deepEqual(writes, ['en', 'es', 'en']);
+  } finally { await server.close(); }
+});
+
+test('preferences maps activity to localized messages, retries, and timed success', async () => {
+  const server = await makeServer();
+  try {
+    const { preferencesStatusMessage } = await server.ssrLoadModule('/src/components/PreferencesStatus.tsx');
+    const { default: StatusMessage } = await server.ssrLoadModule('/src/components/StatusMessage.tsx');
+    const { getLocaleMessages } = await server.ssrLoadModule('/src/locales/index.ts');
+    for (const language of ['en', 'es']) {
+      const messages = getLocaleMessages(language);
+      for (const [status, text] of [
+        ['loading', messages.loadingPreferences], ['saving', messages.savingPreferences],
+        ['saved', messages.preferencesSaved], ['save-error', messages.preferencesSaveError],
+        ['load-error', messages.preferencesLoadError],
+      ]) {
+        const markup = renderToStaticMarkup(createElement(StatusMessage, preferencesStatusMessage({ messages, status, onRetry() {} })));
+        assert.ok(markup.includes(text));
+        if (status.endsWith('error')) assert.ok(markup.includes(messages.retry));
+        else assert.ok(!markup.includes('<button'));
+      }
+      const idle = renderToStaticMarkup(createElement(StatusMessage, preferencesStatusMessage({ messages, status: 'idle', onRetry() {} })));
+      assert.match(idle, /><\/div>$/);
+      assert.ok(!idle.includes(messages.preferencesSaved));
+      assert.equal(preferencesStatusMessage({ messages, status: 'saved', onRetry() {} }).durationSeconds, 4);
+      assert.equal(preferencesStatusMessage({ messages, status: 'save-error', onRetry() {} }).durationSeconds, undefined);
+    }
+  } finally { await server.close(); }
 });

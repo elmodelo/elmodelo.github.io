@@ -4,7 +4,7 @@ import type { Theme } from '../hooks/useTheme';
 import type { LocaleMessages } from '../locales/types';
 import type { Account } from '../hooks/useTrackedAccounts';
 
-interface SettingsPanelProps {
+interface PreferencesPanelProps {
   messages: LocaleMessages;
   theme: Theme;
   onThemeChange: (theme: Theme) => void;
@@ -26,10 +26,10 @@ interface OptionGroupProps<T extends string> {
 
 function OptionGroup<T extends string>({ legend, name, value, options, onChange }: OptionGroupProps<T>) {
   return (
-    <fieldset className="settings-group">
+    <fieldset className="preferences-group">
       <legend>{legend}</legend>
       {options.map((option) => (
-        <label className="settings-option" key={option.value}>
+        <label className="preferences-option" key={option.value}>
           <input
             type="radio"
             name={name}
@@ -44,7 +44,7 @@ function OptionGroup<T extends string>({ legend, name, value, options, onChange 
   );
 }
 
-export default function SettingsPanel({
+export default function PreferencesPanel({
   messages,
   theme,
   onThemeChange,
@@ -54,7 +54,7 @@ export default function SettingsPanel({
   onTrackedAccountIdsChange,
   accountsStatus,
   onRetryAccounts,
-}: SettingsPanelProps) {
+}: PreferencesPanelProps) {
   const accountListId = useId();
   const accountListRef = useRef<HTMLFieldSetElement>(null);
   const [accountsOpen, setAccountsOpen] = useState(false);
@@ -75,9 +75,9 @@ export default function SettingsPanel({
   }, [accountsOpen]);
 
   return (
-    <section className="dashboard-panel" aria-labelledby="settings-title">
-      <h1 id="settings-title">{messages.settings}</h1>
-      <div className="panel-scroll" tabIndex={0} role="region" aria-labelledby="settings-title">
+    <section className="dashboard-panel" aria-labelledby="preferences-title">
+      <h1 id="preferences-title">{messages.preferences}</h1>
+      <div className="panel-scroll" tabIndex={0} role="region" aria-labelledby="preferences-title">
         <OptionGroup
           legend={messages.theme}
           name="theme"
@@ -98,9 +98,9 @@ export default function SettingsPanel({
           ]}
           onChange={onLanguageChange}
         />
-        <div className="settings-group">
+        <div className="preferences-group">
           <button
-            className="settings-account-trigger"
+            className="preferences-account-trigger"
             type="button"
             popoverTarget={accountListId}
             aria-expanded={accountsOpen}
@@ -124,7 +124,7 @@ export default function SettingsPanel({
             id={accountListId}
             ref={accountListRef}
             popover="auto"
-            className="settings-account-options"
+            className="preferences-account-options"
             aria-label={messages.trackedAccounts}
             style={dropdownPosition}
             onToggle={(event) => setAccountsOpen(event.newState === 'open')}
@@ -141,7 +141,7 @@ export default function SettingsPanel({
             ) : accounts.length === 0 ? (
               <p>{messages.noAccounts}</p>
             ) : accounts.map((account) => (
-              <label className="settings-option" key={account.id}>
+              <label className="preferences-option" key={account.id}>
                 <input
                   type="checkbox"
                   name="trackedAccounts"

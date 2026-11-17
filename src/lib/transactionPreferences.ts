@@ -23,22 +23,22 @@ export const DEFAULT_TRANSACTION_PREFERENCES: TransactionPreferences = {
 
 export function isTransactionPreferences(value: unknown): value is TransactionPreferences {
   if (!value || typeof value !== 'object') return false;
-  const settings = value as Record<string, unknown>;
-  return PAGE_SIZE_OPTIONS.some((size) => size === settings.pageSize)
-    && SORT_COLUMNS.some((column) => column === settings.sortColumn)
-    && typeof settings.ascending === 'boolean'
-    && typeof settings.postedAtAscending === 'boolean'
-    && (settings.sortColumn !== 'posted_at' || settings.ascending === settings.postedAtAscending);
+  const preferences = value as Record<string, unknown>;
+  return PAGE_SIZE_OPTIONS.some((size) => size === preferences.pageSize)
+    && SORT_COLUMNS.some((column) => column === preferences.sortColumn)
+    && typeof preferences.ascending === 'boolean'
+    && typeof preferences.postedAtAscending === 'boolean'
+    && (preferences.sortColumn !== 'posted_at' || preferences.ascending === preferences.postedAtAscending);
 }
 
-export function changeTransactionSort(settings: TransactionPreferences, column: SortColumn): TransactionPreferences {
-  const ascending = column === settings.sortColumn
-    ? !settings.ascending
-    : column === 'posted_at' ? settings.postedAtAscending : true;
+export function changeTransactionSort(preferences: TransactionPreferences, column: SortColumn): TransactionPreferences {
+  const ascending = column === preferences.sortColumn
+    ? !preferences.ascending
+    : column === 'posted_at' ? preferences.postedAtAscending : true;
   return {
-    ...settings,
+    ...preferences,
     sortColumn: column,
     ascending,
-    postedAtAscending: column === 'posted_at' ? ascending : settings.postedAtAscending,
+    postedAtAscending: column === 'posted_at' ? ascending : preferences.postedAtAscending,
   };
 }

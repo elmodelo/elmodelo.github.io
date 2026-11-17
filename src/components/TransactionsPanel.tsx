@@ -5,10 +5,13 @@ import type { TransactionFilters } from '../lib/transactionFilters';
 import type { LocaleMessages } from '../locales/types';
 import LoadingDialog from './LoadingDialog';
 import CategorizePanel from './CategorizePanel';
-import { usePersistedState } from '../hooks/usePersistedState';
+import { useStatusMessage } from '../hooks/useStatusMessages';
+import { usePreferences } from '../hooks/usePreferences';
+import type { SetStateAction } from 'react';
+import type { TransactionPreferences } from '../lib/transactionPreferences';
 import { usePermissions } from '../hooks/usePermissions';
 import {
-  DEFAULT_TRANSACTION_PREFERENCES, PAGE_SIZE_OPTIONS, isTransactionPreferences,
+  PAGE_SIZE_OPTIONS,
   changeTransactionSort, type SortColumn,
 } from '../lib/transactionPreferences';
 
@@ -34,18 +37,17 @@ interface TransactionResult {
 
 interface TransactionsPanelProps {
   messages: LocaleMessages;
-  userId: string;
   trackedAccountIds: string[];
   filters?: TransactionFilters;
   title?: string;
   onCategoriesChanged?: () => void;
 }
 
-export default function TransactionsPanel({ messages, userId, trackedAccountIds, filters = NO_TRANSACTION_FILTERS, title = messages.transactions, onCategoriesChanged }: TransactionsPanelProps) {
+export default function TransactionsPanel({ messages, trackedAccountIds, filters = NO_TRANSACTION_FILTERS, title = messages.transactions, onCategoriesChanged }: TransactionsPanelProps) {
   const { canWrite: canCategorize } = usePermissions();
-  const [preferences, setPreferences] = usePersistedState(
-    'transactions', DEFAULT_TRANSACTION_PREFERENCES, isTransactionPreferences, userId,
-  );
+  const { preferences: applicationPreferences, update } = usePreferences();
+  const preferences = applicationPreferences.transactions;
+  const setPreferences = (value: SetStateAction<TransactionPreferences>) => update('transactions', value);
   const { sortColumn, ascending, postedAtAscending, pageSize } = preferences;
   // Compare serialized values so newly allocated, equivalent filters do not reload the panel.
   const filtersKey = JSON.stringify(filters);
@@ -143,6 +145,13 @@ export default function TransactionsPanel({ messages, userId, trackedAccountIds,
       controller.abort();
     };
   }, [trackedAccountIds, filtersKey, sortColumn, ascending, postedAtAscending, page, pageSize, requestKey]);
+
+  // This is the complete matching query count, across all pages, not checked rows.
+  useStatusMessage({
+    message: !isLoading && result && !result.error
+      ? messages.transactionCount.replace('{count}', new Intl.NumberFormat(messages.language).format(result.count))
+      : null,
+  });
 
   const columns: { id: SortColumn; label: string }[] = [
     { id: 'posted_at', label: messages.transactionDate },

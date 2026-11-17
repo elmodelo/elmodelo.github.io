@@ -16,17 +16,56 @@ Run `npm run build` to generate `dist/` and `npm run preview` to preview it.
 Run `npm test` for the local component and transaction-query checks.
 
 After signing in, use the main menu to browse transactions, view the account
-email and sign out. Settings sets the theme, language, and tracked accounts. Tracked accounts
-are listed by name with checkboxes and saved per user in browser storage. All accounts are
-tracked until the first edit; unchecking every account shows no transactions.
-`Dashboard` owns `useTrackedAccounts(userId)` and passes its `trackedAccountIds: string[]`
-to panels, which can use the IDs in `.in('account', trackedAccountIds)` filters.
-Wait for the hook's `ready` status before querying, and treat an empty list as no results.
-A value saved in the browser's local
-storage is always used; otherwise the system preference applies. Transactions are sorted and
-paginated by the database, initially showing the newest 50; the page size and
-sort column can be changed in the panel. Dates are displayed in UTC and amounts
-use the account currency.
+email and sign out. Preferences sets the theme, language, and tracked accounts.
+Apply backend migrations through `0030_app_preferences.sql` before deploying this version.
+In Supabase Data API settings, expose `app` alongside `finance`. Keep `operational`
+unexposed; preferences no longer requires exposing operational tables.
+
+Preferences are loaded from `app.preferences`, with one JSON object per Auth
+user. Changes save automatically after a short debounce, with saving, saved, and
+retry feedback at the bottom of the dashboard across all sections. Success feedback
+disappears after four seconds; errors remain visible until retry or another edit. Failed loads block the dashboard to avoid overwriting
+existing preferences with defaults. Both currently allowlisted readers and writers can save their own
+preferences; RLS prevents access to anyone else's preferences and denies access
+after allowlist removal. Anonymous clients and importers have no access.
+
+The shared status strip displays messages from all active workflows, newest first,
+separated by dividers. Transactions publishes the full matching query count across
+all pages (including zero), respecting tracked accounts and filters. Counts are
+hidden during reloads or errors and removed when leaving the transactions panel.
+
+Wrap the application in `StatusMessagesProvider`, mount `StatusBar` beneath the
+panel, and publish from a workflow using `useStatusMessage`:
+
+```tsx
+useStatusMessage({ message: `${count} transactions` }); // Until this panel unmounts.
+useStatusMessage({ message: 'Upload complete', tone: 'success', durationSeconds: 4 });
+```
+
+Each hook owns one message; changing it replaces that workflow's previous status
+and places the new message first. Omit the message while idle. Omit `durationSeconds`
+for panel lifetime, or supply a duration for timed expiry, including after leaving
+the panel. Removing a message moves remaining messages left. Info, success, and
+error tones and optional actions (`label`, `onClick`, `disabled`) are supported.
+Keep action callbacks stable to avoid republishing unchanged messages. Workflows
+own localization; the strip provides a shared polite live region and wraps on
+narrow screens. `PreferencesStatus` adapts preference state to this system.
+
+The local-storage audit found these preferences, now stored in the JSON object:
+
+- `theme`: light/dark (system default until selected).
+- `language`: English/Spanish (browser default until selected).
+- `trackedAccounts`: selected account IDs (`null` tracks all; `[]` tracks none).
+- `transactions`: page size, sort column, sort direction, and remembered date-sort direction.
+
+The former guest/user browser keys and legacy `theme`/`language` keys are no
+longer read or written. Existing local preferences are not imported; users start
+with defaults until they save preferences to the database. Signed-out appearance
+choices stay in memory. Supabase's authentication session storage is unchanged.
+
+`Dashboard` owns `useTrackedAccounts(userId)` and passes its `trackedAccountIds`
+to panels. Transactions are sorted and paginated by the database, initially
+showing the newest 25. Dates use UTC and amounts use the account currency.
 
 `TransactionsPanel` accepts `filters?: TransactionFilters` (defined in
 `src/lib/transactionFilters.ts`) and an optional localized `title`. Filters are

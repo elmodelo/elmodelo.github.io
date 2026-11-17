@@ -1,11 +1,7 @@
 import { useEffect, useState } from 'react';
-import { readStored } from '../lib/storage';
-import { usePersistedState } from './usePersistedState';
+import { usePreferences } from './usePreferences';
 
 export type Theme = 'light' | 'dark';
-
-export const THEMES: readonly Theme[] = ['light', 'dark'];
-const STORAGE_KEY = 'theme';
 
 function getSystemTheme(): Theme {
   return typeof window !== 'undefined' &&
@@ -14,16 +10,11 @@ function getSystemTheme(): Theme {
     : 'light';
 }
 
-function isTheme(value: unknown): value is Theme | null {
-  return value === null || THEMES.some((theme) => theme === value);
-}
-
-export function useTheme(userId?: string | null) {
-  const [storedTheme, setTheme] = usePersistedState<Theme | null>(
-    STORAGE_KEY, !userId ? readStored(STORAGE_KEY, THEMES) : null, isTheme, userId,
-  );
+export function useTheme() {
+  const { preferences, update } = usePreferences();
+  const setTheme = (theme: Theme) => update('theme', theme);
   const [systemTheme, setSystemTheme] = useState<Theme>(getSystemTheme);
-  const theme = storedTheme ?? systemTheme;
+  const theme = preferences.theme ?? systemTheme;
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');

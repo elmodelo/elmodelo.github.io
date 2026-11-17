@@ -2,7 +2,7 @@ import { useId, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { LocaleMessages } from '../locales/types';
 
-export type AppSection = 'transactions' | 'uncategorized' | 'settings' | 'account';
+export type AppSection = 'transactions' | 'uncategorized' | 'preferences' | 'account';
 
 interface MenuProps {
   messages: LocaleMessages;
@@ -17,7 +17,7 @@ export default function Menu({ messages, section, onSelect, toggleTarget, uncate
   const menuId = useId();
   const items: { id: AppSection; label: string }[] = [
     { id: 'transactions', label: messages.transactions },
-    { id: 'settings', label: messages.settings },
+    { id: 'preferences', label: messages.preferences },
     { id: 'account', label: messages.myAccount },
   ];
 

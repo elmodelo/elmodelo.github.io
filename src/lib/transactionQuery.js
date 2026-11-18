@@ -6,18 +6,24 @@ export const UNCATEGORIZED_TRANSACTION_FILTERS = Object.freeze([
   Object.freeze({ field: 'category', operator: 'is', value: null }),
 ]);
 
+function descriptionConditions(value) {
+  // Quote the complete pattern so punctuation cannot inject PostgREST logic.
+  const pattern = '%' + value.trim().split(/\s+/).map((word) => word.replace(/[\\%_*]/g, '\\$&')).join('%') + '%';
+  const quoted = '"' + pattern.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+  return 'name.ilike.' + quoted + ',memo.ilike.' + quoted;
+}
+
 /** Apply all conditions before ordering, counting, or pagination. */
 function applyTransactionFilters(query, filters) {
   const descriptionSearches = [];
   for (const { field, operator, value } of filters) {
     switch (operator) {
-      case 'search': {
-        // Quote the complete pattern so punctuation cannot inject PostgREST logic.
-        const pattern = '%' + value.trim().split(/\s+/).map((word) => word.replace(/[\\%_*]/g, '\\$&')).join('%') + '%';
-        const quoted = '"' + pattern.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
-        descriptionSearches.push(`name.ilike.${quoted},memo.ilike.${quoted}`);
+      case 'search':
+        descriptionSearches.push(descriptionConditions(value));
         break;
-      }
+      case 'search.any':
+        descriptionSearches.push(value.map(descriptionConditions).join(','));
+        break;
       case 'in':
         query = query.in(field, value);
         break;
@@ -37,7 +43,7 @@ function applyTransactionFilters(query, filters) {
   if (descriptionSearches.length === 1) {
     query = query.or(descriptionSearches[0], { referencedTable: 'description' });
   } else if (descriptionSearches.length > 1) {
-    // Every search must match, but each can match either description field.
+    // Each group must match one of its alternatives in either description field.
     const clauses = descriptionSearches.map((search) => `or(${search})`);
     query = query.or(`and(${clauses.join(',')})`, { referencedTable: 'description' });
   }
@@ -53,10 +59,10 @@ export function fetchUncategorizedTransactionCount(client, trackedAccountIds, si
 
 export function fetchTransactions(client, { trackedAccountIds, sortColumn, ascending, postedAtAscending = false, page, pageSize, signal, filters = NO_TRANSACTION_FILTERS }) {
   if (trackedAccountIds.length === 0) return Promise.resolve({ data: [], count: 0, error: null });
-  if (filters.some((filter) => filter.operator === 'in' && filter.value.length === 0)) {
+  if (filters.some((filter) => (filter.operator === 'in' || filter.operator === 'search.any') && filter.value.length === 0)) {
     return Promise.resolve({ data: [], count: 0, error: null });
   }
-  const descriptionJoin = filters.some((filter) => filter.operator === 'search') ? '!inner' : '';
+  const descriptionJoin = filters.some((filter) => filter.operator === 'search' || filter.operator === 'search.any') ? '!inner' : '';
   let query = client
     .schema('finance')
     .from('transaction')

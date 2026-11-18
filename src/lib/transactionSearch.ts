@@ -9,33 +9,39 @@ const amountOperators = { '<': 'lt', '>': 'gt', '=': 'eq', '!=': 'neq' } as cons
 
 export function parseTransactionSearch(input: string): TransactionSearch {
   const text = input.trim();
-  if (!text.includes('`')) {
+  const opening = text.indexOf('`');
+  if (opening === -1) {
     return {
       status: 'ready',
       filters: text ? [{ field: 'description', operator: 'search', value: text }] : [],
       names: [],
     };
   }
-  if (!text.startsWith('`')) return { status: 'invalid' };
-  const closing = text.indexOf('`', 1);
+  const closing = text.indexOf('`', opening + 1);
   if (closing === -1) return { status: 'open' };
-  if (closing !== text.length - 1) return { status: 'invalid' };
+  if (text.includes('`', closing + 1)) return { status: 'invalid' };
 
   const filters: TransactionFilters[number][] = [];
+  const plainText = [text.slice(0, opening).trim(), text.slice(closing + 1).trim()].filter(Boolean).join(' ');
+  if (plainText) filters.push({ field: 'description', operator: 'search', value: plainText });
   const names: string[] = [];
-  let remaining = text.slice(1, closing).trim();
+  const descriptionTerms: string[] = [];
+  let remaining = text.slice(opening + 1, closing).trim();
   while (remaining) {
-    const token = /^(?:"(?:[^"\\]|\\["\\])*"|[^\s"]+)(?=\s|$)/u.exec(remaining)?.[0];
+    const token = /^(?:(?:text:)?"(?:[^"\\]|\\["\\])*"|[^\s"]+)(?=\s|$)/u.exec(remaining)?.[0];
     if (!token) return { status: 'invalid' };
     remaining = remaining.slice(token.length).trimStart();
 
-    if (token.startsWith('"')) {
-      const name = token.slice(1, -1).replace(/\\(["\\])/g, '$1').trim();
+    if (token.startsWith('text:')) {
+      const term = unquote(token.slice(5));
+      if (!term) return { status: 'invalid' };
+      descriptionTerms.push(term);
+    } else if (token.startsWith('"')) {
+      const name = unquote(token);
       if (!name) return { status: 'invalid' };
       names.push(name);
     } else if (token.startsWith('date:')) {
-      const date = token.slice(5);
-      const [from, to = from, ...extra] = date.split('..');
+      const [from, to = from, ...extra] = token.slice(5).split('..').map(normalizeDate);
       const values = { ...EMPTY_TRANSACTION_FILTER, from, to };
       if (extra.length || (!from && !to) || from.startsWith('0000-') || to.startsWith('0000-')
         || !isTransactionFilterValues(values)) return { status: 'invalid' };
@@ -49,7 +55,21 @@ export function parseTransactionSearch(input: string): TransactionSearch {
       filters.push({ field: 'amount', operator, value: amount.groups.value });
     }
   }
+  const uniqueTerms = [...new Set(descriptionTerms)];
+  if (uniqueTerms.length === 1) {
+    filters.push({ field: 'description', operator: 'search', value: uniqueTerms[0] });
+  } else if (uniqueTerms.length > 1) {
+    filters.push({ field: 'description', operator: 'search.any', value: uniqueTerms });
+  }
   return { status: 'ready', filters, names };
+}
+
+function normalizeDate(date: string) {
+  return date.replace(/^(\d{4})(\d{2})(\d{2})$/, '$1-$2-$3');
+}
+
+function unquote(token: string) {
+  return token.startsWith('"') ? token.slice(1, -1).replace(/\\(["\\])/g, '$1').trim() : token;
 }
 
 type NamedItem = { id: string; name: string };

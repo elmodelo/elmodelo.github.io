@@ -22,16 +22,52 @@ test('transaction search keeps plain text fuzzy and validates complete backtick 
         { field: 'posted_at', operator: 'lt', value: '2024-03-01T00:00:00.000Z' },
       ],
     });
+    assert.deepEqual(parse('`Groceries "Daily Banking" text:Costco text:"Whole Foods" text:Costco <-50`'), {
+      status: 'ready',
+      names: ['Groceries', 'Daily Banking'],
+      filters: [
+        { field: 'amount', operator: 'lt', value: '-50' },
+        { field: 'description', operator: 'search.any', value: ['Costco', 'Whole Foods'] },
+      ],
+    });
+    assert.deepEqual(parse('`text:"receipt \\"Q4\\""`').filters, [
+      { field: 'description', operator: 'search', value: 'receipt "Q4"' },
+    ]);
     const [lower, upper] = parse('`date:2026-11-30`').filters;
     assert.deepEqual(lower, { field: 'posted_at', operator: 'gte', value: '2026-11-30T00:00:00.000Z' });
     assert.deepEqual(upper, { field: 'posted_at', operator: 'lt', value: '2026-12-01T00:00:00.000Z' });
     assert.deepEqual(parse('`date:2026-11-30..`').filters, [lower]);
     assert.deepEqual(parse('`date:..2026-11-30`').filters, [upper]);
-    for (const expression of ['> 2', '<=2', '>=2', '!=', '>2e3', '>2<4', 'date:..', 'date:2025-02-29',
+    assert.deepEqual(parse('`date:20261130`').filters, [lower, upper]);
+    assert.deepEqual(parse('`date:20261130..`').filters, [lower]);
+    assert.deepEqual(parse('`date:..20261130`').filters, [upper]);
+    assert.deepEqual(parse('`date:20240201..2024-02-29`'), parse('`date:2024-02-01..20240229`'));
+    for (const expression of ['> 2', '<=2', '>=2', '!=', '>2e3', '>2<4', 'date:..', 'text:', 'text: "Costco"', 'text:" "', 'text:"Whole Foods"Costco', 'date:2025-02-29', 'date:20250229', 'date:2026113', 'date:2026-1130', 'date:20261202..2026-12-01',
       'date:2026-12-02..2026-12-01', 'date:2026-01-01..2026-02-01..', '"Home Office', '" "', '"Food"Dining']) {
       assert.deepEqual(parse('`' + expression + '`'), { status: 'invalid' }, expression);
     }
-    assert.deepEqual(parse('`Food` trailing'), { status: 'invalid' });
+    assert.deepEqual(parse('costco `>50 groceries checking`'), {
+      status: 'ready',
+      names: ['groceries', 'checking'],
+      filters: [
+        { field: 'description', operator: 'search', value: 'costco' },
+        { field: 'amount', operator: 'gt', value: '50' },
+      ],
+    });
+    assert.deepEqual(parse('Costco  ` Groceries text:warehouse text:"food court" ` receipt'), {
+      status: 'ready',
+      names: ['Groceries'],
+      filters: [
+        { field: 'description', operator: 'search', value: 'Costco receipt' },
+        { field: 'description', operator: 'search.any', value: ['warehouse', 'food court'] },
+      ],
+    });
+    assert.deepEqual(parse('`Groceries` Costco').filters, [
+      { field: 'description', operator: 'search', value: 'Costco' },
+    ]);
+    assert.deepEqual(parse('Costco `Groceries'), { status: 'open' });
+    assert.deepEqual(parse('Costco `> 50`'), { status: 'invalid' });
+    assert.deepEqual(parse('Costco `Groceries` `>50`'), { status: 'invalid' });
     const categories = [
       { id: 'c1', name: 'Home Office' }, { id: 'c2', name: 'Épicerie' }, { id: 'c3', name: 'Dining' },
     ];

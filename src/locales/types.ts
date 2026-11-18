@@ -2,6 +2,8 @@ export interface LocaleMessages {
   loadingTransactionTotal: string;
   transactionTotal: string;
   transactionTotalEstimated: string;
+  transactionTotalMissing: string;
+  transactionTotalSearchUnsupported: string;
   transactionTotalError: string;
   transactionTotalConversionError: string;
 
@@ -21,6 +23,8 @@ export interface LocaleMessages {
   filterTo: string;
   filterSearch: string;
   transactionSearch: string;
+  transactionPowerSearchAddText: string;
+  transactionPowerSearchExample: string;
   transactionSearchOpen: string;
   transactionSearchInvalid: string;
   transactionSearchUnknown: string;

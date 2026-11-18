@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { loadTransactionTotal, transactionTotalMessage } from '../lib/transactionTotals';
+import { loadTransactionTotal, transactionTotalFailureMessage, transactionTotalMessage } from '../lib/transactionTotals';
 import { useStatusMessage } from '../hooks/useStatusMessages';
 import type { LocaleMessages } from '../locales/types';
 import type { TransactionFilters } from '../lib/transactionFilters';
@@ -11,15 +11,17 @@ interface Props {
   trackedAccountIds: string[];
   filtersKey: string;
   revision: number;
+  hasMatches: boolean;
 }
 
 /** One total for the complete filter, independent of page, sort and checked rows. */
-export default function TransactionTotalStatus({ messages, trackedAccountIds, filtersKey, revision }: Props) {
+export default function TransactionTotalStatus({ messages, trackedAccountIds, filtersKey, revision, hasMatches }: Props) {
   const [attempt, setAttempt] = useState(0);
   const key = JSON.stringify([trackedAccountIds, filtersKey, revision, attempt]);
-  const [result, setResult] = useState<{ key: string; total?: Total; error?: boolean } | null>(null);
+  const [result, setResult] = useState<{ key: string; total: Total } | { key: string; error: unknown } | null>(null);
   const retry = useCallback(() => setAttempt((value) => value + 1), []);
   useEffect(() => {
+    if (!hasMatches) return;
     let active = true;
     const controller = new AbortController();
     const [accounts, filters] = JSON.parse(key) as [string[], string];
@@ -27,17 +29,19 @@ export default function TransactionTotalStatus({ messages, trackedAccountIds, fi
       trackedAccountIds: accounts, filters: JSON.parse(filters) as TransactionFilters, signal: controller.signal,
     }).then((total) => {
       if (active) setResult({ key, total });
-    }).catch(() => {
-      if (active) setResult({ key, error: true });
+    }).catch((error: unknown) => {
+      if (active) setResult({ key, error });
     });
     return () => { active = false; controller.abort(); };
-  }, [key]);
+  }, [hasMatches, key]);
 
   const current = result?.key === key ? result : null;
-  const error = !!(current?.error || current?.total?.conversionError);
+  const error = hasMatches && !!current && ('error' in current || current.total.conversionError);
   useStatusMessage({
-    message: !current ? messages.loadingTransactionTotal
-      : current.total ? transactionTotalMessage(messages, current.total) : messages.transactionTotalError,
+    message: !hasMatches ? transactionTotalMessage(messages, { cad: 0 })
+      : !current ? messages.loadingTransactionTotal
+        : 'total' in current ? transactionTotalMessage(messages, current.total)
+          : transactionTotalFailureMessage(messages, current.error, JSON.parse(filtersKey) as TransactionFilters),
     tone: error ? 'error' : 'info',
     action: error ? { label: messages.retry, onClick: retry } : undefined,
   });

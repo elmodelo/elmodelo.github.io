@@ -223,6 +223,18 @@ test('shared description search filters parent rows and keeps count and all othe
   });
   const expression = request.searchParams.get('description.or');
   assert.ok(expression.includes('a\\",memo.is.null)\\\\\\\\b\\\\_\\\\%'));
+  await fetchTransactions(client, {
+    trackedAccountIds: ['tracked'], filters: [
+      { field: 'description', operator: 'search.any', value: ['Costco', 'Whole Foods'] },
+      { field: 'description', operator: 'search', value: 'receipt' },
+      { field: 'category', operator: 'in', value: ['groceries'] },
+    ], sortColumn: 'posted_at', ascending: false, page: 0, pageSize: 25,
+  });
+  assert.match(request.searchParams.get('select'), /description:transaction_description!inner/);
+  assert.equal(request.searchParams.get('category'), 'in.(groceries)');
+  assert.equal(request.searchParams.get('description.or'),
+    '(and(or(name.ilike."%Costco%",memo.ilike."%Costco%",name.ilike."%Whole%Foods%",memo.ilike."%Whole%Foods%"),or(name.ilike."%receipt%",memo.ilike."%receipt%")))');
+
 });
 
 test('explicit empty account or category filters match nothing without issuing a request', async () => {

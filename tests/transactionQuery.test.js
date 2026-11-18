@@ -208,6 +208,16 @@ test('shared description search filters parent rows and keeps count and all othe
   assert.equal(request.searchParams.get('limit'), '25');
 
   await fetchTransactions(client, {
+    trackedAccountIds: ['tracked'], filters: [
+      { field: 'description', operator: 'search', value: 'coffee shop' },
+      { field: 'description', operator: 'search', value: 'receipt' },
+    ], sortColumn: 'posted_at', ascending: false, page: 0, pageSize: 25,
+  });
+  assert.deepEqual(request.searchParams.getAll('description.or'), [
+    '(and(or(name.ilike."%coffee%shop%",memo.ilike."%coffee%shop%"),or(name.ilike."%receipt%",memo.ilike."%receipt%")))',
+  ]);
+
+  await fetchTransactions(client, {
     trackedAccountIds: ['tracked'], filters: [{ field: 'description', operator: 'search', value: 'a",memo.is.null)\\b_%' }],
     sortColumn: 'posted_at', ascending: false, page: 0, pageSize: 25,
   });

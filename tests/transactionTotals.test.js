@@ -163,16 +163,19 @@ test('totals preserve the RPC error code and distinguish missing support from or
   }
 });
 
-test('total messages localize currencies, distinguish estimated totals, and disclose the actual rate date', async () => {
+test('total messages localize currencies and show the rate date and rates only for converted totals', async () => {
   const server = await createServer({ server: { middlewareMode: true, ws: false }, appType: 'custom' });
   try {
     const { getLocaleMessages } = await server.ssrLoadModule('/src/locales/index.ts');
     for (const locale of ['en', 'es']) {
       const messages = getLocaleMessages(locale);
-      assert.match(transactionTotalMessage(messages, { cad: 5, rateDate: null }), /CAD/);
-      const converted = transactionTotalMessage(messages, { cad: 5, rateDate: '2026-11-16', exchangeRates: { USD: 1.4291, JPY: 0.00897 } });
-      assert.match(converted, /2026-11-16/);
-      assert.match(converted, /estimat|estimado/i);
+      const rateDate = '2026-11-16';
+      const cadOnly = transactionTotalMessage(messages, { cad: 5, rateDate: null });
+      assert.match(cadOnly, /CAD/);
+      assert.ok(!cadOnly.includes(rateDate));
+      assert.doesNotMatch(cadOnly, /USD|JPY/);
+      const converted = transactionTotalMessage(messages, { cad: 5, rateDate, exchangeRates: { USD: 1.4291, JPY: 0.00897 } });
+      assert.ok(converted.includes(rateDate));
       assert.ok(converted.includes(locale === 'en' ? '1 USD = 1.4291 CAD' : '1 USD = 1,4291 CAD'));
       assert.ok(converted.includes(locale === 'en' ? '1 JPY = 0.00897 CAD' : '1 JPY = 0,00897 CAD'));
       assert.ok(!converted.includes('1 CAD ='));

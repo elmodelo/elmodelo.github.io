@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient';
 import { fetchTransactions, NO_TRANSACTION_FILTERS } from '../lib/transactionQuery';
 import type { TransactionFilters } from '../lib/transactionFilters';
 import { parseTransactionSearch, resolveSearchNames } from '../lib/transactionSearch';
+import { projectTransactionSearch } from '../lib/projectTransactionSearch';
 import { fetchCategories } from '../lib/transactionCategorization';
 import type { LocaleMessages } from '../locales/types';
 import TransactionFilterPanel from './TransactionFilterPanel';
@@ -56,7 +57,7 @@ interface TransactionsPanelProps {
 const EMPTY_SEARCH = { text: '', filters: NO_TRANSACTION_FILTERS };
 
 export default function TransactionsPanel({ messages, accounts, trackedAccountIds, filters = NO_TRANSACTION_FILTERS, title = messages.transactions, onCategoriesChanged }: TransactionsPanelProps) {
-  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState<'edit' | 'save-search' | null>(null);
   const [{ values: filterValues, presetId }, setAppliedFilter] = useState({
     values: EMPTY_TRANSACTION_FILTER,
     presetId: '',
@@ -300,9 +301,9 @@ export default function TransactionsPanel({ messages, accounts, trackedAccountId
               items[next]?.focus();
             }}>
             <button ref={filterButtonRef} type="button" className="button button-secondary transaction-filter-trigger"
-              aria-label={messages.filterTransactions} title={messages.filterTransactions} aria-expanded={filterOpen}
+              aria-label={messages.filterTransactions} title={messages.filterTransactions} aria-expanded={filterOpen !== null}
               aria-haspopup="dialog" data-active={panelFilters.length || activePreset ? '' : undefined}
-              onClick={() => setFilterOpen(true)}>
+              onClick={() => setFilterOpen('edit')}>
               <svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M3 4h18l-7 8v7l-4 2v-9L3 4Z" /></svg>
             </button>
             <button ref={savedFiltersButtonRef} type="button" className="button button-secondary transaction-saved-filters-trigger"
@@ -325,10 +326,16 @@ export default function TransactionsPanel({ messages, accounts, trackedAccountId
               <span aria-hidden="true">▾</span>
             </button>
             <div id={savedFiltersId} ref={savedFiltersRef} popover="auto" className="transaction-saved-filters">
+              {search && matchingCount !== null && (
+                <button type="button" className="menu-button" onClick={() => {
+                  savedFiltersRef.current?.hidePopover();
+                  setFilterOpen('save-search');
+                }}>{messages.saveCurrentSearch}</button>
+              )}
               {applicationPreferences.transaction_filters.length === 0
                 ? <p>{messages.noSavedFilters}</p>
                 : applicationPreferences.transaction_filters.map((preset) => (
-                  <button key={preset.id} type="button" className="menu-button"
+                  <button key={preset.id} type="button" className="menu-button" title={preset.values.sourceSearch}
                     onClick={() => {
                       savedFiltersRef.current?.hidePopover();
                       applyFilter(preset.values, preset.id);
@@ -531,11 +538,13 @@ export default function TransactionsPanel({ messages, accounts, trackedAccountId
         trackedAccountIds={trackedAccountIds} filtersKey={filtersKey} revision={retry}
         hasMatches={matchingCount > 0} />}
       {filterOpen && <TransactionFilterPanel messages={messages} trackedAccountIds={trackedAccountIds}
-        values={filterValues} activePresetId={activePreset?.id}
-        onClose={() => { setFilterOpen(false); filterButtonRef.current?.focus(); }}
+        values={projectTransactionSearch(filterValues, search, searchFilters)}
+        activePresetId={search ? undefined : activePreset?.id}
+        focusName={filterOpen === 'save-search'}
+        onClose={() => { setFilterOpen(null); filterButtonRef.current?.focus(); }}
         onApply={(values, appliedPresetId) => {
           applyFilter(values, appliedPresetId);
-          setFilterOpen(false);
+          setFilterOpen(null);
           filterButtonRef.current?.focus();
         }} />}
       {showLoadingDialog && <LoadingDialog label={messages.loadingTransactions} />}

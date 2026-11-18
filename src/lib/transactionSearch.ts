@@ -1,4 +1,3 @@
-import { buildTransactionFilters, EMPTY_TRANSACTION_FILTER, isTransactionFilterValues } from './transactionFilterPresets';
 import type { TransactionFilters } from './transactionFilters';
 
 type TransactionSearch =
@@ -42,10 +41,9 @@ export function parseTransactionSearch(input: string): TransactionSearch {
       names.push(name);
     } else if (token.startsWith('date:')) {
       const [from, to = from, ...extra] = token.slice(5).split('..').map(normalizeDate);
-      const values = { ...EMPTY_TRANSACTION_FILTER, from, to };
       if (extra.length || (!from && !to) || from.startsWith('0000-') || to.startsWith('0000-')
-        || !isTransactionFilterValues(values)) return { status: 'invalid' };
-      filters.push(...buildTransactionFilters(values));
+        || !isTransactionDateRange(from, to)) return { status: 'invalid' };
+      filters.push(...buildTransactionDateFilters(from, to));
     } else if (/^\p{L}[\p{L}\p{M}]*$/u.test(token)) {
       names.push(token);
     } else {
@@ -62,6 +60,37 @@ export function parseTransactionSearch(input: string): TransactionSearch {
     filters.push({ field: 'description', operator: 'search.any', value: uniqueTerms });
   }
   return { status: 'ready', filters, names };
+}
+
+function validDate(value: unknown): value is string {
+  return typeof value === 'string' && (value === '' || (/^\d{4}-\d{2}-\d{2}$/.test(value)
+    && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value));
+}
+
+export function isTransactionDateRange(from: unknown, to: unknown) {
+  return validDate(from) && validDate(to) && (!from || !to || from <= to);
+}
+
+export function buildTransactionDateFilters(from: string, to: string): TransactionFilters {
+  const filters: TransactionFilters[number][] = [];
+  if (from) filters.push({ field: 'posted_at', operator: 'gte', value: from + 'T00:00:00.000Z' });
+  if (to) {
+    const nextDay = new Date(to + 'T00:00:00.000Z');
+    nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+    filters.push({ field: 'posted_at', operator: 'lt', value: nextDay.toISOString() });
+  }
+  return filters;
+}
+
+export function parseFilterPowerSearch(text: string): TransactionFilters | null {
+  const filters: TransactionFilters[number][] = [];
+  for (const line of text.split('\n')) {
+    if (!line.trim()) continue;
+    const parsed = parseTransactionSearch('`' + line.trim() + '`');
+    if (parsed.status !== 'ready' || parsed.names.length) return null;
+    filters.push(...parsed.filters);
+  }
+  return filters;
 }
 
 function normalizeDate(date: string) {
@@ -89,10 +118,8 @@ export function resolveSearchNames(names: string[], categories: NamedItem[], acc
     for (const account of matchingAccounts) accountIds.add(account.id);
   }
 
-  const filters = buildTransactionFilters({
-    ...EMPTY_TRANSACTION_FILTER,
-    categories: categoryIds.size ? [...categoryIds].sort() : null,
-    accounts: accountIds.size ? [...accountIds].sort() : null,
-  });
+  const filters: TransactionFilters[number][] = [];
+  if (accountIds.size) filters.push({ field: 'account', operator: 'in', value: [...accountIds].sort() });
+  if (categoryIds.size) filters.push({ field: 'category', operator: 'in', value: [...categoryIds].sort() });
   return { filters, unknown };
 }

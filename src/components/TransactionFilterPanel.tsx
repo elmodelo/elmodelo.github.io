@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient';
 import { fetchCategories } from '../lib/transactionCategorization';
 import { usePreferences } from '../hooks/usePreferences';
 import { buildTransactionFilters, EMPTY_TRANSACTION_FILTER, isTransactionFilterValues, type TransactionFilterValues } from '../lib/transactionFilterPresets';
+import { parseFilterPowerSearch } from '../lib/transactionSearch';
 import type { LocaleMessages } from '../locales/types';
 
 interface Props {
@@ -10,14 +11,16 @@ interface Props {
   trackedAccountIds: string[];
   values: TransactionFilterValues;
   activePresetId?: string;
+  focusName?: boolean;
   onApply: (values: TransactionFilterValues, presetId: string) => void;
   onClose: () => void;
 }
 type Option = { id: string; name: string };
 
-export default function TransactionFilterPanel({ messages, trackedAccountIds, values, activePresetId, onApply, onClose }: Props) {
+export default function TransactionFilterPanel({ messages, trackedAccountIds, values, activePresetId, focusName = false, onApply, onClose }: Props) {
   const id = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
   const { preferences, status, update } = usePreferences();
   const [draft, setDraft] = useState(values);
   const [accounts, setAccounts] = useState<Option[]>([]);
@@ -28,15 +31,18 @@ export default function TransactionFilterPanel({ messages, trackedAccountIds, va
   const [name, setName] = useState(() => preferences.transaction_filters.find((preset) => preset.id === activePresetId)?.name ?? '');
   const [savedMessage, setSavedMessage] = useState(false);
   const valid = isTransactionFilterValues(draft);
+  const invalidPowerSearch = parseFilterPowerSearch(draft.powerSearch ?? '') === null;
   const canSave = status !== 'loading' && status !== 'load-error';
+  const canSaveDraft = canSave && valid && !!name.trim();
   const presets = preferences.transaction_filters;
 
   useLayoutEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
     dialog.showModal();
+    if (focusName) nameRef.current?.focus();
     return () => dialog.close();
-  }, []);
+  }, [focusName]);
 
   useEffect(() => {
     let active = true;
@@ -56,8 +62,17 @@ export default function TransactionFilterPanel({ messages, trackedAccountIds, va
   }, [attempt]);
 
   function change<K extends keyof TransactionFilterValues>(key: K, value: TransactionFilterValues[K]) {
-    setDraft((previous) => ({ ...previous, [key]: value }));
+    setDraft((previous) => ({ ...previous, [key]: value, sourceSearch: undefined }));
     setSavedMessage(false);
+  }
+
+  function saveDraft() {
+    if (!canSaveDraft) return;
+    const existing = presets.find((preset) => preset.name === name.trim());
+    const saved = { id: existing?.id ?? crypto.randomUUID(), name: name.trim(), values: structuredClone(draft) };
+    update('transaction_filters', (previous) => [...previous.filter((preset) => preset.id !== saved.id), saved]);
+    setPresetId(saved.id);
+    setSavedMessage(true);
   }
   function options(field: 'accounts' | 'categories', label: string, items: Option[]) {
     const selected = draft[field];
@@ -108,15 +123,15 @@ export default function TransactionFilterPanel({ messages, trackedAccountIds, va
           {presets.map((preset) => <option key={preset.id} value={preset.id}>{preset.name}</option>)}
         </select>
         <label htmlFor={`${id}-name`}>{messages.filterName}</label>
-        <input id={`${id}-name`} value={name} maxLength={100} onChange={(event) => { setName(event.target.value); setSavedMessage(false); }} />
+        <input id={`${id}-name`} ref={nameRef} value={name} maxLength={100}
+          onChange={(event) => { setName(event.target.value); setSavedMessage(false); }}
+          onKeyDown={(event) => {
+            if (!focusName || event.key !== 'Enter' || event.nativeEvent.isComposing) return;
+            event.preventDefault();
+            saveDraft();
+          }} />
         <div className="transaction-filter-actions">
-          <button type="button" className="button button-secondary" disabled={!canSave || !valid || !name.trim()} onClick={() => {
-            const existing = presets.find((preset) => preset.name === name.trim());
-            const saved = { id: existing?.id ?? crypto.randomUUID(), name: name.trim(), values: structuredClone(draft) };
-            update('transaction_filters', (previous) => [...previous.filter((preset) => preset.id !== saved.id), saved]);
-            setPresetId(saved.id);
-            setSavedMessage(true);
-          }}>{messages.saveFilter}</button>
+          <button type="button" className="button button-secondary" disabled={!canSaveDraft} onClick={saveDraft}>{messages.saveFilter}</button>
           <button type="button" className="button button-secondary" disabled={!canSave || !presetId} onClick={() => {
             update('transaction_filters', (previous) => previous.filter((preset) => preset.id !== presetId));
             setPresetId(''); setName(''); setSavedMessage(false);
@@ -145,7 +160,15 @@ export default function TransactionFilterPanel({ messages, trackedAccountIds, va
         <label>{messages.filterMaximum}<input type="number" step="any" value={draft.maximum} onChange={(event) => change('maximum', event.target.value)} /></label>
       </div>
       <p className="transaction-filter-help">{messages.filterAmountHelp}</p>
-      {!valid && <p role="alert" className="form-message form-message-error">{messages.filterInvalid}</p>}
+      <label>{messages.filterPowerSearch}
+        <textarea rows={2} value={draft.powerSearch ?? ''} aria-describedby={`${id}-power-help`}
+          aria-invalid={invalidPowerSearch || undefined}
+          onChange={(event) => change('powerSearch', event.target.value)} />
+      </label>
+      <p id={`${id}-power-help`} className="transaction-filter-help">{messages.filterPowerSearchHelp}</p>
+      {!valid && <p role="alert" className="form-message form-message-error">
+        {invalidPowerSearch ? messages.filterPowerSearchInvalid : messages.filterInvalid}
+      </p>}
       <div className="transaction-filter-actions">
         <button type="button" className="button button-secondary" onClick={() => { setDraft(EMPTY_TRANSACTION_FILTER); setPresetId(''); setName(''); setSavedMessage(false); }}>{messages.resetFilters}</button>
         <button type="button" className="button button-secondary" onClick={onClose}>{messages.cancel}</button>

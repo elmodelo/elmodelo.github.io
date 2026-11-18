@@ -16,6 +16,10 @@ export interface LocaleMessages {
   filterName: string;
   saveFilter: string;
   deleteFilter: string;
+  saveCurrentSearch: string;
+  filterPowerSearch: string;
+  filterPowerSearchInvalid: string;
+  filterPowerSearchHelp: string;
   filterSaveHelp: string;
   filterOptionsError: string;
   filterScopeHelp: string;

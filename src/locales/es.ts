@@ -3,7 +3,7 @@ import type { LocaleMessages } from './types';
 const es: LocaleMessages = {
   loadingTransactionTotal: "Calculando el total filtrado…",
   transactionTotal: "Total filtrado: {amount}",
-  transactionTotalEstimated: "Total filtrado estimado: {amount} (tipos del Banco de Canadá: {date}; {rates})",
+  transactionTotalEstimated: "Total: {amount} (Bank of Canada {date} {rates})",
   transactionTotalError: "No se pudo calcular el total filtrado. Inténtalo de nuevo.",
   transactionTotalConversionError: "Conversión de moneda no disponible. Subtotales filtrados: {totals}",
   filterTransactions: "Filtrar transacciones",

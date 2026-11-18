@@ -8,6 +8,7 @@ export interface LocaleMessages {
   filterTransactions: string;
   filterAll: string;
   savedFilters: string;
+  noSavedFilters: string;
   loadFilter: string;
   chooseFilter: string;
   filterName: string;

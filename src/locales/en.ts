@@ -9,6 +9,7 @@ const en: LocaleMessages = {
   filterTransactions: "Filter transactions",
   filterAll: "All",
   savedFilters: "Saved filters",
+  noSavedFilters: "No saved filters",
   loadFilter: "Load filter",
   chooseFilter: "Choose a saved filter",
   filterName: "Filter name",

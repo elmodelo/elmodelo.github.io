@@ -2,19 +2,20 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { fetchCategories } from '../lib/transactionCategorization';
 import { usePreferences } from '../hooks/usePreferences';
-import { EMPTY_TRANSACTION_FILTER, isTransactionFilterValues, type TransactionFilterValues } from '../lib/transactionFilterPresets';
+import { buildTransactionFilters, EMPTY_TRANSACTION_FILTER, isTransactionFilterValues, type TransactionFilterValues } from '../lib/transactionFilterPresets';
 import type { LocaleMessages } from '../locales/types';
 
 interface Props {
   messages: LocaleMessages;
   trackedAccountIds: string[];
   values: TransactionFilterValues;
-  onApply: (values: TransactionFilterValues) => void;
+  activePresetId?: string;
+  onApply: (values: TransactionFilterValues, presetId: string) => void;
   onClose: () => void;
 }
 type Option = { id: string; name: string };
 
-export default function TransactionFilterPanel({ messages, trackedAccountIds, values, onApply, onClose }: Props) {
+export default function TransactionFilterPanel({ messages, trackedAccountIds, values, activePresetId, onApply, onClose }: Props) {
   const id = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const { preferences, status, update } = usePreferences();
@@ -23,8 +24,8 @@ export default function TransactionFilterPanel({ messages, trackedAccountIds, va
   const [categories, setCategories] = useState<Option[]>([]);
   const [loadStatus, setLoadStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [attempt, setAttempt] = useState(0);
-  const [presetId, setPresetId] = useState('');
-  const [name, setName] = useState('');
+  const [presetId, setPresetId] = useState(activePresetId ?? '');
+  const [name, setName] = useState(() => preferences.transaction_filters.find((preset) => preset.id === activePresetId)?.name ?? '');
   const [savedMessage, setSavedMessage] = useState(false);
   const valid = isTransactionFilterValues(draft);
   const canSave = status !== 'loading' && status !== 'load-error';
@@ -87,7 +88,13 @@ export default function TransactionFilterPanel({ messages, trackedAccountIds, va
         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" /></svg>
       </button>
     </div>
-    <form onSubmit={(event) => { event.preventDefault(); if (valid) onApply(draft); }}>
+    <form onSubmit={(event) => {
+      event.preventDefault();
+      if (!valid) return;
+      const preset = presets.find((item) => item.id === presetId);
+      const matchesPreset = preset && JSON.stringify(buildTransactionFilters(preset.values)) === JSON.stringify(buildTransactionFilters(draft));
+      onApply(draft, matchesPreset ? presetId : '');
+    }}>
       <fieldset className="transaction-filter-saved">
         <legend>{messages.savedFilters}</legend>
         <label htmlFor={`${id}-saved`}>{messages.loadFilter}</label>

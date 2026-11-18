@@ -4,6 +4,7 @@ import { fetchCategories } from '../lib/transactionCategorization';
 import { usePreferences } from '../hooks/usePreferences';
 import { buildTransactionFilters, EMPTY_TRANSACTION_FILTER, isTransactionFilterValues, type TransactionFilterValues } from '../lib/transactionFilterPresets';
 import { parseFilterPowerSearch } from '../lib/transactionSearch';
+import { isRelativeDateRange, MAX_RELATIVE_DAYS, relativeDateExpression } from '../lib/relativeTransactionDates';
 import type { LocaleMessages } from '../locales/types';
 
 interface Props {
@@ -31,6 +32,8 @@ export default function TransactionFilterPanel({ messages, trackedAccountIds, va
   const [name, setName] = useState(() => preferences.transaction_filters.find((preset) => preset.id === activePresetId)?.name ?? '');
   const [savedMessage, setSavedMessage] = useState(false);
   const valid = isTransactionFilterValues(draft);
+  const relativeDate = draft.relativeDate;
+  const invalidRelativeDate = relativeDate !== undefined && !isRelativeDateRange(relativeDate);
   const invalidPowerSearch = parseFilterPowerSearch(draft.powerSearch ?? '') === null;
   const canSave = status !== 'loading' && status !== 'load-error';
   const canSaveDraft = canSave && valid && !!name.trim();
@@ -107,7 +110,11 @@ export default function TransactionFilterPanel({ messages, trackedAccountIds, va
       event.preventDefault();
       if (!valid) return;
       const preset = presets.find((item) => item.id === presetId);
-      const matchesPreset = preset && JSON.stringify(buildTransactionFilters(preset.values)) === JSON.stringify(buildTransactionFilters(draft));
+      const asOf = new Date();
+      const matchesPreset = preset
+        && (preset.values.relativeDate ? relativeDateExpression(preset.values.relativeDate) : '') === (relativeDate ? relativeDateExpression(relativeDate) : '')
+        && (preset.values.powerSearch ?? '').trim() === (draft.powerSearch ?? '').trim()
+        && JSON.stringify(buildTransactionFilters(preset.values, asOf)) === JSON.stringify(buildTransactionFilters(draft, asOf));
       onApply(draft, matchesPreset ? presetId : '');
     }}>
       <fieldset className="transaction-filter-saved">
@@ -150,6 +157,26 @@ export default function TransactionFilterPanel({ messages, trackedAccountIds, va
         </div>}
       <p className="transaction-filter-help">{messages.filterScopeHelp}</p>
       <div className="transaction-filter-grid">
+        <label>{messages.filterRelativeDate}
+          <select value={relativeDate?.kind ?? ''} aria-describedby={relativeDate ? `${id}-relative-help` : undefined}
+            onChange={(event) => {
+              const kind = event.target.value;
+              change('relativeDate', kind === 'last-month' ? { kind } : kind === 'last-days' ? { kind, days: 30 } : undefined);
+            }}>
+            <option value="">{messages.filterRelativeNone}</option>
+            <option value="last-days">{messages.filterRelativeDays}</option>
+            <option value="last-month">{messages.filterRelativeMonth}</option>
+          </select>
+        </label>
+        {relativeDate?.kind === 'last-days' && <label>{messages.filterRelativeDayCount}
+          <input type="number" min={1} max={MAX_RELATIVE_DAYS} step={1} required
+            aria-invalid={invalidRelativeDate || undefined}
+            value={Number.isFinite(relativeDate.days) ? relativeDate.days : ''}
+            onChange={(event) => change('relativeDate', { kind: 'last-days', days: event.target.valueAsNumber })} />
+        </label>}
+      </div>
+      {relativeDate && <p id={`${id}-relative-help`} className="transaction-filter-help">{messages.filterRelativeHelp}</p>}
+      <div className="transaction-filter-grid">
         <label>{messages.filterFrom}<input type="date" value={draft.from} max={draft.to || undefined} onChange={(event) => change('from', event.target.value)} /></label>
         <label>{messages.filterTo}<input type="date" value={draft.to} min={draft.from || undefined} onChange={(event) => change('to', event.target.value)} /></label>
       </div>
@@ -167,7 +194,7 @@ export default function TransactionFilterPanel({ messages, trackedAccountIds, va
       </label>
       <p id={`${id}-power-help`} className="transaction-filter-help">{messages.filterPowerSearchHelp}</p>
       {!valid && <p role="alert" className="form-message form-message-error">
-        {invalidPowerSearch ? messages.filterPowerSearchInvalid : messages.filterInvalid}
+        {invalidRelativeDate ? messages.filterRelativeInvalid : invalidPowerSearch ? messages.filterPowerSearchInvalid : messages.filterInvalid}
       </p>}
       <div className="transaction-filter-actions">
         <button type="button" className="button button-secondary" onClick={() => { setDraft(EMPTY_TRANSACTION_FILTER); setPresetId(''); setName(''); setSavedMessage(false); }}>{messages.resetFilters}</button>

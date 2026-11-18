@@ -92,3 +92,45 @@ test('a search saved through the filter controls keeps conjunctions, alternative
     assert.deepEqual(parseSavedTransactionFilters([{ ...preset, values: { ...values, powerSearch: 'text:' } }]), []);
   } finally { await server.close(); }
 });
+
+test('relative ranges survive saving and resolve against the UTC day when reused', async () => {
+  const server = await makeServer();
+  try {
+    const { EMPTY_TRANSACTION_FILTER: empty, buildTransactionFilters: build, parseSavedTransactionFilters: reload } =
+      await server.ssrLoadModule('/src/lib/transactionFilterPresets.ts');
+    const { parseTransactionSearch: parse } = await server.ssrLoadModule('/src/lib/transactionSearch.ts');
+    const { projectTransactionSearch: project } = await server.ssrLoadModule('/src/lib/projectTransactionSearch.ts');
+
+    const source = 'costco `date:"last 30 days"`';
+    const parsed = parse(source);
+    assert.deepEqual(parsed.relativeDates, [{ kind: 'last-days', days: 30 }]);
+    const values = project(empty, source, parsed.filters, parsed.relativeDates);
+    assert.equal(values.from, '');
+    assert.equal(values.to, '');
+    assert.deepEqual(values.relativeDate, { kind: 'last-days', days: 30 });
+
+    const [saved] = reload(JSON.parse(JSON.stringify([{ id: 'rolling', name: 'Rolling Costco', values }])));
+    const dates = (filter, now) => build(filter, new Date(now)).filter(({ field }) => field === 'posted_at').map(({ value }) => value);
+    assert.deepEqual(dates(saved.values, '2026-01-01T23:59:59Z'), ['2025-12-03T00:00:00.000Z', '2026-01-02T00:00:00.000Z']);
+    assert.deepEqual(dates(saved.values, '2026-01-02T00:00:00Z'), ['2025-12-04T00:00:00.000Z', '2026-01-03T00:00:00.000Z']);
+    assert.deepEqual(dates({ ...empty, relativeDate: { kind: 'last-month' } }, '2024-03-31T19:45:00Z'),
+      ['2024-02-01T00:00:00.000Z', '2024-03-01T00:00:00.000Z']);
+    assert.deepEqual(dates({ ...empty, relativeDate: { kind: 'last-month' } }, '2026-01-31T19:45:00Z'),
+      ['2025-12-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z']);
+    assert.deepEqual(dates({ ...empty, relativeDate: { kind: 'last-days', days: 1 } }, '2026-11-18T23:12:00-05:00'),
+      ['2026-11-19T00:00:00.000Z', '2026-11-20T00:00:00.000Z']);
+
+    const mixed = parse('`date:"last month" date:"last 2 days" date:20261101..`');
+    const projected = project(empty, 'mixed', mixed.filters, mixed.relativeDates);
+    assert.deepEqual(projected.relativeDate, { kind: 'last-month' });
+    assert.equal(projected.powerSearch, 'date:"last 2 days"');
+    assert.deepEqual(dates(projected, '2026-12-01T08:00:00Z'), [
+      '2026-11-01T00:00:00.000Z', '2026-11-01T00:00:00.000Z', '2026-12-01T00:00:00.000Z',
+      '2026-11-30T00:00:00.000Z', '2026-12-02T00:00:00.000Z',
+    ]);
+    for (const phrase of ['last 0 days', 'last -2 days', 'last 2.5 days', 'last 36501 days', 'next month']) {
+      assert.deepEqual(parse('`date:"' + phrase + '"`'), { status: 'invalid' });
+    }
+    assert.deepEqual(reload([{ id: 'bad', name: 'Invalid', values: { ...empty, relativeDate: { kind: 'last-days', days: 0 } } }]), []);
+  } finally { await server.close(); }
+});

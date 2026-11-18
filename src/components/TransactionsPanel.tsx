@@ -4,6 +4,7 @@ import { fetchTransactions, NO_TRANSACTION_FILTERS } from '../lib/transactionQue
 import type { TransactionFilters } from '../lib/transactionFilters';
 import { parseTransactionSearch, resolveSearchNames } from '../lib/transactionSearch';
 import { projectTransactionSearch } from '../lib/projectTransactionSearch';
+import { buildRelativeDateFilters, type RelativeDateRange } from '../lib/relativeTransactionDates';
 import { fetchCategories } from '../lib/transactionCategorization';
 import type { LocaleMessages } from '../locales/types';
 import TransactionFilterPanel from './TransactionFilterPanel';
@@ -54,7 +55,7 @@ interface TransactionsPanelProps {
   onCategoriesChanged?: () => void;
 }
 
-const EMPTY_SEARCH = { text: '', filters: NO_TRANSACTION_FILTERS };
+const EMPTY_SEARCH = { text: '', filters: NO_TRANSACTION_FILTERS, relativeDates: [] as RelativeDateRange[] };
 
 export default function TransactionsPanel({ messages, accounts, trackedAccountIds, filters = NO_TRANSACTION_FILTERS, title = messages.transactions, onCategoriesChanged }: TransactionsPanelProps) {
   const [filterOpen, setFilterOpen] = useState<'edit' | 'save-search' | null>(null);
@@ -63,7 +64,7 @@ export default function TransactionsPanel({ messages, accounts, trackedAccountId
     presetId: '',
   });
   const [searchText, setSearchText] = useState('');
-  const [{ text: search, filters: searchFilters }, setAppliedSearch] = useState(EMPTY_SEARCH);
+  const [{ text: search, filters: searchFilters, relativeDates }, setAppliedSearch] = useState(EMPTY_SEARCH);
   const [searchIssue, setSearchIssue] = useState<{ text: string; unknown: string[] | null } | null>(null);
   const parsedSearch = useMemo(() => parseTransactionSearch(searchText), [searchText]);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -79,9 +80,11 @@ export default function TransactionsPanel({ messages, accounts, trackedAccountId
   const preferences = applicationPreferences.transactions;
   const setPreferences = (value: SetStateAction<TransactionPreferences>) => update('transactions', value);
   const { sortColumn, ascending, postedAtAscending, pageSize } = preferences;
-  const panelFilters = buildTransactionFilters(filterValues);
+  const asOf = new Date();
+  const panelFilters = buildTransactionFilters(filterValues, asOf);
+  const relativeSearchFilters = relativeDates.flatMap((range) => buildRelativeDateFilters(range, asOf));
   // Compare serialized values so newly allocated, equivalent filters do not reload the panel.
-  const filtersKey = JSON.stringify([...filters, ...panelFilters, ...searchFilters]);
+  const filtersKey = JSON.stringify([...filters, ...panelFilters, ...searchFilters, ...relativeSearchFilters]);
   const [pagination, setPagination] = useState({ filtersKey, page: 0 });
   const page = pagination.filtersKey === filtersKey ? pagination.page : 0;
   if (pagination.filtersKey !== filtersKey) {
@@ -120,7 +123,7 @@ export default function TransactionsPanel({ messages, accounts, trackedAccountId
   useEffect(() => {
     if (parsedSearch.status !== 'ready' || searchText.trim() === search) return;
     const controller = new AbortController();
-    const { filters, names } = parsedSearch;
+    const { filters, names, relativeDates = [] } = parsedSearch;
     const timer = window.setTimeout(async () => {
       try {
         const resolved = await resolveFilters(names, filters, accounts, controller.signal);
@@ -130,7 +133,7 @@ export default function TransactionsPanel({ messages, accounts, trackedAccountId
           return;
         }
         setSearchIssue(null);
-        setAppliedSearch({ text: searchText.trim(), filters: resolved.filters });
+        setAppliedSearch({ text: searchText.trim(), filters: resolved.filters, relativeDates });
       } catch {
         if (!controller.signal.aborted) setSearchIssue({ text: searchText, unknown: null });
       }
@@ -270,7 +273,7 @@ export default function TransactionsPanel({ messages, accounts, trackedAccountId
     }
     setSearchIssue(null);
     setSearchText(text);
-    setAppliedSearch({ text: text.trim(), filters: resolved.filters });
+    setAppliedSearch({ text: text.trim(), filters: resolved.filters, relativeDates: parsed.relativeDates ?? [] });
     return null;
   }
 
@@ -538,7 +541,7 @@ export default function TransactionsPanel({ messages, accounts, trackedAccountId
         trackedAccountIds={trackedAccountIds} filtersKey={filtersKey} revision={retry}
         hasMatches={matchingCount > 0} />}
       {filterOpen && <TransactionFilterPanel messages={messages} trackedAccountIds={trackedAccountIds}
-        values={projectTransactionSearch(filterValues, search, searchFilters)}
+        values={projectTransactionSearch(filterValues, search, searchFilters, relativeDates)}
         activePresetId={search ? undefined : activePreset?.id}
         focusName={filterOpen === 'save-search'}
         onClose={() => { setFilterOpen(null); filterButtonRef.current?.focus(); }}

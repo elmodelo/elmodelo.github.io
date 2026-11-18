@@ -1,8 +1,9 @@
+import { buildRelativeDateFilters, parseRelativeDateRange, type RelativeDateRange } from './relativeTransactionDates';
 import type { TransactionFilters } from './transactionFilters';
 
 type TransactionSearch =
   | { status: 'open' | 'invalid' }
-  | { status: 'ready'; filters: TransactionFilters; names: string[] };
+  | { status: 'ready'; filters: TransactionFilters; names: string[]; relativeDates?: RelativeDateRange[] };
 
 const amountOperators = { '<': 'lt', '>': 'gt', '=': 'eq', '!=': 'neq' } as const;
 
@@ -25,9 +26,10 @@ export function parseTransactionSearch(input: string): TransactionSearch {
   if (plainText) filters.push({ field: 'description', operator: 'search', value: plainText });
   const names: string[] = [];
   const descriptionTerms: string[] = [];
+  const relativeDates: RelativeDateRange[] = [];
   let remaining = text.slice(opening + 1, closing).trim();
   while (remaining) {
-    const token = /^(?:(?:text:)?"(?:[^"\\]|\\["\\])*"|[^\s"]+)(?=\s|$)/u.exec(remaining)?.[0];
+    const token = /^(?:(?:(?:text|date):)?"(?:[^"\\]|\\["\\])*"|[^\s"]+)(?=\s|$)/u.exec(remaining)?.[0];
     if (!token) return { status: 'invalid' };
     remaining = remaining.slice(token.length).trimStart();
 
@@ -40,7 +42,14 @@ export function parseTransactionSearch(input: string): TransactionSearch {
       if (!name) return { status: 'invalid' };
       names.push(name);
     } else if (token.startsWith('date:')) {
-      const [from, to = from, ...extra] = token.slice(5).split('..').map(normalizeDate);
+      const term = token.slice(5);
+      if (term.startsWith('"')) {
+        const range = parseRelativeDateRange(unquote(term));
+        if (!range) return { status: 'invalid' };
+        relativeDates.push(range);
+        continue;
+      }
+      const [from, to = from, ...extra] = term.split('..').map(normalizeDate);
       if (extra.length || (!from && !to) || from.startsWith('0000-') || to.startsWith('0000-')
         || !isTransactionDateRange(from, to)) return { status: 'invalid' };
       filters.push(...buildTransactionDateFilters(from, to));
@@ -59,7 +68,7 @@ export function parseTransactionSearch(input: string): TransactionSearch {
   } else if (uniqueTerms.length > 1) {
     filters.push({ field: 'description', operator: 'search.any', value: uniqueTerms });
   }
-  return { status: 'ready', filters, names };
+  return { status: 'ready', filters, names, ...(relativeDates.length ? { relativeDates } : {}) };
 }
 
 function validDate(value: unknown): value is string {
@@ -82,13 +91,14 @@ export function buildTransactionDateFilters(from: string, to: string): Transacti
   return filters;
 }
 
-export function parseFilterPowerSearch(text: string): TransactionFilters | null {
+export function parseFilterPowerSearch(text: string, asOf = new Date()): TransactionFilters | null {
   const filters: TransactionFilters[number][] = [];
   for (const line of text.split('\n')) {
     if (!line.trim()) continue;
     const parsed = parseTransactionSearch('`' + line.trim() + '`');
     if (parsed.status !== 'ready' || parsed.names.length) return null;
     filters.push(...parsed.filters);
+    for (const range of parsed.relativeDates ?? []) filters.push(...buildRelativeDateFilters(range, asOf));
   }
   return filters;
 }

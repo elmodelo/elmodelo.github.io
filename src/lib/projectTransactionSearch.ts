@@ -1,3 +1,4 @@
+import { relativeDateExpression, type RelativeDateRange } from './relativeTransactionDates';
 import { isTransactionDateRange } from './transactionSearch';
 import type { TransactionFilterValues } from './transactionFilterPresets';
 import type { TransactionFilters } from './transactionFilters';
@@ -7,6 +8,7 @@ export function projectTransactionSearch(
   values: TransactionFilterValues,
   search: string,
   filters: TransactionFilters,
+  relativeDates: readonly RelativeDateRange[] = [],
 ): TransactionFilterValues {
   if (!search) return values;
   const draft = { ...values, sourceSearch: search };
@@ -67,6 +69,10 @@ export function projectTransactionSearch(
         break;
       }
     }
+  }
+  for (const range of relativeDates) {
+    if (!draft.relativeDate) draft.relativeDate = range;
+    else remaining.push(relativeDateExpression(range));
   }
   draft.powerSearch = remaining.join('\n');
   return draft;

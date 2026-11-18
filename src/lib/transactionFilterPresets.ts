@@ -1,3 +1,4 @@
+import { buildRelativeDateFilters, isRelativeDateRange, type RelativeDateRange } from './relativeTransactionDates';
 import { buildTransactionDateFilters, isTransactionDateRange, parseFilterPowerSearch } from './transactionSearch';
 import type { TransactionFilters } from './transactionFilters';
 
@@ -9,6 +10,7 @@ export interface TransactionFilterValues {
   search: string;
   minimum: string;
   maximum: string;
+  relativeDate?: RelativeDateRange;
   powerSearch?: string;
   sourceSearch?: string;
 }
@@ -26,6 +28,7 @@ export function isTransactionFilterValues(value: unknown): value is TransactionF
   const v = value as TransactionFilterValues;
   return [v.accounts, v.categories].every((ids) => ids === null || (Array.isArray(ids) && ids.every((id) => typeof id === 'string')))
     && isTransactionDateRange(v.from, v.to)
+    && (v.relativeDate === undefined || isRelativeDateRange(v.relativeDate))
     && (v.powerSearch === undefined || (typeof v.powerSearch === 'string' && parseFilterPowerSearch(v.powerSearch) !== null))
     && (v.sourceSearch === undefined || typeof v.sourceSearch === 'string')
     && typeof v.search === 'string'
@@ -42,15 +45,16 @@ export function parseSavedTransactionFilters(value: unknown): SavedTransactionFi
     return true;
   });
 }
-export function buildTransactionFilters(values: TransactionFilterValues): TransactionFilters {
+export function buildTransactionFilters(values: TransactionFilterValues, asOf = new Date()): TransactionFilters {
   if (!isTransactionFilterValues(values)) throw new Error('Invalid transaction filter');
   const filters: TransactionFilters[number][] = [];
   if (values.accounts !== null) filters.push({ field: 'account', operator: 'in', value: values.accounts });
   if (values.categories !== null) filters.push({ field: 'category', operator: 'in', value: values.categories });
   filters.push(...buildTransactionDateFilters(values.from, values.to));
+  if (values.relativeDate) filters.push(...buildRelativeDateFilters(values.relativeDate, asOf));
   if (values.search.trim()) filters.push({ field: 'description', operator: 'search', value: values.search.trim() });
   if (values.minimum !== '') filters.push({ field: 'amount', operator: 'gt', value: Number(values.minimum) });
   if (values.maximum !== '') filters.push({ field: 'amount', operator: 'lt', value: Number(values.maximum) });
-  if (values.powerSearch) filters.push(...(parseFilterPowerSearch(values.powerSearch) ?? []));
+  if (values.powerSearch) filters.push(...(parseFilterPowerSearch(values.powerSearch, asOf) ?? []));
   return filters;
 }

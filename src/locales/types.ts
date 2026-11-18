@@ -23,6 +23,13 @@ export interface LocaleMessages {
   filterSaveHelp: string;
   filterOptionsError: string;
   filterScopeHelp: string;
+  filterRelativeDate: string;
+  filterRelativeNone: string;
+  filterRelativeDays: string;
+  filterRelativeMonth: string;
+  filterRelativeDayCount: string;
+  filterRelativeHelp: string;
+  filterRelativeInvalid: string;
   filterFrom: string;
   filterTo: string;
   filterSearch: string;

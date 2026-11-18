@@ -1023,8 +1023,8 @@
   outline-offset: -2px;
 }
 @media (max-width: 520px) {
-  .transactions-heading:has(.transaction-filter-search) { flex-wrap: wrap; }
-  .transactions-heading:has(.transaction-filter-search) h1 { flex-basis: 100%; }
+  .transactions-heading { flex-wrap: wrap; }
+  .transactions-heading h1 { flex-basis: 100%; }
 }
 .transaction-filter-buttons { display: inline-flex; flex-shrink: 0; }
 .transaction-filter-buttons > .button { margin: 0; }

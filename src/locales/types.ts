@@ -20,6 +20,11 @@ export interface LocaleMessages {
   filterFrom: string;
   filterTo: string;
   filterSearch: string;
+  transactionSearch: string;
+  transactionSearchOpen: string;
+  transactionSearchInvalid: string;
+  transactionSearchUnknown: string;
+  transactionSearchHelp: string;
   filterSearchHelp: string;
   filterMinimum: string;
   filterMaximum: string;

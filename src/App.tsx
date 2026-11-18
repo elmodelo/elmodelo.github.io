@@ -179,6 +179,7 @@ function Dashboard({
               ) : <TransactionsPanel
                 key={section}
                 messages={messages}
+                accounts={accounts}
                 trackedAccountIds={trackedAccountIds}
                 filters={section === 'uncategorized' ? UNCATEGORIZED_TRANSACTION_FILTERS : undefined}
                 title={section === 'uncategorized' ? messages.uncategorized : messages.transactions}

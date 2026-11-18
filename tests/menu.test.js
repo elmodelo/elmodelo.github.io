@@ -50,13 +50,14 @@ test('transaction panel initially renders a localized loading state', async () =
     const { getLocaleMessages } = await server.ssrLoadModule('/src/locales/index.ts');
     const markup = renderToStaticMarkup(createElement(TransactionsPanel, {
       messages: getLocaleMessages('es'),
+      accounts: [],
       trackedAccountIds: ['account-a'],
     }));
     assert.match(markup, /Transacciones/);
     assert.match(markup, /role="status"/);
     assert.match(markup, /Cargando transacciones/);
     const filteredMarkup = renderToStaticMarkup(createElement(TransactionsPanel, {
-      messages: getLocaleMessages('es'), trackedAccountIds: ['account-a'],
+      messages: getLocaleMessages('es'), accounts: [], trackedAccountIds: ['account-a'],
       filters: [{ field: 'category', operator: 'is', value: null }], title: 'Sin categoría',
     }));
     assert.match(filteredMarkup, /<h1 id="transactions-title">Sin categoría<\/h1>/);
@@ -103,7 +104,7 @@ test('transaction panel has no auto-categorize button for any role', async () =>
     const { StatusMessagesProvider } = await server.ssrLoadModule('/src/hooks/useStatusMessages.tsx');
     const TransactionsPanel = (props) => createElement(StatusMessagesProvider, {}, createElement(PreferencesProvider, {}, createElement(Panel, props)));
     const { getLocaleMessages } = await server.ssrLoadModule('/src/locales/index.ts');
-    const props = { messages: getLocaleMessages('en'), userId: 'test-user', trackedAccountIds: [] };
+    const props = { messages: getLocaleMessages('en'), userId: 'test-user', accounts: [], trackedAccountIds: [] };
     const { PermissionsProvider } = await server.ssrLoadModule('/src/hooks/usePermissions.tsx');
     assert.ok(!renderToStaticMarkup(createElement(TransactionsPanel, props)).includes('Auto-categorize'));
     for (const role of [null, 'READER', 'WRITER']) {

@@ -1,13 +1,11 @@
-import { useEffect, useState } from 'react';
+import { lazy, useEffect, useState } from 'react';
 import type { LocaleMessages } from './locales/types';
-import RegistrationForm from './components/RegistrationForm';
+import FeatureBoundary from './components/FeatureBoundary';
 import SignIn from './components/SignIn';
 import Menu, { type AppSection } from './components/Menu';
-import PreferencesPanel from './components/PreferencesPanel';
 import PreferencesStatus from './components/PreferencesStatus';
 import StatusBar from './components/StatusBar';
 import { StatusMessagesProvider } from './hooks/useStatusMessages';
-import TransactionsPanel from './components/TransactionsPanel';
 import LoadingDialog from './components/LoadingDialog';
 import { useAuth } from './hooks/useAuth';
 import { PreferencesProvider, usePreferences } from './hooks/usePreferences';
@@ -18,6 +16,10 @@ import { useTrackedAccounts } from './hooks/useTrackedAccounts';
 import { fetchUncategorizedTransactionCount, UNCATEGORIZED_TRANSACTION_FILTERS } from './lib/transactionQuery';
 import { supabase } from './lib/supabaseClient';
 import './App.css';
+
+const RegistrationForm = lazy(() => import('./components/RegistrationForm'));
+const PreferencesPanel = lazy(() => import('./components/PreferencesPanel'));
+const TransactionsPanel = lazy(() => import('./components/TransactionsPanel'));
 
 function App() {
   const auth = useAuth();
@@ -87,10 +89,9 @@ function Application({ auth }: { auth: ReturnType<typeof useAuth> }) {
               onLanguageChange={setLanguage}
             />
           ) : showRegistration ? (
-            <RegistrationForm
-              messages={messages}
-              onSignIn={() => setShowRegistration(false)}
-            />
+            <FeatureBoundary messages={messages} loadingLabel={messages.loadingRegistration} fallbackClassName="auth-card status-card">
+              <RegistrationForm messages={messages} onSignIn={() => setShowRegistration(false)} />
+            </FeatureBoundary>
           ) : (
             <SignIn
               messages={messages}
@@ -176,27 +177,30 @@ function Dashboard({
                     {messages.retry}
                   </button>
                 </section>
-              ) : <TransactionsPanel
-                key={section}
+              ) : <FeatureBoundary key={section} messages={messages} loadingLabel={messages.loadingTransactions}>
+                <TransactionsPanel
+                  messages={messages}
+                  accounts={accounts}
+                  trackedAccountIds={trackedAccountIds}
+                  filters={section === 'uncategorized' ? UNCATEGORIZED_TRANSACTION_FILTERS : undefined}
+                  title={section === 'uncategorized' ? messages.uncategorized : messages.transactions}
+                  onCategoriesChanged={() => setCategoryRevision((previous) => previous + 1)}
+                />
+              </FeatureBoundary>
+          ) : section === 'preferences' ? (
+            <FeatureBoundary messages={messages} loadingLabel={messages.loadingPreferences}>
+              <PreferencesPanel
                 messages={messages}
+                theme={theme}
+                onThemeChange={onThemeChange}
+                onLanguageChange={onLanguageChange}
                 accounts={accounts}
                 trackedAccountIds={trackedAccountIds}
-                filters={section === 'uncategorized' ? UNCATEGORIZED_TRANSACTION_FILTERS : undefined}
-                title={section === 'uncategorized' ? messages.uncategorized : messages.transactions}
-                onCategoriesChanged={() => setCategoryRevision((previous) => previous + 1)}
+                onTrackedAccountIdsChange={setTrackedAccountIds}
+                accountsStatus={accountsStatus}
+                onRetryAccounts={retryAccounts}
               />
-          ) : section === 'preferences' ? (
-            <PreferencesPanel
-              messages={messages}
-              theme={theme}
-              onThemeChange={onThemeChange}
-              onLanguageChange={onLanguageChange}
-              accounts={accounts}
-              trackedAccountIds={trackedAccountIds}
-              onTrackedAccountIdsChange={setTrackedAccountIds}
-              accountsStatus={accountsStatus}
-              onRetryAccounts={retryAccounts}
-            />
+            </FeatureBoundary>
           ) : (
             <section className="dashboard-panel" aria-labelledby="account-title">
               <h1 id="account-title">{messages.myAccount}</h1>

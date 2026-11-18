@@ -33,17 +33,28 @@ export function createExchangeRateLoader(fetchRates = (...args) => fetch(...args
 export const loadExchangeRates = createExchangeRateLoader();
 
 export async function fetchTransactionTotals(client, { trackedAccountIds, filters, signal }) {
-  if (!trackedAccountIds.length || filters.some((filter) => filter.operator === 'in' && !filter.value.length)) return [];
+  if (!trackedAccountIds.length || filters.some((filter) => (filter.operator === 'in' || filter.operator === 'search.any') && !filter.value.length)) return [];
   const { data, error } = await client.schema('finance').rpc('filtered_transaction_totals', {
     p_accounts: trackedAccountIds, p_filters: filters,
   }).abortSignal(signal);
-  if (error || !Array.isArray(data)) throw new Error('Transaction totals unavailable');
+  if (error) throw new Error('Transaction totals unavailable', { cause: error });
+  if (!Array.isArray(data)) throw new Error('Invalid transaction totals');
   return data.map(({ currency, amount }) => {
     if (typeof currency !== 'string' || !/^[A-Z]{3}$/.test(currency)
       || (typeof amount !== 'number' && typeof amount !== 'string') || String(amount).trim() === ''
       || !Number.isFinite(Number(amount))) throw new Error('Invalid transaction totals');
     return { currency, amount: Number(amount) };
   });
+}
+
+export function transactionTotalFailureMessage(messages, error, filters) {
+  const cause = error instanceof Error ? error.cause : null;
+  if (cause?.code === 'PGRST202') return messages.transactionTotalMissing;
+  if (cause?.code === '22023' && cause.message === 'Unsupported filter operator'
+    && filters.some(({ operator }) => operator === 'search.any')) {
+    return messages.transactionTotalSearchUnsupported;
+  }
+  return messages.transactionTotalError;
 }
 
 /** Keep signed subtotals; round only the final CAD total for display. */

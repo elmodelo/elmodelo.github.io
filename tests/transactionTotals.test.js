@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import { createServer } from 'vite';
 import {
   createExchangeRateLoader, EXCHANGE_RATES_URL, fetchTransactionTotals,
-  convertTotalsToCad, loadTransactionTotal, transactionTotalMessage,
+  convertTotalsToCad, loadTransactionTotal, transactionTotalFailureMessage, transactionTotalMessage,
 } from '../src/lib/transactionTotals.js';
 
 const options = { trackedAccountIds: ['tracked'], filters: [{ field: 'amount', operator: 'lt', value: 0 }] };
@@ -136,6 +136,31 @@ test('invalid rate responses and invalid aggregate data fail visibly and can be 
     global: { fetch: async () => new Response('{"message":"denied"}', { status: 403 }) },
   });
   await assert.rejects(fetchTransactionTotals(errorClient, options));
+});
+
+test('totals preserve the RPC error code and distinguish missing support from ordinary failures', async () => {
+  const messages = {
+    transactionTotalError: 'generic',
+    transactionTotalMissing: 'missing',
+    transactionTotalSearchUnsupported: 'old search',
+  };
+  const filters = [{ field: 'description', operator: 'search.any', value: ['Costco', 'Whole Foods'] }];
+  for (const [status, code, message, expected] of [
+    [400, '22023', 'Unsupported filter operator', 'old search'],
+    [400, '22023', 'Invalid description search', 'generic'],
+    [404, 'PGRST202', 'Could not find the function', 'missing'],
+  ]) {
+    const client = createClient('http://127.0.0.1:54321', 'test-key', {
+      global: { fetch: async () => new Response(JSON.stringify({ code, message }), {
+        status, headers: { 'content-type': 'application/json' },
+      }) },
+    });
+    await assert.rejects(fetchTransactionTotals(client, { ...options, filters }), (error) => {
+      assert.equal(error.cause.code, code);
+      assert.equal(transactionTotalFailureMessage(messages, error, filters), expected);
+      return true;
+    });
+  }
 });
 
 test('total messages localize currencies, distinguish estimated totals, and disclose the actual rate date', async () => {

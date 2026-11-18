@@ -4,6 +4,7 @@ export type TransactionFilterField = 'id' | 'account' | 'description' | 'categor
 /** Conditions are combined with AND, in addition to the tracked-account restriction. */
 export type TransactionFilter =
   | { field: 'description'; operator: 'search'; value: string }
+  | { field: 'description'; operator: 'search.any'; value: readonly string[] }
   | { field: TransactionFilterField; operator: 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte'; value: string | number }
   | { field: TransactionFilterField; operator: 'in'; value: readonly string[] | readonly number[] }
   | { field: TransactionFilterField; operator: 'is' | 'not.is'; value: null };

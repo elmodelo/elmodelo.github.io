@@ -1,9 +1,14 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { fetchTransactions, NO_TRANSACTION_FILTERS } from '../lib/transactionQuery';
 import type { TransactionFilters } from '../lib/transactionFilters';
+import { parseTransactionSearch, resolveSearchNames } from '../lib/transactionSearch';
+import { projectTransactionSearch } from '../lib/projectTransactionSearch';
+import { buildRelativeDateFilters, type RelativeDateRange } from '../lib/relativeTransactionDates';
+import { fetchCategories } from '../lib/transactionCategorization';
 import type { LocaleMessages } from '../locales/types';
 import TransactionFilterPanel from './TransactionFilterPanel';
+import MobileTransactionSearch from './MobileTransactionSearch';
 import TransactionTotalStatus from './TransactionTotalStatus';
 import { buildTransactionFilters, EMPTY_TRANSACTION_FILTER, type TransactionFilterValues } from '../lib/transactionFilterPresets';
 import LoadingDialog from './LoadingDialog';
@@ -12,6 +17,7 @@ import { useStatusMessage } from '../hooks/useStatusMessages';
 import { usePreferences } from '../hooks/usePreferences';
 import type { SetStateAction } from 'react';
 import type { TransactionPreferences } from '../lib/transactionPreferences';
+import type { Account } from '../hooks/useTrackedAccounts';
 import { usePermissions } from '../hooks/usePermissions';
 import {
   PAGE_SIZE_OPTIONS,
@@ -29,6 +35,7 @@ interface Transaction {
 
 interface TransactionResult {
   key: string;
+  scopeKey: string;
   search: string;
   page: number;
   pageSize: number;
@@ -41,21 +48,27 @@ interface TransactionResult {
 
 interface TransactionsPanelProps {
   messages: LocaleMessages;
+  accounts: Account[];
   trackedAccountIds: string[];
   filters?: TransactionFilters;
   title?: string;
   onCategoriesChanged?: () => void;
 }
 
-export default function TransactionsPanel({ messages, trackedAccountIds, filters = NO_TRANSACTION_FILTERS, title = messages.transactions, onCategoriesChanged }: TransactionsPanelProps) {
-  const [filterOpen, setFilterOpen] = useState(false);
+const EMPTY_SEARCH = { text: '', filters: NO_TRANSACTION_FILTERS, relativeDates: [] as RelativeDateRange[] };
+
+export default function TransactionsPanel({ messages, accounts, trackedAccountIds, filters = NO_TRANSACTION_FILTERS, title = messages.transactions, onCategoriesChanged }: TransactionsPanelProps) {
+  const [filterOpen, setFilterOpen] = useState<'edit' | 'save-search' | null>(null);
   const [{ values: filterValues, presetId }, setAppliedFilter] = useState({
     values: EMPTY_TRANSACTION_FILTER,
     presetId: '',
   });
   const [searchText, setSearchText] = useState('');
-  const [search, setSearch] = useState('');
+  const [{ text: search, filters: searchFilters, relativeDates }, setAppliedSearch] = useState(EMPTY_SEARCH);
+  const [searchIssue, setSearchIssue] = useState<{ text: string; unknown: string[] | null } | null>(null);
+  const parsedSearch = useMemo(() => parseTransactionSearch(searchText), [searchText]);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const mobileSearchButtonRef = useRef<HTMLButtonElement>(null);
   const filterButtonRef = useRef<HTMLButtonElement>(null);
   const savedFiltersButtonRef = useRef<HTMLButtonElement>(null);
   const savedFiltersId = useId();
@@ -67,14 +80,11 @@ export default function TransactionsPanel({ messages, trackedAccountIds, filters
   const preferences = applicationPreferences.transactions;
   const setPreferences = (value: SetStateAction<TransactionPreferences>) => update('transactions', value);
   const { sortColumn, ascending, postedAtAscending, pageSize } = preferences;
-  const panelFilters = buildTransactionFilters(filterValues);
-  const hasFilter = filters.length > 0 || panelFilters.length > 0 || !!activePreset;
-  const quickSearch = hasFilter ? search : '';
-  const effectiveFilters: TransactionFilters = quickSearch
-    ? [...filters, ...panelFilters, { field: 'description', operator: 'search', value: quickSearch }]
-    : [...filters, ...panelFilters];
+  const asOf = new Date();
+  const panelFilters = buildTransactionFilters(filterValues, asOf);
+  const relativeSearchFilters = relativeDates.flatMap((range) => buildRelativeDateFilters(range, asOf));
   // Compare serialized values so newly allocated, equivalent filters do not reload the panel.
-  const filtersKey = JSON.stringify(effectiveFilters);
+  const filtersKey = JSON.stringify([...filters, ...panelFilters, ...searchFilters, ...relativeSearchFilters]);
   const [pagination, setPagination] = useState({ filtersKey, page: 0 });
   const page = pagination.filtersKey === filtersKey ? pagination.page : 0;
   if (pagination.filtersKey !== filtersKey) {
@@ -87,16 +97,19 @@ export default function TransactionsPanel({ messages, trackedAccountIds, filters
   function applyFilter(values: TransactionFilterValues, presetId: string) {
     setAppliedFilter({ values, presetId });
     setSearchText('');
-    setSearch('');
+    setAppliedSearch(EMPTY_SEARCH);
+    setSearchIssue(null);
     setRetry((previous) => previous + 1);
   }
   const [result, setResult] = useState<TransactionResult | null>(null);
   const previousPageRef = useRef<HTMLButtonElement>(null);
   const nextPageRef = useRef<HTMLButtonElement>(null);
-  const requestKey = `${canCategorize}:${JSON.stringify(trackedAccountIds)}:${filtersKey}:${sortColumn}:${ascending}:${postedAtAscending}:${page}:${pageSize}:${retry}`;
+  const scopeKey = JSON.stringify([canCategorize, trackedAccountIds, filtersKey, retry]);
+  const requestKey = `${scopeKey}:${sortColumn}:${ascending}:${postedAtAscending}:${page}:${pageSize}`;
   const currentResult = result;
+  const matchingCount = result?.scopeKey === scopeKey && !result.error ? result.count : null;
   const isLoading = result?.key !== requestKey;
-  const showLoadingDialog = isLoading && (!result || result.search === quickSearch);
+  const showLoadingDialog = isLoading && (!result || result.search === search);
   const [selection, setSelection] = useState<{ key: string; ids: string[] }>({ key: requestKey, ids: [] });
   const selectedIds = selection.key === requestKey ? selection.ids : [];
   if (selection.key !== requestKey) setSelection({ key: requestKey, ids: [] });
@@ -108,9 +121,40 @@ export default function TransactionsPanel({ messages, trackedAccountIds, filters
     && currentResult.transactions.every((transaction) => selectedIds.includes(transaction.id));
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setSearch(searchText.trim()), 250);
-    return () => window.clearTimeout(timer);
-  }, [searchText]);
+    if (parsedSearch.status !== 'ready' || searchText.trim() === search) return;
+    const controller = new AbortController();
+    const { filters, names, relativeDates = [] } = parsedSearch;
+    const timer = window.setTimeout(async () => {
+      try {
+        const resolved = await resolveFilters(names, filters, accounts, controller.signal);
+        if (controller.signal.aborted) return;
+        if (resolved.unknown.length) {
+          setSearchIssue({ text: searchText, unknown: resolved.unknown });
+          return;
+        }
+        setSearchIssue(null);
+        setAppliedSearch({ text: searchText.trim(), filters: resolved.filters, relativeDates });
+      } catch {
+        if (!controller.signal.aborted) setSearchIssue({ text: searchText, unknown: null });
+      }
+    }, 250);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [accounts, parsedSearch, searchText, search]);
+
+  const currentIssue = searchIssue?.text === searchText ? searchIssue : null;
+  const unknownNames = currentIssue?.unknown?.join(', ');
+  const searchInvalid = parsedSearch.status === 'invalid' || !!currentIssue;
+  useStatusMessage({
+    tone: searchInvalid ? 'error' : 'info',
+    message: parsedSearch.status === 'open' ? messages.transactionSearchOpen
+      : parsedSearch.status === 'invalid' ? messages.transactionSearchInvalid
+        : unknownNames
+          ? messages.transactionSearchUnknown.replace('{names}', () => unknownNames)
+          : currentIssue ? messages.categoriesError : null,
+  });
 
   useEffect(() => {
     if (selectPageRef.current) {
@@ -127,12 +171,12 @@ export default function TransactionsPanel({ messages, trackedAccountIds, filters
           || event.target.closest('input, textarea, select, [role="textbox"], [role="combobox"], dialog'))) return;
 
       const searchInput = searchInputRef.current;
-      if (event.key === '/' && !savedFiltersRef.current?.matches(':popover-open')) {
-        const target = searchInput ?? savedFiltersButtonRef.current;
-        if (!target) return;
+      if (event.key === '/' && searchInput) {
         event.preventDefault();
-        target.focus();
-        if (!searchInput) target.click();
+        const dropdown = savedFiltersRef.current;
+        if (dropdown?.matches(':popover-open')) dropdown.hidePopover();
+        if (searchInput.getClientRects().length) searchInput.focus();
+        else mobileSearchButtonRef.current?.click();
         return;
       }
 
@@ -152,7 +196,7 @@ export default function TransactionsPanel({ messages, trackedAccountIds, filters
   useEffect(() => {
     let active = true;
     const controller = new AbortController();
-    const queryState = { key: requestKey, search: quickSearch, page, pageSize, sortColumn, ascending };
+    const queryState = { key: requestKey, scopeKey, search, page, pageSize, sortColumn, ascending };
 
     async function loadTransactions() {
       try {
@@ -192,7 +236,7 @@ export default function TransactionsPanel({ messages, trackedAccountIds, filters
       active = false;
       controller.abort();
     };
-  }, [trackedAccountIds, filtersKey, sortColumn, ascending, postedAtAscending, page, pageSize, requestKey, quickSearch]);
+  }, [trackedAccountIds, filtersKey, sortColumn, ascending, postedAtAscending, page, pageSize, requestKey, scopeKey, search]);
 
   // This is the complete matching query count, across all pages, not checked rows.
   useStatusMessage({
@@ -219,14 +263,31 @@ export default function TransactionsPanel({ messages, trackedAccountIds, filters
   const dateFormatter = new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeZone: 'UTC' });
   const totalPages = currentResult ? Math.max(1, Math.ceil(currentResult.count / currentResult.pageSize)) : 1;
 
+  async function submitMobileSearch(text: string, signal: AbortSignal) {
+    const parsed = parseTransactionSearch(text);
+    if (parsed.status !== 'ready') return messages.transactionSearchInvalid;
+    const resolved = await resolveFilters(parsed.names, parsed.filters, accounts, signal);
+    if (signal.aborted) return null;
+    if (resolved.unknown.length) {
+      return messages.transactionSearchUnknown.replace('{names}', () => resolved.unknown.join(', '));
+    }
+    setSearchIssue(null);
+    setSearchText(text);
+    setAppliedSearch({ text: text.trim(), filters: resolved.filters, relativeDates: parsed.relativeDates ?? [] });
+    return null;
+  }
+
   return (
     <section className="dashboard-panel transactions-panel" aria-labelledby="transactions-title">
       <div className="transactions-heading">
         <h1 id="transactions-title">{heading}</h1>
         <div className="transaction-filter-tools">
-          {hasFilter && <input ref={searchInputRef} className="transaction-filter-search" type="search"
-            aria-label={messages.filterSearch} aria-keyshortcuts="/" placeholder={messages.filterSearch}
-            value={searchText} onChange={(event) => setSearchText(event.target.value)} />}
+          <input ref={searchInputRef} className="transaction-filter-search" type="search"
+            aria-label={messages.transactionSearch} aria-keyshortcuts="/" placeholder={messages.transactionSearch}
+            aria-invalid={searchInvalid || undefined} title={messages.transactionSearchHelp}
+            value={searchText} onChange={(event) => setSearchText(event.target.value)} />
+          <MobileTransactionSearch buttonRef={mobileSearchButtonRef} messages={messages}
+            query={search} onSearch={submitMobileSearch} />
           <div className="transaction-filter-buttons" role="group" aria-label={messages.filterTransactions}
             onKeyDown={(event) => {
               if ((event.key !== 'ArrowDown' && event.key !== 'ArrowUp')
@@ -243,13 +304,12 @@ export default function TransactionsPanel({ messages, trackedAccountIds, filters
               items[next]?.focus();
             }}>
             <button ref={filterButtonRef} type="button" className="button button-secondary transaction-filter-trigger"
-              aria-label={messages.filterTransactions} title={messages.filterTransactions} aria-expanded={filterOpen}
+              aria-label={messages.filterTransactions} title={messages.filterTransactions} aria-expanded={filterOpen !== null}
               aria-haspopup="dialog" data-active={panelFilters.length || activePreset ? '' : undefined}
-              onClick={() => setFilterOpen(true)}>
+              onClick={() => setFilterOpen('edit')}>
               <svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M3 4h18l-7 8v7l-4 2v-9L3 4Z" /></svg>
             </button>
             <button ref={savedFiltersButtonRef} type="button" className="button button-secondary transaction-saved-filters-trigger"
-              aria-keyshortcuts={hasFilter ? undefined : '/'}
               aria-label={messages.savedFilters} title={messages.savedFilters} popoverTarget={savedFiltersId}
               onClick={(event) => {
                 const dropdown = savedFiltersRef.current;
@@ -269,10 +329,16 @@ export default function TransactionsPanel({ messages, trackedAccountIds, filters
               <span aria-hidden="true">▾</span>
             </button>
             <div id={savedFiltersId} ref={savedFiltersRef} popover="auto" className="transaction-saved-filters">
+              {search && matchingCount !== null && (
+                <button type="button" className="menu-button" onClick={() => {
+                  savedFiltersRef.current?.hidePopover();
+                  setFilterOpen('save-search');
+                }}>{messages.saveCurrentSearch}</button>
+              )}
               {applicationPreferences.transaction_filters.length === 0
                 ? <p>{messages.noSavedFilters}</p>
                 : applicationPreferences.transaction_filters.map((preset) => (
-                  <button key={preset.id} type="button" className="menu-button"
+                  <button key={preset.id} type="button" className="menu-button" title={preset.values.sourceSearch}
                     onClick={() => {
                       savedFiltersRef.current?.hidePopover();
                       applyFilter(preset.values, preset.id);
@@ -471,17 +537,28 @@ export default function TransactionsPanel({ messages, trackedAccountIds, filters
           }}
         />
       )}
-      {filtersKey !== '[]' && <TransactionTotalStatus messages={messages} trackedAccountIds={trackedAccountIds}
-        filtersKey={filtersKey} revision={retry} />}
+      {filtersKey !== '[]' && matchingCount !== null && <TransactionTotalStatus messages={messages}
+        trackedAccountIds={trackedAccountIds} filtersKey={filtersKey} revision={retry}
+        hasMatches={matchingCount > 0} />}
       {filterOpen && <TransactionFilterPanel messages={messages} trackedAccountIds={trackedAccountIds}
-        values={filterValues} activePresetId={activePreset?.id}
-        onClose={() => { setFilterOpen(false); filterButtonRef.current?.focus(); }}
+        values={projectTransactionSearch(filterValues, search, searchFilters, relativeDates)}
+        activePresetId={search ? undefined : activePreset?.id}
+        focusName={filterOpen === 'save-search'}
+        onClose={() => { setFilterOpen(null); filterButtonRef.current?.focus(); }}
         onApply={(values, appliedPresetId) => {
           applyFilter(values, appliedPresetId);
-          setFilterOpen(false);
+          setFilterOpen(null);
           filterButtonRef.current?.focus();
         }} />}
       {showLoadingDialog && <LoadingDialog label={messages.loadingTransactions} />}
     </section>
   );
+}
+
+async function resolveFilters(names: string[], filters: TransactionFilters, accounts: Account[], signal: AbortSignal) {
+  if (!names.length) return { filters, unknown: [] };
+  const available = await fetchCategories(supabase, signal);
+  signal.throwIfAborted();
+  const resolved = resolveSearchNames(names, available, accounts);
+  return { filters: [...filters, ...resolved.filters], unknown: resolved.unknown };
 }

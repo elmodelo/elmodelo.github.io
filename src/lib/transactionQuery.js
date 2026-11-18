@@ -8,13 +8,14 @@ export const UNCATEGORIZED_TRANSACTION_FILTERS = Object.freeze([
 
 /** Apply all conditions before ordering, counting, or pagination. */
 function applyTransactionFilters(query, filters) {
+  const descriptionSearches = [];
   for (const { field, operator, value } of filters) {
     switch (operator) {
       case 'search': {
         // Quote the complete pattern so punctuation cannot inject PostgREST logic.
         const pattern = '%' + value.trim().split(/\s+/).map((word) => word.replace(/[\\%_*]/g, '\\$&')).join('%') + '%';
         const quoted = '"' + pattern.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
-        query = query.or(`name.ilike.${quoted},memo.ilike.${quoted}`, { referencedTable: 'description' });
+        descriptionSearches.push(`name.ilike.${quoted},memo.ilike.${quoted}`);
         break;
       }
       case 'in':
@@ -32,6 +33,13 @@ function applyTransactionFilters(query, filters) {
       default:
         throw new Error(`Unsupported transaction filter operator: ${operator}`);
     }
+  }
+  if (descriptionSearches.length === 1) {
+    query = query.or(descriptionSearches[0], { referencedTable: 'description' });
+  } else if (descriptionSearches.length > 1) {
+    // Every search must match, but each can match either description field.
+    const clauses = descriptionSearches.map((search) => `or(${search})`);
+    query = query.or(`and(${clauses.join(',')})`, { referencedTable: 'description' });
   }
   return query;
 }

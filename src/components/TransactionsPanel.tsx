@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { fetchTransactions, NO_TRANSACTION_FILTERS } from '../lib/transactionQuery';
 import type { TransactionFilters } from '../lib/transactionFilters';
 import type { LocaleMessages } from '../locales/types';
 import TransactionFilterPanel from './TransactionFilterPanel';
 import TransactionTotalStatus from './TransactionTotalStatus';
-import { buildTransactionFilters, EMPTY_TRANSACTION_FILTER } from '../lib/transactionFilterPresets';
+import { buildTransactionFilters, EMPTY_TRANSACTION_FILTER, type TransactionFilterValues } from '../lib/transactionFilterPresets';
 import LoadingDialog from './LoadingDialog';
 import CategorizePanel from './CategorizePanel';
 import { useStatusMessage } from '../hooks/useStatusMessages';
@@ -29,6 +29,7 @@ interface Transaction {
 
 interface TransactionResult {
   key: string;
+  search: string;
   page: number;
   pageSize: number;
   sortColumn: SortColumn;
@@ -48,15 +49,32 @@ interface TransactionsPanelProps {
 
 export default function TransactionsPanel({ messages, trackedAccountIds, filters = NO_TRANSACTION_FILTERS, title = messages.transactions, onCategoriesChanged }: TransactionsPanelProps) {
   const [filterOpen, setFilterOpen] = useState(false);
-  const [filterValues, setFilterValues] = useState(EMPTY_TRANSACTION_FILTER);
+  const [{ values: filterValues, presetId }, setAppliedFilter] = useState({
+    values: EMPTY_TRANSACTION_FILTER,
+    presetId: '',
+  });
+  const [searchText, setSearchText] = useState('');
+  const [search, setSearch] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const filterButtonRef = useRef<HTMLButtonElement>(null);
+  const savedFiltersButtonRef = useRef<HTMLButtonElement>(null);
+  const savedFiltersId = useId();
+  const savedFiltersRef = useRef<HTMLDivElement>(null);
   const { canWrite: canCategorize } = usePermissions();
   const { preferences: applicationPreferences, update } = usePreferences();
+  const activePreset = applicationPreferences.transaction_filters.find((preset) => preset.id === presetId);
+  const heading = activePreset?.name ?? title;
   const preferences = applicationPreferences.transactions;
   const setPreferences = (value: SetStateAction<TransactionPreferences>) => update('transactions', value);
   const { sortColumn, ascending, postedAtAscending, pageSize } = preferences;
+  const panelFilters = buildTransactionFilters(filterValues);
+  const hasFilter = filters.length > 0 || panelFilters.length > 0 || !!activePreset;
+  const quickSearch = hasFilter ? search : '';
+  const effectiveFilters: TransactionFilters = quickSearch
+    ? [...filters, ...panelFilters, { field: 'description', operator: 'search', value: quickSearch }]
+    : [...filters, ...panelFilters];
   // Compare serialized values so newly allocated, equivalent filters do not reload the panel.
-  const filtersKey = JSON.stringify([...filters, ...buildTransactionFilters(filterValues)]);
+  const filtersKey = JSON.stringify(effectiveFilters);
   const [pagination, setPagination] = useState({ filtersKey, page: 0 });
   const page = pagination.filtersKey === filtersKey ? pagination.page : 0;
   if (pagination.filtersKey !== filtersKey) {
@@ -66,12 +84,19 @@ export default function TransactionsPanel({ messages, trackedAccountIds, filters
     setPagination({ filtersKey, page: nextPage });
   }
   const [retry, setRetry] = useState(0);
+  function applyFilter(values: TransactionFilterValues, presetId: string) {
+    setAppliedFilter({ values, presetId });
+    setSearchText('');
+    setSearch('');
+    setRetry((previous) => previous + 1);
+  }
   const [result, setResult] = useState<TransactionResult | null>(null);
   const previousPageRef = useRef<HTMLButtonElement>(null);
   const nextPageRef = useRef<HTMLButtonElement>(null);
   const requestKey = `${canCategorize}:${JSON.stringify(trackedAccountIds)}:${filtersKey}:${sortColumn}:${ascending}:${postedAtAscending}:${page}:${pageSize}:${retry}`;
   const currentResult = result;
   const isLoading = result?.key !== requestKey;
+  const showLoadingDialog = isLoading && (!result || result.search === quickSearch);
   const [selection, setSelection] = useState<{ key: string; ids: string[] }>({ key: requestKey, ids: [] });
   const selectedIds = selection.key === requestKey ? selection.ids : [];
   if (selection.key !== requestKey) setSelection({ key: requestKey, ids: [] });
@@ -83,6 +108,11 @@ export default function TransactionsPanel({ messages, trackedAccountIds, filters
     && currentResult.transactions.every((transaction) => selectedIds.includes(transaction.id));
 
   useEffect(() => {
+    const timer = window.setTimeout(() => setSearch(searchText.trim()), 250);
+    return () => window.clearTimeout(timer);
+  }, [searchText]);
+
+  useEffect(() => {
     if (selectPageRef.current) {
       selectPageRef.current.indeterminate = selectedIds.length > 0 && !allPageSelected;
     }
@@ -90,12 +120,24 @@ export default function TransactionsPanel({ messages, trackedAccountIds, filters
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (isLoading || filterOpen || categorizing || event.defaultPrevented || event.repeat || event.isComposing
-        || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      if (showLoadingDialog || filterOpen || categorizing || event.defaultPrevented || event.repeat || event.isComposing
+        || event.altKey || event.ctrlKey || event.metaKey) return;
       if (event.target instanceof HTMLElement
         && (event.target.isContentEditable
           || event.target.closest('input, textarea, select, [role="textbox"], [role="combobox"], dialog'))) return;
 
+      const searchInput = searchInputRef.current;
+      if (event.key === '/' && !savedFiltersRef.current?.matches(':popover-open')) {
+        const target = searchInput ?? savedFiltersButtonRef.current;
+        if (!target) return;
+        event.preventDefault();
+        target.focus();
+        if (!searchInput) target.click();
+        return;
+      }
+
+      if (isLoading || event.shiftKey || (event.target instanceof Element
+        && event.target.closest('.transaction-filter-buttons'))) return;
       const button = event.key === 'ArrowLeft' ? previousPageRef.current
         : event.key === 'ArrowRight' ? nextPageRef.current : null;
       if (!button || button.disabled) return;
@@ -105,12 +147,12 @@ export default function TransactionsPanel({ messages, trackedAccountIds, filters
 
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [isLoading, filterOpen, categorizing]);
+  }, [isLoading, showLoadingDialog, filterOpen, categorizing]);
 
   useEffect(() => {
     let active = true;
     const controller = new AbortController();
-    const queryState = { key: requestKey, page, pageSize, sortColumn, ascending };
+    const queryState = { key: requestKey, search: quickSearch, page, pageSize, sortColumn, ascending };
 
     async function loadTransactions() {
       try {
@@ -150,7 +192,7 @@ export default function TransactionsPanel({ messages, trackedAccountIds, filters
       active = false;
       controller.abort();
     };
-  }, [trackedAccountIds, filtersKey, sortColumn, ascending, postedAtAscending, page, pageSize, requestKey]);
+  }, [trackedAccountIds, filtersKey, sortColumn, ascending, postedAtAscending, page, pageSize, requestKey, quickSearch]);
 
   // This is the complete matching query count, across all pages, not checked rows.
   useStatusMessage({
@@ -180,13 +222,67 @@ export default function TransactionsPanel({ messages, trackedAccountIds, filters
   return (
     <section className="dashboard-panel transactions-panel" aria-labelledby="transactions-title">
       <div className="transactions-heading">
-        <button ref={filterButtonRef} type="button" className="button button-secondary transaction-filter-trigger"
-          aria-label={messages.filterTransactions} title={messages.filterTransactions} aria-expanded={filterOpen}
-          aria-haspopup="dialog" data-active={filtersKey !== JSON.stringify(filters) ? '' : undefined}
-          onClick={() => setFilterOpen(true)}>
-          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M3 4h18l-7 8v7l-4 2v-9L3 4Z" /></svg>
-        </button>
-        <h1 id="transactions-title">{title}</h1>
+        <h1 id="transactions-title">{heading}</h1>
+        <div className="transaction-filter-tools">
+          {hasFilter && <input ref={searchInputRef} className="transaction-filter-search" type="search"
+            aria-label={messages.filterSearch} aria-keyshortcuts="/" placeholder={messages.filterSearch}
+            value={searchText} onChange={(event) => setSearchText(event.target.value)} />}
+          <div className="transaction-filter-buttons" role="group" aria-label={messages.filterTransactions}
+            onKeyDown={(event) => {
+              if ((event.key !== 'ArrowDown' && event.key !== 'ArrowUp')
+                || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+              const dropdown = savedFiltersRef.current;
+              if (!dropdown?.matches(':popover-open')) return;
+              const items = Array.from(dropdown.querySelectorAll('button'));
+              const index = items.findIndex((item) => item === event.target);
+              if (!items.length || (index === -1 && event.target !== savedFiltersButtonRef.current)) return;
+              event.preventDefault();
+              const next = event.key === 'ArrowDown'
+                ? (index + 1) % items.length
+                : index <= 0 ? items.length - 1 : index - 1;
+              items[next]?.focus();
+            }}>
+            <button ref={filterButtonRef} type="button" className="button button-secondary transaction-filter-trigger"
+              aria-label={messages.filterTransactions} title={messages.filterTransactions} aria-expanded={filterOpen}
+              aria-haspopup="dialog" data-active={panelFilters.length || activePreset ? '' : undefined}
+              onClick={() => setFilterOpen(true)}>
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M3 4h18l-7 8v7l-4 2v-9L3 4Z" /></svg>
+            </button>
+            <button ref={savedFiltersButtonRef} type="button" className="button button-secondary transaction-saved-filters-trigger"
+              aria-keyshortcuts={hasFilter ? undefined : '/'}
+              aria-label={messages.savedFilters} title={messages.savedFilters} popoverTarget={savedFiltersId}
+              onClick={(event) => {
+                const dropdown = savedFiltersRef.current;
+                const group = event.currentTarget.parentElement;
+                if (!dropdown || !group) return;
+                const bounds = group.getBoundingClientRect();
+                const width = Math.min(288, window.innerWidth - 24);
+                const below = window.innerHeight - bounds.bottom - 16;
+                const above = bounds.top - 16;
+                const openAbove = below < 240 && above > below;
+                dropdown.style.width = `${width}px`;
+                dropdown.style.left = `${Math.max(12, Math.min(bounds.right - width, window.innerWidth - width - 12))}px`;
+                dropdown.style.top = openAbove ? 'auto' : `${bounds.bottom + 4}px`;
+                dropdown.style.bottom = openAbove ? `${window.innerHeight - bounds.top + 4}px` : 'auto';
+                dropdown.style.maxHeight = `${Math.min(240, openAbove ? above : below)}px`;
+              }}>
+              <span aria-hidden="true">▾</span>
+            </button>
+            <div id={savedFiltersId} ref={savedFiltersRef} popover="auto" className="transaction-saved-filters">
+              {applicationPreferences.transaction_filters.length === 0
+                ? <p>{messages.noSavedFilters}</p>
+                : applicationPreferences.transaction_filters.map((preset) => (
+                  <button key={preset.id} type="button" className="menu-button"
+                    onClick={() => {
+                      savedFiltersRef.current?.hidePopover();
+                      applyFilter(preset.values, preset.id);
+                    }}>
+                    {preset.name}
+                  </button>
+                ))}
+            </div>
+          </div>
+        </div>
       </div>
       {!currentResult ? null : currentResult.error ? (
         <div role="alert">
@@ -197,7 +293,7 @@ export default function TransactionsPanel({ messages, trackedAccountIds, filters
         </div>
       ) : (
         <>
-          <div key={currentResult.key} className="panel-scroll" tabIndex={0} role="region" aria-label={title}>
+          <div key={currentResult.key} className="panel-scroll" tabIndex={0} role="region" aria-labelledby="transactions-title" aria-busy={isLoading}>
             <table className="transaction-table">
               <thead>
                 <tr>
@@ -378,10 +474,14 @@ export default function TransactionsPanel({ messages, trackedAccountIds, filters
       {filtersKey !== '[]' && <TransactionTotalStatus messages={messages} trackedAccountIds={trackedAccountIds}
         filtersKey={filtersKey} revision={retry} />}
       {filterOpen && <TransactionFilterPanel messages={messages} trackedAccountIds={trackedAccountIds}
-        values={filterValues}
+        values={filterValues} activePresetId={activePreset?.id}
         onClose={() => { setFilterOpen(false); filterButtonRef.current?.focus(); }}
-        onApply={(values) => { setFilterValues(values); setRetry((previous) => previous + 1); setFilterOpen(false); filterButtonRef.current?.focus(); }} />}
-      {isLoading && <LoadingDialog label={messages.loadingTransactions} />}
+        onApply={(values, appliedPresetId) => {
+          applyFilter(values, appliedPresetId);
+          setFilterOpen(false);
+          filterButtonRef.current?.focus();
+        }} />}
+      {showLoadingDialog && <LoadingDialog label={messages.loadingTransactions} />}
     </section>
   );
 }

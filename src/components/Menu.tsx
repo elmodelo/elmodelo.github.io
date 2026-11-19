@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import type { LocaleMessages } from '../locales/types';
 import type { SavedTransactionFilter } from '../lib/transactionFilterPresets';
 
-export type AppSection = 'transactions' | 'uncategorized' | 'preferences' | 'account' | `saved-filter:${string}`;
+export type AppSection = 'transactions' | 'cash-flow' | 'uncategorized' | 'preferences' | 'account' | `saved-filter:${string}`;
 
 export function savedFilterSection(id: string): AppSection {
   return `saved-filter:${id}`;
@@ -23,6 +23,7 @@ export default function Menu({ messages, section, onSelect, toggleTarget, uncate
   const menuId = useId();
   const items: { id: AppSection; label: string }[] = [
     { id: 'transactions', label: messages.transactions },
+    { id: 'cash-flow', label: messages.cashFlow },
     { id: 'preferences', label: messages.preferences },
     { id: 'account', label: messages.myAccount },
   ];
@@ -42,8 +43,8 @@ export default function Menu({ messages, section, onSelect, toggleTarget, uncate
         </svg>
       </button>, toggleTarget)}
       <div id={menuId} className="menu-items" data-expanded={expanded}>
-        {items.map((item, index) => (
-          <div className={index === 1 ? 'menu-item menu-item-separated' : 'menu-item'} key={item.id}>
+        {items.map((item) => (
+          <div className={item.id === 'preferences' ? 'menu-item menu-item-separated' : 'menu-item'} key={item.id}>
             <button
               type="button"
               className="menu-button"

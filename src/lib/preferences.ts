@@ -5,6 +5,7 @@ export interface ApplicationPreferences extends Record<string, unknown> {
   theme: 'light' | 'dark' | null;
   language: 'en' | 'es' | null;
   trackedAccounts: string[] | null;
+  cashFlowAccounts: string[] | null;
   transactions: TransactionPreferences;
   transaction_filters: SavedTransactionFilter[];
 }
@@ -20,6 +21,8 @@ export function parsePreferences(value: unknown): ApplicationPreferences {
     language: data.language === 'en' || data.language === 'es' ? data.language : null,
     trackedAccounts: Array.isArray(data.trackedAccounts) && data.trackedAccounts.every((id) => typeof id === 'string')
       ? data.trackedAccounts : null,
+    cashFlowAccounts: Array.isArray(data.cashFlowAccounts) && data.cashFlowAccounts.every((id) => typeof id === 'string')
+      ? data.cashFlowAccounts : null,
     transactions: isTransactionPreferences(data.transactions) ? data.transactions : DEFAULT_TRANSACTION_PREFERENCES,
   };
 }

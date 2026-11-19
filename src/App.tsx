@@ -21,6 +21,7 @@ import './App.css';
 const RegistrationForm = lazy(() => import('./components/RegistrationForm'));
 const PreferencesPanel = lazy(() => import('./components/PreferencesPanel'));
 const TransactionsPanel = lazy(() => import('./components/TransactionsPanel'));
+const CashFlowPanel = lazy(() => import('./components/CashFlowPanel'));
 
 function App() {
   const auth = useAuth();
@@ -140,7 +141,7 @@ function Dashboard({
   const pinnedPreset = pinnedFilters.find((preset) => savedFilterSection(preset.id) === selectedSection);
   const section = selectedSection.startsWith('saved-filter:') && !pinnedPreset ? 'transactions' : selectedSection;
   if (section !== selectedSection) setSection(section);
-  const { accounts, trackedAccountIds, setTrackedAccountIds, status: accountsStatus, retryAccounts } = useTrackedAccounts(userId);
+  const { accounts, trackedAccountIds, setTrackedAccountIds, cashFlowAccountIds, setCashFlowAccountIds, status: accountsStatus, retryAccounts } = useTrackedAccounts(userId);
   const [categoryRevision, setCategoryRevision] = useState(0);
   const [uncategorizedResult, setUncategorizedResult] = useState<{ accountIds: string[]; count: number } | null>(null);
 
@@ -195,6 +196,20 @@ function Dashboard({
                   onCategoriesChanged={() => setCategoryRevision((previous) => previous + 1)}
                 />
               </FeatureBoundary>
+          ) : section === 'cash-flow' ? (
+            accountsStatus === 'loading' ? <LoadingDialog label={messages.loadingAccounts} />
+              : accountsStatus === 'error' ? (
+                <section className="dashboard-panel" role="alert">
+                  <h1>{messages.cashFlow}</h1>
+                  <p className="form-message form-message-error">{messages.accountsError}</p>
+                  <button className="button button-secondary" type="button" onClick={retryAccounts}>
+                    {messages.retry}
+                  </button>
+                </section>
+              ) : <FeatureBoundary messages={messages} loadingLabel={messages.loadingCashFlow}>
+                <CashFlowPanel messages={messages} accounts={accounts} cashFlowAccountIds={cashFlowAccountIds}
+                  onCategoriesChanged={() => setCategoryRevision((previous) => previous + 1)} />
+              </FeatureBoundary>
           ) : section === 'preferences' ? (
             <FeatureBoundary messages={messages} loadingLabel={messages.loadingPreferences}>
               <PreferencesPanel
@@ -205,6 +220,8 @@ function Dashboard({
                 accounts={accounts}
                 trackedAccountIds={trackedAccountIds}
                 onTrackedAccountIdsChange={setTrackedAccountIds}
+                cashFlowAccountIds={cashFlowAccountIds}
+                onCashFlowAccountIdsChange={setCashFlowAccountIds}
                 accountsStatus={accountsStatus}
                 onRetryAccounts={retryAccounts}
                 savedFilters={savedFilters}

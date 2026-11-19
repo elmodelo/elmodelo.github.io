@@ -12,6 +12,8 @@ interface PreferencesPanelProps {
   onLanguageChange: (language: Language) => void;
   accounts: Account[];
   trackedAccountIds: string[];
+  cashFlowAccountIds: string[];
+  onCashFlowAccountIdsChange: (ids: string[]) => void;
   onTrackedAccountIdsChange: (ids: string[]) => void;
   accountsStatus: 'loading' | 'ready' | 'error';
   onRetryAccounts: () => void;
@@ -47,19 +49,18 @@ function OptionGroup<T extends string>({ legend, name, value, options, onChange 
   );
 }
 
-export default function PreferencesPanel({
-  messages,
-  theme,
-  onThemeChange,
-  onLanguageChange,
-  accounts,
-  trackedAccountIds,
-  onTrackedAccountIdsChange,
-  accountsStatus,
-  onRetryAccounts,
-  savedFilters,
-  onPinFilter,
-}: PreferencesPanelProps) {
+interface AccountSelectionProps {
+  messages: LocaleMessages;
+  label: string;
+  name: string;
+  accounts: Account[];
+  selectedIds: string[];
+  onChange: (ids: string[]) => void;
+  accountsStatus: 'loading' | 'ready' | 'error';
+  onRetryAccounts: () => void;
+}
+
+function AccountSelection({ messages, label, name, accounts, selectedIds, onChange, accountsStatus, onRetryAccounts }: AccountSelectionProps) {
   const accountListId = useId();
   const accountListRef = useRef<HTMLFieldSetElement>(null);
   const [accountsOpen, setAccountsOpen] = useState(false);
@@ -79,6 +80,83 @@ export default function PreferencesPanel({
     };
   }, [accountsOpen]);
 
+  return (
+    <div className="preferences-group">
+      <button
+        className="preferences-account-trigger"
+        type="button"
+        popoverTarget={accountListId}
+        aria-expanded={accountsOpen}
+        aria-controls={accountListId}
+        onClick={(event) => {
+          const rect = event.currentTarget.getBoundingClientRect();
+          const below = window.innerHeight - rect.bottom - 12;
+          const maxHeight = Math.min(320, Math.max(below, rect.top - 12));
+          setDropdownPosition({
+            top: below >= maxHeight ? rect.bottom + 4 : rect.top - maxHeight - 4,
+            left: rect.left,
+            width: rect.width,
+            maxHeight,
+          });
+        }}
+      >
+        <span>{label} ({selectedIds.length}/{accounts.length})</span>
+        <span aria-hidden="true">▾</span>
+      </button>
+      <fieldset
+        id={accountListId}
+        ref={accountListRef}
+        popover="auto"
+        className="preferences-account-options"
+        aria-label={label}
+        style={dropdownPosition}
+        onToggle={(event) => setAccountsOpen(event.newState === 'open')}
+      >
+        {accountsStatus === 'loading' ? (
+          <p role="status">{messages.loadingAccounts}</p>
+        ) : accountsStatus === 'error' ? (
+          <div role="alert">
+            <p className="form-message form-message-error">{messages.accountsError}</p>
+            <button className="button button-secondary" type="button" onClick={onRetryAccounts}>
+              {messages.retry}
+            </button>
+          </div>
+        ) : accounts.length === 0 ? (
+          <p>{messages.noAccounts}</p>
+        ) : accounts.map((account) => (
+          <label className="preferences-option" key={account.id}>
+            <input
+              type="checkbox"
+              name={name}
+              value={account.id}
+              checked={selectedIds.includes(account.id)}
+              onChange={(event) => onChange(event.target.checked
+                ? [...selectedIds, account.id]
+                : selectedIds.filter((id) => id !== account.id))}
+            />
+            <span>{account.name}</span>
+          </label>
+        ))}
+      </fieldset>
+    </div>
+  );
+}
+
+export default function PreferencesPanel({
+  messages,
+  theme,
+  onThemeChange,
+  onLanguageChange,
+  accounts,
+  trackedAccountIds,
+  cashFlowAccountIds = [],
+  onCashFlowAccountIdsChange,
+  onTrackedAccountIdsChange,
+  accountsStatus,
+  onRetryAccounts,
+  savedFilters,
+  onPinFilter,
+}: PreferencesPanelProps) {
   return (
     <section className="dashboard-panel" aria-labelledby="preferences-title">
       <h1 id="preferences-title">{messages.preferences}</h1>
@@ -103,64 +181,12 @@ export default function PreferencesPanel({
           ]}
           onChange={onLanguageChange}
         />
-        <div className="preferences-group">
-          <button
-            className="preferences-account-trigger"
-            type="button"
-            popoverTarget={accountListId}
-            aria-expanded={accountsOpen}
-            aria-controls={accountListId}
-            onClick={(event) => {
-              const rect = event.currentTarget.getBoundingClientRect();
-              const below = window.innerHeight - rect.bottom - 12;
-              const maxHeight = Math.min(320, Math.max(below, rect.top - 12));
-              setDropdownPosition({
-                top: below >= maxHeight ? rect.bottom + 4 : rect.top - maxHeight - 4,
-                left: rect.left,
-                width: rect.width,
-                maxHeight,
-              });
-            }}
-          >
-            <span>{messages.trackedAccounts} ({trackedAccountIds.length}/{accounts.length})</span>
-            <span aria-hidden="true">▾</span>
-          </button>
-          <fieldset
-            id={accountListId}
-            ref={accountListRef}
-            popover="auto"
-            className="preferences-account-options"
-            aria-label={messages.trackedAccounts}
-            style={dropdownPosition}
-            onToggle={(event) => setAccountsOpen(event.newState === 'open')}
-          >
-            {accountsStatus === 'loading' ? (
-              <p role="status">{messages.loadingAccounts}</p>
-            ) : accountsStatus === 'error' ? (
-              <div role="alert">
-                <p className="form-message form-message-error">{messages.accountsError}</p>
-                <button className="button button-secondary" type="button" onClick={onRetryAccounts}>
-                  {messages.retry}
-                </button>
-              </div>
-            ) : accounts.length === 0 ? (
-              <p>{messages.noAccounts}</p>
-            ) : accounts.map((account) => (
-              <label className="preferences-option" key={account.id}>
-                <input
-                  type="checkbox"
-                  name="trackedAccounts"
-                  value={account.id}
-                  checked={trackedAccountIds.includes(account.id)}
-                  onChange={(event) => onTrackedAccountIdsChange(event.target.checked
-                    ? [...trackedAccountIds, account.id]
-                    : trackedAccountIds.filter((id) => id !== account.id))}
-                />
-                <span>{account.name}</span>
-              </label>
-            ))}
-          </fieldset>
-        </div>
+        <AccountSelection messages={messages} label={messages.trackedAccounts} name="trackedAccounts"
+          accounts={accounts} selectedIds={trackedAccountIds} onChange={onTrackedAccountIdsChange}
+          accountsStatus={accountsStatus} onRetryAccounts={onRetryAccounts} />
+        <AccountSelection messages={messages} label={messages.cashFlowAccounts} name="cashFlowAccounts"
+          accounts={accounts} selectedIds={cashFlowAccountIds} onChange={onCashFlowAccountIdsChange}
+          accountsStatus={accountsStatus} onRetryAccounts={onRetryAccounts} />
         <fieldset className="preferences-group">
           <legend>{messages.savedFilters}</legend>
           {savedFilters.length === 0 ? <p>{messages.noSavedFilters}</p> : (

@@ -21,6 +21,7 @@ export default function CashFlowPanel(props: Props) {
 function CashFlowWorkspace({ messages, accounts, cashFlowAccountIds, onCategoriesChanged }: Props) {
   const titleId = useId();
   const yearId = useId();
+  const [exportTarget, setExportTarget] = useState<HTMLDivElement | null>(null);
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [yearsResult, setYearsResult] = useState<{ years: number[]; error: boolean } | null>(null);
@@ -57,6 +58,7 @@ function CashFlowWorkspace({ messages, accounts, cashFlowAccountIds, onCategorie
           onChange={(event) => { setSelectedYear(Number(event.target.value)); setCell(null); setReturnFocus(null); }}>
           {years.map((option) => <option key={option} value={option}>{option}</option>)}
         </select>
+        <div className="cash-flow-export" ref={setExportTarget} />
       </div>
     </div>
     {!cashFlowAccountIds.length ? <p>{messages.cashFlowNoAccounts}</p> : <>
@@ -67,17 +69,18 @@ function CashFlowWorkspace({ messages, accounts, cashFlowAccountIds, onCategorie
           setYearsResult(null); setYearsAttempt((previous) => previous + 1);
         }}>{messages.retry}</button>
       </div>}
-      <p className="cash-flow-help">{messages.cashFlowPeriodHelp}</p>
       <CashFlowReport key={`${year}:${lastMonth}`} messages={messages} cashFlowAccountIds={cashFlowAccountIds}
-        year={year} firstMonth={firstMonth} lastMonth={lastMonth} revision={revision} returnFocus={returnFocus} onCellClick={(row, month) => { setReturnFocus(null); setCell({ row, month }); }} />
+        year={year} firstMonth={firstMonth} lastMonth={lastMonth} revision={revision} exportTarget={exportTarget} returnFocus={returnFocus} onCellClick={(row, month) => { setReturnFocus(null); setCell({ row, month }); }} />
     </>}
     {cell && <CashFlowTransactionsPanel messages={messages} accounts={accounts}
       trackedAccountIds={cashFlowCurrencyAccounts(accounts, cashFlowAccountIds, cell.row.currency)}
       year={year} month={cell.month} categoryId={cell.row.category_id!} categoryName={cell.row.category_name!}
-      currency={cell.row.currency} onClose={(changed) => {
+      onCategoriesChanged={() => {
+        setRevision((previous) => previous + 1);
+        onCategoriesChanged?.();
+      }} onClose={() => {
         setCell(null);
         setReturnFocus({ categoryId: cell.row.category_id!, currency: cell.row.currency, month: cell.month });
-        if (changed) { setRevision((previous) => previous + 1); onCategoriesChanged?.(); }
       }} />}
   </section>;
 }
@@ -90,10 +93,11 @@ interface ReportProps {
   lastMonth: number;
   onCellClick: (row: CashFlowRow, month: number) => void;
   revision: number;
+  exportTarget: HTMLDivElement | null;
   returnFocus: CashFlowFocusTarget | null;
 }
 
-function CashFlowReport({ messages, cashFlowAccountIds, year, firstMonth, lastMonth, onCellClick, revision, returnFocus }: ReportProps) {
+function CashFlowReport({ messages, cashFlowAccountIds, year, firstMonth, lastMonth, onCellClick, revision, exportTarget, returnFocus }: ReportProps) {
   const [result, setResult] = useState<{ rows: CashFlowRow[]; error: boolean; revision: number } | null>(null);
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
@@ -119,5 +123,5 @@ function CashFlowReport({ messages, cashFlowAccountIds, year, firstMonth, lastMo
     }}>{messages.retry}</button>
   </div>;
   if (!result.rows.length) return <p>{messages.cashFlowEmpty}</p>;
-  return <CashFlowTable messages={messages} rows={result.rows} year={year} firstMonth={firstMonth} lastMonth={lastMonth} busy={result.revision !== revision} returnFocus={returnFocus} onCellClick={onCellClick} />;
+  return <CashFlowTable messages={messages} rows={result.rows} year={year} firstMonth={firstMonth} lastMonth={lastMonth} busy={result.revision !== revision} exportTarget={exportTarget} returnFocus={returnFocus} onCellClick={onCellClick} />;
 }

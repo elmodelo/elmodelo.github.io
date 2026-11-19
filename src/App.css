@@ -597,7 +597,10 @@
 }
 
 @media (hover: hover) {
-  .transaction-table tbody tr:hover {
+  .transaction-table tbody tr:hover,
+  .cash-flow-transactions-dialog .transaction-table tbody tr:hover > td,
+  .cash-flow-table tbody tr:not(.cash-flow-section):hover > th[scope='row'],
+  .cash-flow-table tbody tr:not(.cash-flow-section):hover > td {
     background: var(--surface-raised);
   }
 }
@@ -1154,16 +1157,17 @@
 @media (prefers-reduced-motion: reduce) { .transaction-filter-panel { animation: none; } }
 @media (max-width: 600px) { .transaction-filter-grid { grid-template-columns: minmax(0, 1fr); gap: 0; } }
 
-.cash-flow-heading,
-.cash-flow-dialog-heading {
+.cash-flow-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px 24px;
 }
 
+.cash-flow-heading { margin-bottom: 16px; }
 .cash-flow-panel .cash-flow-heading h1 { margin: 0; }
-.cash-flow-year { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.cash-flow-year { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-left: auto; }
+.cash-flow-export .button { margin: 0; white-space: nowrap; }
 .cash-flow-year select {
   min-height: var(--tap-target-min);
   padding: 8px 36px 8px 12px;
@@ -1178,7 +1182,6 @@
   border-radius: 8px;
 }
 .cash-flow-year select:disabled { opacity: 0.65; }
-.cash-flow-help { font-size: 0.875rem; margin: 12px 0 16px; }
 .cash-flow-scroll { flex: 1; }
 .cash-flow-table {
   width: 100%;
@@ -1188,7 +1191,6 @@
   text-align: right;
 }
 .cash-flow-table + .cash-flow-table { margin-top: 32px; }
-.cash-flow-table caption { padding: 12px 0; text-align: left; font-weight: 700; color: var(--text-muted); }
 .cash-flow-table th, .cash-flow-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
 .cash-flow-table thead th { white-space: nowrap; }
 .cash-flow-table th:first-child { text-align: left; }
@@ -1221,12 +1223,31 @@
 .cash-flow-section th { padding-top: 20px; color: var(--accent); }
 .cash-flow-total td,
 .cash-flow-table .cash-flow-total th[scope='row'] { font-weight: 700; background: var(--surface-raised); }
-.cash-flow-summary { border-left: 1px solid var(--border); }
+.cash-flow-table .cash-flow-summary {
+  border-left: 1px solid var(--border);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+}
+.cash-flow-table .cash-flow-total .cash-flow-summary {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-raised));
+}
+.cash-flow-table thead th,
+.cash-flow-table thead th:first-child {
+  background: var(--surface-raised);
+}
+.cash-flow-table thead th.cash-flow-summary {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-raised));
+}
+@media (hover: hover) {
+  .cash-flow-table tbody tr:not(.cash-flow-section):hover > td.cash-flow-summary {
+    background: color-mix(in srgb, var(--accent) 20%, var(--surface-raised));
+  }
+}
 .cash-flow-transactions-dialog {
-  width: min(1400px, calc(100% - 48px));
-  height: min(850px, 90dvh);
+  width: max-content;
+  max-width: min(1400px, calc(100% - 48px));
+  height: fit-content;
   max-height: calc(100dvh - 32px);
-  padding: 24px;
+  padding: 16px;
   border: 1px solid var(--border);
   border-radius: 16px;
   background: var(--surface);
@@ -1236,15 +1257,13 @@
 }
 .cash-flow-transactions-dialog[open] { display: flex; flex-direction: column; gap: 20px; }
 .cash-flow-transactions-dialog::backdrop { background: rgb(0 0 0 / 55%); }
-.cash-flow-dialog-heading { flex-shrink: 0; align-items: flex-start; }
-.cash-flow-dialog-heading h2 { margin: 0; font-size: 1.25rem; overflow-wrap: anywhere; }
-.cash-flow-dialog-heading button { flex-shrink: 0; }
-.cash-flow-transactions-dialog > .transactions-panel { flex: 1; }
+.transaction-heading-actions { margin-left: auto; flex-shrink: 0; }
+.cash-flow-transactions-dialog > .transactions-panel { flex: 0 1 auto; min-width: 0; }
 
 @media (max-width: 640px) {
   .cash-flow-heading { gap: 12px; flex-wrap: wrap; }
   .cash-flow-year { gap: 6px; }
   .cash-flow-table thead th:first-child,
   .cash-flow-table tbody th[scope='row'] { min-width: 130px; max-width: 160px; }
-  .cash-flow-transactions-dialog { width: calc(100% - 16px); height: calc(100dvh - 16px); max-height: none; padding: 12px; }
+  .cash-flow-transactions-dialog { max-width: calc(100% - 16px); max-height: calc(100dvh - 16px); padding: 12px; }
 }

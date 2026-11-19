@@ -1,4 +1,9 @@
 export interface LocaleMessages {
+  cashFlowExportCsv: string;
+  cashFlowExportError: string;
+  cashFlowExportFilename: string;
+  cashFlowCurrency: string;
+  cashFlowSection: string;
   cashFlow: string;
   loadingCashFlow: string;
   cashFlowAccounts: string;
@@ -18,8 +23,6 @@ export interface LocaleMessages {
   cashFlowAnnual: string;
   cashFlowAverageHelp: string;
   cashFlowAnnualHelp: string;
-  cashFlowPeriodHelp: string;
-  cashFlowTableCaption: string;
   cashFlowCellLabel: string;
   cashFlowTransactionsTitle: string;
 

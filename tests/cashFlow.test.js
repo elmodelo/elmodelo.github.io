@@ -122,8 +122,9 @@ test('localized table has separate currencies, three sections, and only category
       for (const totalRow of markup.matchAll(/<tr class="cash-flow-total">(.*?)<\/tr>/g)) {
         assert.doesNotMatch(totalRow[1], /<button/);
       }
-      assert.match(markup, /CAD · 2026/);
-      assert.match(markup, /USD · 2026/);
+      assert.match(markup, /class="cash-flow-table" aria-label="CAD"/);
+      assert.match(markup, /class="cash-flow-table" aria-label="USD"/);
+      assert.doesNotMatch(markup, /<caption/);
     }
   } finally { await server.close(); }
 });
@@ -144,6 +145,32 @@ test('panel starts on the current year, with localized loading and empty-account
       const empty = renderToStaticMarkup(createElement(CashFlowPanel, { messages, accounts: [], cashFlowAccountIds: [] }));
       assert.ok(empty.includes(messages.cashFlowNoAccounts));
       assert.ok(!empty.includes(messages.loadingCashFlow));
+    }
+  } finally { await server.close(); }
+});
+
+test('cash flow popup uses one contextual heading and a close action without search or filters', async () => {
+  env.VITE_SUPABASE_URL = 'http://127.0.0.1:54321';
+  env.VITE_SUPABASE_ANON_KEY = 'test-key';
+  const server = await createServer({ server: { middlewareMode: true, ws: false }, appType: 'custom' });
+  try {
+    const { default: Popup } = await server.ssrLoadModule('/src/components/CashFlowTransactionsPanel.tsx');
+    const { PreferencesProvider } = await server.ssrLoadModule('/src/hooks/usePreferences.tsx');
+    const { StatusMessagesProvider } = await server.ssrLoadModule('/src/hooks/useStatusMessages.tsx');
+    const { getLocaleMessages } = await server.ssrLoadModule('/src/locales/index.ts');
+    for (const language of ['en', 'es']) {
+      const messages = getLocaleMessages(language);
+      const markup = renderToStaticMarkup(createElement(StatusMessagesProvider, {}, createElement(PreferencesProvider, {},
+        createElement(Popup, { messages, accounts: [], trackedAccountIds: ['cad'], year: 2026, month: 2,
+          categoryId: 'groceries', categoryName: 'Groceries', onClose() {} }))));
+      assert.equal((markup.match(/<h1 /g) ?? []).length, 1);
+      assert.match(markup, /<h1[^>]*>Groceries · .*2026<\/h1>/);
+      assert.ok(!markup.includes(`>${messages.transactions}</h1>`));
+      assert.doesNotMatch(markup, /<h2|transaction-filter-tools|type="search"|transaction-filter-trigger|transaction-saved-filters-trigger/);
+      assert.ok(markup.includes(`aria-label="${messages.close}"`));
+      assert.match(markup, /class="transaction-heading-actions"><button[^>]*transaction-filter-close/);
+      const headingId = markup.match(/<h1 id="([^"]+)"/)[1];
+      assert.ok(markup.includes(`class="cash-flow-transactions-dialog" aria-labelledby="${headingId}"`));
     }
   } finally { await server.close(); }
 });

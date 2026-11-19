@@ -15,7 +15,7 @@ import LoadingDialog from './LoadingDialog';
 import CategorizePanel from './CategorizePanel';
 import { useStatusMessage } from '../hooks/useStatusMessages';
 import { usePreferences } from '../hooks/usePreferences';
-import type { SetStateAction } from 'react';
+import type { SetStateAction, ReactNode } from 'react';
 import type { TransactionPreferences } from '../lib/transactionPreferences';
 import type { Account } from '../hooks/useTrackedAccounts';
 import { usePermissions } from '../hooks/usePermissions';
@@ -52,13 +52,17 @@ interface TransactionsPanelProps {
   trackedAccountIds: string[];
   filters?: TransactionFilters;
   title?: string;
+  headingId?: string;
+  showFilters?: boolean;
+  enableSelection?: boolean;
+  headerActions?: ReactNode;
   initialPreset?: SavedTransactionFilter;
   onCategoriesChanged?: () => void;
 }
 
 const EMPTY_SEARCH = { text: '', filters: NO_TRANSACTION_FILTERS, relativeDates: [] as RelativeDateRange[] };
 
-export default function TransactionsPanel({ messages, accounts, trackedAccountIds, filters = NO_TRANSACTION_FILTERS, title = messages.transactions, initialPreset, onCategoriesChanged }: TransactionsPanelProps) {
+export default function TransactionsPanel({ messages, accounts, trackedAccountIds, filters = NO_TRANSACTION_FILTERS, title = messages.transactions, headingId = 'transactions-title', showFilters = true, enableSelection = true, headerActions, initialPreset, onCategoriesChanged }: TransactionsPanelProps) {
   const [filterOpen, setFilterOpen] = useState<'edit' | 'save-search' | null>(null);
   const [{ values: filterValues, presetId }, setAppliedFilter] = useState({
     values: initialPreset?.values ?? EMPTY_TRANSACTION_FILTER,
@@ -75,6 +79,7 @@ export default function TransactionsPanel({ messages, accounts, trackedAccountId
   const savedFiltersId = useId();
   const savedFiltersRef = useRef<HTMLDivElement>(null);
   const { canWrite: canCategorize } = usePermissions();
+  const canSelect = canCategorize && enableSelection;
   const { preferences: applicationPreferences, update } = usePreferences();
   const activePreset = applicationPreferences.transaction_filters.find((preset) => preset.id === presetId);
   const heading = activePreset?.name ?? title;
@@ -105,14 +110,14 @@ export default function TransactionsPanel({ messages, accounts, trackedAccountId
   const [result, setResult] = useState<TransactionResult | null>(null);
   const previousPageRef = useRef<HTMLButtonElement>(null);
   const nextPageRef = useRef<HTMLButtonElement>(null);
-  const scopeKey = JSON.stringify([canCategorize, trackedAccountIds, filtersKey, retry]);
+  const scopeKey = JSON.stringify([canCategorize, canSelect, trackedAccountIds, filtersKey, retry]);
   const requestKey = `${scopeKey}:${sortColumn}:${ascending}:${postedAtAscending}:${page}:${pageSize}`;
   const currentResult = result;
   const matchingCount = result?.scopeKey === scopeKey && !result.error ? result.count : null;
   const isLoading = result?.key !== requestKey;
   const showLoadingDialog = isLoading && (!result || result.search === search);
   const [selection, setSelection] = useState<{ key: string; ids: string[] }>({ key: requestKey, ids: [] });
-  const selectedIds = selection.key === requestKey ? selection.ids : [];
+  const selectedIds = canSelect && selection.key === requestKey ? selection.ids : [];
   if (selection.key !== requestKey) setSelection({ key: requestKey, ids: [] });
   const [categorizing, setCategorizing] = useState<{ ids: string[]; isSelection: boolean; anchorRow: HTMLTableRowElement; anchorCell: HTMLTableCellElement } | null>(null);
   if (!canCategorize && categorizing) setCategorizing(null);
@@ -172,7 +177,7 @@ export default function TransactionsPanel({ messages, accounts, trackedAccountId
           || event.target.closest('input, textarea, select, [role="textbox"], [role="combobox"], dialog'))) return;
 
       const searchInput = searchInputRef.current;
-      if (event.key === '/' && searchInput) {
+      if (showFilters && event.key === '/' && searchInput) {
         event.preventDefault();
         const dropdown = savedFiltersRef.current;
         if (dropdown?.matches(':popover-open')) dropdown.hidePopover();
@@ -192,7 +197,7 @@ export default function TransactionsPanel({ messages, accounts, trackedAccountId
 
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [isLoading, showLoadingDialog, filterOpen, categorizing]);
+  }, [isLoading, showLoadingDialog, filterOpen, categorizing, showFilters]);
 
   useEffect(() => {
     let active = true;
@@ -279,10 +284,10 @@ export default function TransactionsPanel({ messages, accounts, trackedAccountId
   }
 
   return (
-    <section className="dashboard-panel transactions-panel" aria-labelledby="transactions-title">
+    <section className="dashboard-panel transactions-panel" aria-labelledby={headingId}>
       <div className="transactions-heading">
-        <h1 id="transactions-title">{heading}</h1>
-        <div className="transaction-filter-tools">
+        <h1 id={headingId}>{heading}</h1>
+        {showFilters && <div className="transaction-filter-tools">
           <input ref={searchInputRef} className="transaction-filter-search" type="search"
             aria-label={messages.transactionSearch} aria-keyshortcuts="/" placeholder={messages.transactionSearch}
             aria-invalid={searchInvalid || undefined} title={messages.transactionSearchHelp}
@@ -349,7 +354,8 @@ export default function TransactionsPanel({ messages, accounts, trackedAccountId
                 ))}
             </div>
           </div>
-        </div>
+        </div>}
+        {headerActions && <div className="transaction-heading-actions">{headerActions}</div>}
       </div>
       {!currentResult ? null : currentResult.error ? (
         <div role="alert">
@@ -360,11 +366,11 @@ export default function TransactionsPanel({ messages, accounts, trackedAccountId
         </div>
       ) : (
         <>
-          <div key={currentResult.key} className="panel-scroll" tabIndex={0} role="region" aria-labelledby="transactions-title" aria-busy={isLoading}>
+          <div key={currentResult.key} className="panel-scroll" tabIndex={0} role="region" aria-labelledby={headingId} aria-busy={isLoading}>
             <table className="transaction-table">
               <thead>
                 <tr>
-                  {canCategorize && <th scope="col" className="transaction-selection">
+                  {canSelect && <th scope="col" className="transaction-selection">
                     <input
                       ref={selectPageRef}
                       type="checkbox"
@@ -394,10 +400,10 @@ export default function TransactionsPanel({ messages, accounts, trackedAccountId
                 {currentResult.transactions.map((transaction) => (
                   <tr
                     key={transaction.id}
-                    className={canCategorize && !isLoading ? 'transaction-selectable-row' : undefined}
+                    className={canSelect && !isLoading ? 'transaction-selectable-row' : undefined}
                     data-categorize-target={canCategorize && categorizing?.ids.includes(transaction.id) ? '' : undefined}
                     onPointerDown={(event) => {
-                      rowPointerRef.current = canCategorize && !isLoading && event.isPrimary && event.button === 0
+                      rowPointerRef.current = canSelect && !isLoading && event.isPrimary && event.button === 0
                         ? { x: event.clientX, y: event.clientY, dragged: false } : null;
                     }}
                     onPointerMove={(event) => {
@@ -410,7 +416,7 @@ export default function TransactionsPanel({ messages, accounts, trackedAccountId
                     onClick={(event) => {
                       const pointer = rowPointerRef.current;
                       rowPointerRef.current = null;
-                      if (!canCategorize || isLoading || event.defaultPrevented) return;
+                      if (!canSelect || isLoading || event.defaultPrevented) return;
                       // Interactive controls handle their own clicks. In particular,
                       // checkbox clicks must not toggle selection a second time.
                       if (event.target instanceof Element
@@ -426,7 +432,7 @@ export default function TransactionsPanel({ messages, accounts, trackedAccountId
                       });
                     }}
                   >
-                    {canCategorize && <td className="transaction-selection">
+                    {canSelect && <td className="transaction-selection">
                       <input
                         type="checkbox"
                         aria-label={messages.selectTransaction.replace('{description}', transaction.description?.name ?? transaction.description?.memo ?? '—').replace('{date}', dateFormatter.format(new Date(transaction.posted_at)))}
@@ -465,7 +471,7 @@ export default function TransactionsPanel({ messages, accounts, trackedAccountId
           </div>
           {currentResult.count === 0 && <p className="empty-transactions">{messages.noTransactions}</p>}
           <div className="pagination">
-            {canCategorize && selectedIds.length > 0 && (
+            {canSelect && selectedIds.length > 0 && (
               <span className="pagination-selection" role="status">
                 {messages.selectedTransactions.replace('{count}', String(selectedIds.length))}
               </span>
@@ -541,7 +547,7 @@ export default function TransactionsPanel({ messages, accounts, trackedAccountId
       {filtersKey !== '[]' && matchingCount !== null && <TransactionTotalStatus messages={messages}
         trackedAccountIds={trackedAccountIds} filtersKey={filtersKey} revision={retry}
         hasMatches={matchingCount > 0} />}
-      {filterOpen && <TransactionFilterPanel messages={messages} trackedAccountIds={trackedAccountIds}
+      {showFilters && filterOpen && <TransactionFilterPanel messages={messages} trackedAccountIds={trackedAccountIds}
         values={projectTransactionSearch(filterValues, search, searchFilters, relativeDates)}
         activePresetId={search ? undefined : activePreset?.id}
         focusName={filterOpen === 'save-search'}

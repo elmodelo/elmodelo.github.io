@@ -13,11 +13,11 @@ interface Props {
   month: number;
   categoryId: string;
   categoryName: string;
-  currency: string;
   onClose: (changed: boolean) => void;
+  onCategoriesChanged?: () => void;
 }
 
-export default function CashFlowTransactionsPanel({ messages, accounts, trackedAccountIds, year, month, categoryId, categoryName, currency, onClose }: Props) {
+export default function CashFlowTransactionsPanel({ messages, accounts, trackedAccountIds, year, month, categoryId, categoryName, onClose, onCategoriesChanged }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const changedRef = useRef(false);
   const closingRef = useRef(false);
@@ -25,7 +25,7 @@ export default function CashFlowTransactionsPanel({ messages, accounts, trackedA
   const monthLabel = new Intl.DateTimeFormat(messages.language, { month: 'long', year: 'numeric', timeZone: 'UTC' })
     .format(new Date(`${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-01T00:00:00Z`));
   const title = messages.cashFlowTransactionsTitle.replace('{category}', () => categoryName)
-    .replace('{month}', monthLabel).replace('{currency}', currency);
+    .replace('{month}', monthLabel);
   const filters = cashFlowCellFilters(year, month, categoryId) as TransactionFilters;
 
   useLayoutEffect(() => {
@@ -45,14 +45,12 @@ export default function CashFlowTransactionsPanel({ messages, accounts, trackedA
   return <dialog ref={dialogRef} className="cash-flow-transactions-dialog" aria-labelledby={titleId}
     onCancel={(event) => { event.preventDefault(); dismiss(); }}
     onClose={(event) => { if (!event.currentTarget.open) dismiss(); }}>
-    <div className="cash-flow-dialog-heading">
-      <h2 id={titleId}>{title}</h2>
-      <button type="button" autoFocus className="button button-secondary transaction-filter-close"
+    <TransactionsPanel messages={messages} accounts={accounts} trackedAccountIds={trackedAccountIds}
+      filters={filters} title={title} headingId={titleId} showFilters={false} enableSelection={false}
+      headerActions={<button type="button" autoFocus className="button button-secondary transaction-filter-close"
         aria-label={messages.close} title={messages.close} onClick={dismiss}>
         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" /></svg>
-      </button>
-    </div>
-    <TransactionsPanel messages={messages} accounts={accounts} trackedAccountIds={trackedAccountIds}
-      filters={filters} title={messages.transactions} onCategoriesChanged={() => { changedRef.current = true; }} />
+      </button>}
+      onCategoriesChanged={() => { changedRef.current = true; onCategoriesChanged?.(); }} />
   </dialog>;
 }

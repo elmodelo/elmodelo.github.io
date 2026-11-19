@@ -10,6 +10,7 @@ export interface LocaleMessages {
   filterTransactions: string;
   filterAll: string;
   savedFilters: string;
+  pinToMenu: string;
   noSavedFilters: string;
   loadFilter: string;
   chooseFilter: string;

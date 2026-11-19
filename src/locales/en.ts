@@ -11,6 +11,7 @@ const en: LocaleMessages = {
   filterTransactions: "Filter transactions",
   filterAll: "All",
   savedFilters: "Saved filters",
+  pinToMenu: "Pin to menu",
   noSavedFilters: "No saved filters",
   loadFilter: "Load filter",
   chooseFilter: "Choose a saved filter",

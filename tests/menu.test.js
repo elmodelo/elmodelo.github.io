@@ -8,7 +8,9 @@ import { createServer } from 'vite';
 test('menu renders localized sections, their separator, and the active item', async () => {
   const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' });
   try {
-    const { default: Menu } = await server.ssrLoadModule('/src/components/Menu.tsx');
+    const { default: Menu, savedFilterSection } = await server.ssrLoadModule('/src/components/Menu.tsx');
+    const { EMPTY_TRANSACTION_FILTER: values, sortSavedTransactionFilters } =
+      await server.ssrLoadModule('/src/lib/transactionFilterPresets.ts');
     const { getLocaleMessages } = await server.ssrLoadModule('/src/locales/index.ts');
     for (const [locale, labels] of [
       ['en', ['Transactions', 'Preferences', 'My Account']],
@@ -32,7 +34,43 @@ test('menu renders localized sections, their separator, and the active item', as
       assert.ok(filteredMarkup.indexOf(`>${labels[0]}</button>`) < filteredMarkup.indexOf(`>${uncategorizedLabel}</button>`));
       assert.ok(filteredMarkup.indexOf(`>${uncategorizedLabel}</button>`) < filteredMarkup.indexOf(`>${labels[1]}</button>`));
       assert.ok(filteredMarkup.includes(`class="menu-button menu-subsection" aria-current="page">${uncategorizedLabel}</button>`));
+      const pinnedFilters = sortSavedTransactionFilters([
+        { id: 'z', name: 'Zebra', values, pin_to_menu: true },
+        { id: 'a', name: 'Alpha', values, pin_to_menu: true },
+      ], locale);
+      for (const uncategorizedCount of [0, 34]) {
+        const pinnedMarkup = renderToStaticMarkup(createElement(Menu, {
+          messages: getLocaleMessages(locale), section: savedFilterSection('a'), onSelect() {}, toggleTarget: null,
+          pinnedFilters, uncategorizedCount,
+        }));
+        const ordered = [labels[0], ...(uncategorizedCount ? [uncategorizedLabel] : []), 'Alpha', 'Zebra', labels[1]];
+        const order = ordered.map((label) => pinnedMarkup.indexOf(`>${label}</button>`));
+        assert.ok(order.every((position, index) => position >= 0 && (!index || position > order[index - 1])));
+        assert.match(pinnedMarkup, /aria-current="page">Alpha<\/button>/);
+        assert.doesNotMatch(pinnedMarkup, /aria-current="page">Zebra<\/button>/);
+      }
     }
+  } finally {
+    await server.close();
+  }
+});
+
+test('saved-filter preferences show pin state and default older filters to unchecked', async () => {
+  const server = await createServer({ server: { middlewareMode: true, ws: false }, appType: 'custom' });
+  try {
+    const { default: PreferencesPanel } = await server.ssrLoadModule('/src/components/PreferencesPanel.tsx');
+    const { EMPTY_TRANSACTION_FILTER: values } = await server.ssrLoadModule('/src/lib/transactionFilterPresets.ts');
+    const { getLocaleMessages } = await server.ssrLoadModule('/src/locales/index.ts');
+    const markup = renderToStaticMarkup(createElement(PreferencesPanel, {
+      messages: getLocaleMessages('en'), theme: 'light', accounts: [], trackedAccountIds: [], accountsStatus: 'ready',
+      savedFilters: [
+        { id: 'alpha', name: 'Alpha', values, pin_to_menu: true },
+        { id: 'beta', name: 'Beta', values },
+      ],
+    }));
+    assert.match(markup, /<legend>Saved filters<\/legend>/);
+    assert.match(markup, /<input[^>]*aria-label="Pin to menu: Alpha"[^>]*checked=""/);
+    assert.doesNotMatch(markup, /<input[^>]*aria-label="Pin to menu: Beta"[^>]*checked=""/);
   } finally {
     await server.close();
   }

@@ -73,7 +73,10 @@ export default function TransactionFilterPanel({ messages, trackedAccountIds, va
     if (!canSaveDraft) return;
     const existing = presets.find((preset) => preset.name === name.trim());
     const saved = { id: existing?.id ?? crypto.randomUUID(), name: name.trim(), values: structuredClone(draft) };
-    update('transaction_filters', (previous) => [...previous.filter((preset) => preset.id !== saved.id), saved]);
+    update('transaction_filters', (previous) => [
+      ...previous.filter((preset) => preset.id !== saved.id),
+      { ...saved, pin_to_menu: previous.find((preset) => preset.id === saved.id)?.pin_to_menu === true },
+    ]);
     setPresetId(saved.id);
     setSavedMessage(true);
   }

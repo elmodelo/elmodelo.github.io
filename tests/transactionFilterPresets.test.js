@@ -39,6 +39,11 @@ test('persisted filters round-trip and invalid presets cannot create broken quer
     const { parsePreferences } = await server.ssrLoadModule('/src/lib/preferences.ts');
     const preset = { id: 'preset', name: 'Coffee', values: { ...empty, search: 'coffee', categories: ['food'] } };
     assert.deepEqual(parsePreferences({ transaction_filters: [preset] }).transaction_filters, [preset]);
+    for (const pin_to_menu of [true, false]) {
+      const pinned = { ...preset, pin_to_menu };
+      assert.deepEqual(parsePreferences({ transaction_filters: JSON.parse(JSON.stringify([pinned])) }).transaction_filters, [pinned]);
+    }
+    assert.equal(parsePreferences({ transaction_filters: [{ ...preset, pin_to_menu: 'true' }] }).transaction_filters[0].pin_to_menu, false);
     for (const invalid of [null, {}, { ...empty, accounts: [1] }, { ...empty, categories: undefined },
       { ...empty, from: '2025-02-30' }, { ...empty, from: '2026-02-01', to: '2026-01-01' },
       { ...empty, minimum: 'NaN' }, { ...empty, minimum: 'Infinity' }, { ...empty, minimum: ' ' },

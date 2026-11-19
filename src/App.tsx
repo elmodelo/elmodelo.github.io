@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { LocaleMessages } from './locales/types';
 import RegistrationForm from './components/RegistrationForm';
 import SignIn from './components/SignIn';
-import Menu, { type AppSection } from './components/Menu';
+import Menu, { savedFilterSection, type AppSection } from './components/Menu';
 import PreferencesPanel from './components/PreferencesPanel';
 import PreferencesStatus from './components/PreferencesStatus';
 import StatusBar from './components/StatusBar';
@@ -16,6 +16,7 @@ import { useLanguage, type Language } from './hooks/useLanguage';
 import { useTheme, type Theme } from './hooks/useTheme';
 import { useTrackedAccounts } from './hooks/useTrackedAccounts';
 import { fetchUncategorizedTransactionCount, UNCATEGORIZED_TRANSACTION_FILTERS } from './lib/transactionQuery';
+import { sortSavedTransactionFilters } from './lib/transactionFilterPresets';
 import { supabase } from './lib/supabaseClient';
 import './App.css';
 
@@ -131,7 +132,13 @@ function Dashboard({
   onThemeChange,
   onLanguageChange,
 }: DashboardProps) {
-  const [section, setSection] = useState<AppSection>('transactions');
+  const [selectedSection, setSection] = useState<AppSection>('transactions');
+  const { preferences, update } = usePreferences();
+  const savedFilters = sortSavedTransactionFilters(preferences.transaction_filters, messages.language);
+  const pinnedFilters = savedFilters.filter((preset) => preset.pin_to_menu === true);
+  const pinnedPreset = pinnedFilters.find((preset) => savedFilterSection(preset.id) === selectedSection);
+  const section = selectedSection.startsWith('saved-filter:') && !pinnedPreset ? 'transactions' : selectedSection;
+  if (section !== selectedSection) setSection(section);
   const { accounts, trackedAccountIds, setTrackedAccountIds, status: accountsStatus, retryAccounts } = useTrackedAccounts(userId);
   const [categoryRevision, setCategoryRevision] = useState(0);
   const [uncategorizedResult, setUncategorizedResult] = useState<{ accountIds: string[]; count: number } | null>(null);
@@ -162,11 +169,11 @@ function Dashboard({
     <>
       <Menu
         messages={messages} section={section} onSelect={setSection} toggleTarget={headerMenuTarget}
-        uncategorizedCount={uncategorizedCount}
+        uncategorizedCount={uncategorizedCount} pinnedFilters={pinnedFilters}
       />
       <div className="dashboard-main">
         <div className="dashboard-content">
-          {section === 'transactions' || section === 'uncategorized' ? (
+          {section === 'transactions' || section === 'uncategorized' || pinnedPreset ? (
             accountsStatus === 'loading' ? <LoadingDialog label={messages.loadingAccounts} />
               : accountsStatus === 'error' ? (
                 <section className="dashboard-panel" role="alert">
@@ -182,7 +189,8 @@ function Dashboard({
                 accounts={accounts}
                 trackedAccountIds={trackedAccountIds}
                 filters={section === 'uncategorized' ? UNCATEGORIZED_TRANSACTION_FILTERS : undefined}
-                title={section === 'uncategorized' ? messages.uncategorized : messages.transactions}
+                title={pinnedPreset?.name ?? (section === 'uncategorized' ? messages.uncategorized : messages.transactions)}
+                initialPreset={pinnedPreset}
                 onCategoriesChanged={() => setCategoryRevision((previous) => previous + 1)}
               />
           ) : section === 'preferences' ? (
@@ -196,6 +204,9 @@ function Dashboard({
               onTrackedAccountIdsChange={setTrackedAccountIds}
               accountsStatus={accountsStatus}
               onRetryAccounts={retryAccounts}
+              savedFilters={savedFilters}
+              onPinFilter={(id, pinned) => update('transaction_filters', (previous) => previous.map((preset) =>
+                preset.id === id ? { ...preset, pin_to_menu: pinned } : preset))}
             />
           ) : (
             <section className="dashboard-panel" aria-labelledby="account-title">

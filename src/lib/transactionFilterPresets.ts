@@ -18,6 +18,12 @@ export interface SavedTransactionFilter {
   id: string;
   name: string;
   values: TransactionFilterValues;
+  pin_to_menu?: boolean;
+}
+
+export function sortSavedTransactionFilters(filters: readonly SavedTransactionFilter[], locale: string) {
+  const collator = new Intl.Collator(locale);
+  return [...filters].sort((a, b) => collator.compare(a.name, b.name));
 }
 export const EMPTY_TRANSACTION_FILTER: TransactionFilterValues = {
   accounts: null, categories: null, from: '', to: '', search: '', minimum: '', maximum: '',
@@ -43,7 +49,7 @@ export function parseSavedTransactionFilters(value: unknown): SavedTransactionFi
       || !isTransactionFilterValues(item.values)) return false;
     ids.add(item.id);
     return true;
-  });
+  }).map((item) => item.pin_to_menu === undefined ? item : { ...item, pin_to_menu: item.pin_to_menu === true });
 }
 export function buildTransactionFilters(values: TransactionFilterValues, asOf = new Date()): TransactionFilters {
   if (!isTransactionFilterValues(values)) throw new Error('Invalid transaction filter');

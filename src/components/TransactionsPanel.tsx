@@ -10,7 +10,7 @@ import type { LocaleMessages } from '../locales/types';
 import TransactionFilterPanel from './TransactionFilterPanel';
 import MobileTransactionSearch from './MobileTransactionSearch';
 import TransactionTotalStatus from './TransactionTotalStatus';
-import { buildTransactionFilters, EMPTY_TRANSACTION_FILTER, type TransactionFilterValues } from '../lib/transactionFilterPresets';
+import { buildTransactionFilters, EMPTY_TRANSACTION_FILTER, type SavedTransactionFilter, type TransactionFilterValues } from '../lib/transactionFilterPresets';
 import LoadingDialog from './LoadingDialog';
 import CategorizePanel from './CategorizePanel';
 import { useStatusMessage } from '../hooks/useStatusMessages';
@@ -52,16 +52,17 @@ interface TransactionsPanelProps {
   trackedAccountIds: string[];
   filters?: TransactionFilters;
   title?: string;
+  initialPreset?: SavedTransactionFilter;
   onCategoriesChanged?: () => void;
 }
 
 const EMPTY_SEARCH = { text: '', filters: NO_TRANSACTION_FILTERS, relativeDates: [] as RelativeDateRange[] };
 
-export default function TransactionsPanel({ messages, accounts, trackedAccountIds, filters = NO_TRANSACTION_FILTERS, title = messages.transactions, onCategoriesChanged }: TransactionsPanelProps) {
+export default function TransactionsPanel({ messages, accounts, trackedAccountIds, filters = NO_TRANSACTION_FILTERS, title = messages.transactions, initialPreset, onCategoriesChanged }: TransactionsPanelProps) {
   const [filterOpen, setFilterOpen] = useState<'edit' | 'save-search' | null>(null);
   const [{ values: filterValues, presetId }, setAppliedFilter] = useState({
-    values: EMPTY_TRANSACTION_FILTER,
-    presetId: '',
+    values: initialPreset?.values ?? EMPTY_TRANSACTION_FILTER,
+    presetId: initialPreset?.id ?? '',
   });
   const [searchText, setSearchText] = useState('');
   const [{ text: search, filters: searchFilters, relativeDates }, setAppliedSearch] = useState(EMPTY_SEARCH);

@@ -1,8 +1,13 @@
 import { useId, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { LocaleMessages } from '../locales/types';
+import type { SavedTransactionFilter } from '../lib/transactionFilterPresets';
 
-export type AppSection = 'transactions' | 'uncategorized' | 'preferences' | 'account';
+export type AppSection = 'transactions' | 'uncategorized' | 'preferences' | 'account' | `saved-filter:${string}`;
+
+export function savedFilterSection(id: string): AppSection {
+  return `saved-filter:${id}`;
+}
 
 interface MenuProps {
   messages: LocaleMessages;
@@ -10,9 +15,10 @@ interface MenuProps {
   onSelect: (section: AppSection) => void;
   toggleTarget: HTMLElement | null;
   uncategorizedCount?: number;
+  pinnedFilters?: readonly SavedTransactionFilter[];
 }
 
-export default function Menu({ messages, section, onSelect, toggleTarget, uncategorizedCount = 0 }: MenuProps) {
+export default function Menu({ messages, section, onSelect, toggleTarget, uncategorizedCount = 0, pinnedFilters = [] }: MenuProps) {
   const [expanded, setExpanded] = useState(false);
   const menuId = useId();
   const items: { id: AppSection; label: string }[] = [
@@ -62,6 +68,19 @@ export default function Menu({ messages, section, onSelect, toggleTarget, uncate
                 {messages.uncategorized} ({uncategorizedCount})
               </button>
             )}
+            {item.id === 'transactions' && pinnedFilters.map((preset) => {
+              const id = savedFilterSection(preset.id);
+              return (
+                <button key={id} type="button" className="menu-button menu-subsection"
+                  aria-current={section === id ? 'page' : undefined}
+                  onClick={() => {
+                    onSelect(id);
+                    setExpanded(false);
+                  }}>
+                  {preset.name}
+                </button>
+              );
+            })}
           </div>
         ))}
       </div>

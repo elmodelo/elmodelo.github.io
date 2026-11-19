@@ -357,6 +357,11 @@
   margin: 24px auto 20px;
 }
 
+.main-menu {
+  max-height: 100%;
+  overflow-y: auto;
+}
+
 .menu-items {
   display: flex;
   flex-direction: column;
@@ -410,6 +415,7 @@
 .menu-subsection {
   padding-left: 28px;
   font-size: 0.9em;
+  overflow-wrap: anywhere;
 }
 
 .menu-button:hover,
@@ -501,6 +507,9 @@
 .preferences-option input {
   accent-color: var(--accent);
 }
+
+.preferences-pin-label { margin: 0; }
+.preferences-filter-option { overflow-wrap: anywhere; }
 
 .dashboard-content .form-message-error {
   color: var(--error);

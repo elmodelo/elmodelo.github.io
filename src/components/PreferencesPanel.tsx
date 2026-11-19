@@ -3,6 +3,7 @@ import type { Language } from '../hooks/useLanguage';
 import type { Theme } from '../hooks/useTheme';
 import type { LocaleMessages } from '../locales/types';
 import type { Account } from '../hooks/useTrackedAccounts';
+import type { SavedTransactionFilter } from '../lib/transactionFilterPresets';
 
 interface PreferencesPanelProps {
   messages: LocaleMessages;
@@ -14,6 +15,8 @@ interface PreferencesPanelProps {
   onTrackedAccountIdsChange: (ids: string[]) => void;
   accountsStatus: 'loading' | 'ready' | 'error';
   onRetryAccounts: () => void;
+  savedFilters: readonly SavedTransactionFilter[];
+  onPinFilter: (id: string, pinned: boolean) => void;
 }
 
 interface OptionGroupProps<T extends string> {
@@ -54,6 +57,8 @@ export default function PreferencesPanel({
   onTrackedAccountIdsChange,
   accountsStatus,
   onRetryAccounts,
+  savedFilters,
+  onPinFilter,
 }: PreferencesPanelProps) {
   const accountListId = useId();
   const accountListRef = useRef<HTMLFieldSetElement>(null);
@@ -156,6 +161,22 @@ export default function PreferencesPanel({
             ))}
           </fieldset>
         </div>
+        <fieldset className="preferences-group">
+          <legend>{messages.savedFilters}</legend>
+          {savedFilters.length === 0 ? <p>{messages.noSavedFilters}</p> : (
+            <>
+              <p className="preferences-pin-label">{messages.pinToMenu}</p>
+              {savedFilters.map((preset) => (
+                <label className="preferences-option preferences-filter-option" key={preset.id}>
+                  <input type="checkbox" checked={preset.pin_to_menu === true}
+                    aria-label={`${messages.pinToMenu}: ${preset.name}`}
+                    onChange={(event) => onPinFilter(preset.id, event.target.checked)} />
+                  <span>{preset.name}</span>
+                </label>
+              ))}
+            </>
+          )}
+        </fieldset>
       </div>
     </section>
   );

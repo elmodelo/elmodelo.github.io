@@ -52,6 +52,9 @@ export interface LocaleMessages {
   language: 'en' | 'es';
   brandHome: string;
   currentLanguage: string;
+  loadingRegistration: string;
+  featureLoadError: string;
+  reloadPage: string;
   checkingSession: string;
   authErrorTitle: string;
   authCheckError: string;

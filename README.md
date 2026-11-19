@@ -16,10 +16,31 @@ Run `npm run build` to generate `dist/` and `npm run preview` to preview it.
 Run `npm test` for the local component and transaction-query checks.
 
 After signing in, use the main menu to browse transactions, view the account
-email and sign out. Preferences sets the theme, language, and tracked accounts.
-Apply backend migrations through `0030_app_preferences.sql` before deploying this version.
+email and sign out. Preferences sets the theme, language, tracked accounts, and
+the independent Cash Flow accounts.
+Apply backend migrations through `0038_cash_flow_years.sql` before deploying this version.
 In Supabase Data API settings, expose `app` alongside `finance`. Keep `operational`
 unexposed; preferences no longer requires exposing operational tables.
+
+Cash Flow is a top-level main menu item. `CashFlowPanel` defaults to the current
+calendar year, showing January through the current month. Historical years show
+all twelve months. The top-right year selector always offers the current year;
+previous years come from `finance.cash_flow_years` for the Cash Flow accounts, so
+years without transaction data are omitted. Changing Cash Flow accounts resets the
+year and closes any drill-down. `finance.cash_flow` supplies zero-filled monthly
+arrays, displayed-month averages, and full-calendar-year totals, with separate
+CAD/USD tables and Income, Investment, and Expense sections. Zero-activity
+categories remain visible; Visa Payment and uncategorized transactions are excluded
+from the aggregate.
+
+Category/month amounts are keyboard-accessible buttons, including zero amounts.
+They open a modal `TransactionsPanel` with the category ID, Cash Flow accounts in
+the cell's currency, and a half-open UTC month range. Existing database pagination,
+sorting, search, filters, and writer categorization remain available; extra filters
+intersect with the cell's fixed scope. Summary cells are not clickable. Closing
+the dialog restores focus to the cell and refreshes cash flow if categories changed.
+All new interface strings are in the English and Spanish locale files; month names
+and amounts use `Intl` formatting.
 
 Preferences are loaded from `app.preferences`, with one JSON object per Auth
 user. Changes save automatically after a short debounce, with saving, saved, and
@@ -55,7 +76,11 @@ The local-storage audit found these preferences, now stored in the JSON object:
 
 - `theme`: light/dark (system default until selected).
 - `language`: English/Spanish (browser default until selected).
-- `trackedAccounts`: selected account IDs (`null` tracks all; `[]` tracks none).
+- `trackedAccounts`: transaction account IDs (`null` tracks all; `[]` tracks none).
+- `cashFlowAccounts`: independent Cash Flow account IDs (`null` includes all; `[]` includes none).
+  The Cash Flow selector in Preferences lists all available accounts, including untracked ones.
+  Existing users default to all accounts until they edit this new setting. It uses the existing
+  preferences JSON and autosave mechanism; no additional database migration is needed.
 - `transactions`: page size, sort column, sort direction, and remembered date-sort direction.
 
 The former guest/user browser keys and legacy `theme`/`language` keys are no
@@ -63,8 +88,9 @@ longer read or written. Existing local preferences are not imported; users start
 with defaults until they save preferences to the database. Signed-out appearance
 choices stay in memory. Supabase's authentication session storage is unchanged.
 
-`Dashboard` owns `useTrackedAccounts(userId)` and passes its `trackedAccountIds`
-to panels. Transactions are sorted and paginated by the database, initially
+`Dashboard` owns `useTrackedAccounts(userId)`, passing `trackedAccountIds` to
+transaction views and the independent `cashFlowAccountIds` to Cash Flow. Both
+selections use the shared account lookup. Transactions are sorted and paginated by the database, initially
 showing the newest 25. Dates use UTC and amounts use the account currency.
 
 `TransactionsPanel` accepts `filters?: TransactionFilters` (defined in

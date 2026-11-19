@@ -1,0 +1,92 @@
+import { useEffect, useId, useRef } from 'react';
+import type { LocaleMessages } from '../locales/types';
+
+export interface CashFlowRow {
+  section: 'INCOME' | 'INVESTMENT' | 'EXPENSE';
+  row_kind: 'category' | 'total';
+  category_id: string | null;
+  category_name: string | null;
+  currency: string;
+  monthly_amounts: number[];
+  monthly_average: number;
+  annual_total: number;
+}
+
+export interface CashFlowFocusTarget {
+  categoryId: string;
+  currency: string;
+  month: number;
+}
+
+interface Props {
+  messages: LocaleMessages;
+  rows: CashFlowRow[];
+  year: number;
+  firstMonth: number;
+  lastMonth: number;
+  busy?: boolean;
+  returnFocus?: CashFlowFocusTarget | null;
+  onCellClick: (row: CashFlowRow, month: number) => void;
+}
+
+export default function CashFlowTable({ messages, rows, year, firstMonth, lastMonth, onCellClick, busy = false, returnFocus }: Props) {
+  const id = useId();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!returnFocus || busy) return;
+    // Resolve the current button after refresh rather than a potentially replaced node.
+    const buttons = scrollRef.current?.querySelectorAll<HTMLButtonElement>('.cash-flow-cell');
+    const target = Array.from(buttons ?? []).find((button) =>
+      button.dataset.category === returnFocus.categoryId && button.dataset.currency === returnFocus.currency
+      && Number(button.dataset.month) === returnFocus.month);
+    target?.focus();
+  }, [returnFocus, busy, rows]);
+  const months = Array.from({ length: lastMonth - firstMonth + 1 }, (_, index) => firstMonth + index);
+  const monthFormatter = new Intl.DateTimeFormat(messages.language, { month: 'short', timeZone: 'UTC' });
+  const fullMonthFormatter = new Intl.DateTimeFormat(messages.language, { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const numberFormatter = new Intl.NumberFormat(messages.language, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const sectionLabels = { INCOME: messages.cashFlowIncome, INVESTMENT: messages.cashFlowInvestment, EXPENSE: messages.cashFlowExpense };
+  const totalLabels = { INCOME: messages.cashFlowIncomeTotal, INVESTMENT: messages.cashFlowInvestmentTotal, EXPENSE: messages.cashFlowExpenseTotal };
+  const currencies = [...new Set(rows.map((row) => row.currency))].sort();
+  const monthDate = (month: number) => new Date(`${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-01T00:00:00Z`);
+
+  return <div ref={scrollRef} className="panel-scroll cash-flow-scroll" tabIndex={0} role="region" aria-label={messages.cashFlow} aria-busy={busy}>
+    {currencies.map((currency) => <table key={currency} className="cash-flow-table">
+      <caption>{messages.cashFlowTableCaption.replace('{currency}', currency).replace('{year}', String(year))}</caption>
+      <thead><tr>
+        <th scope="col">{messages.transactionCategory}</th>
+        {months.map((month) => <th key={month} scope="col">{monthFormatter.format(monthDate(month))}</th>)}
+        <th scope="col" title={messages.cashFlowAverageHelp}>{messages.cashFlowAverage}</th>
+        <th scope="col" title={messages.cashFlowAnnualHelp}>{messages.cashFlowAnnual}</th>
+      </tr></thead>
+      {(['INCOME', 'INVESTMENT', 'EXPENSE'] as const).map((section) => <tbody key={section} aria-labelledby={`${id}-${currency}-${section}`}>
+        <tr className="cash-flow-section"><th id={`${id}-${currency}-${section}`} scope="rowgroup" colSpan={months.length + 3}>
+          {sectionLabels[section]}
+        </th></tr>
+        {rows.filter((row) => row.currency === currency && row.section === section)
+          .sort((a, b) => a.row_kind !== b.row_kind ? (a.row_kind === 'total' ? 1 : -1)
+            : (a.category_name ?? '').localeCompare(b.category_name ?? '', messages.language))
+          .map((row) => <tr key={row.category_id ?? 'total'} className={row.row_kind === 'total' ? 'cash-flow-total' : undefined}>
+            <th scope="row">{row.row_kind === 'total' ? totalLabels[section] : row.category_name}</th>
+            {row.monthly_amounts.map((amount, index) => <td key={months[index]}>
+              {row.row_kind === 'category' ? <button type="button" className="cash-flow-cell" aria-haspopup="dialog"
+                data-category={row.category_id} data-currency={currency} data-month={months[index]}
+                aria-label={messages.cashFlowCellLabel.replace('{category}', () => row.category_name ?? '')
+                  .replace('{month}', fullMonthFormatter.format(monthDate(months[index])))
+                  .replace('{amount}', numberFormatter.format(amount)).replace('{currency}', currency)}
+                onClick={(event) => {
+                  // Establish the native dialog's return target, including browsers
+                  // that do not focus buttons on pointer activation.
+                  event.currentTarget.focus();
+                  onCellClick(row, months[index]);
+                }}>
+                {numberFormatter.format(amount)}
+              </button> : numberFormatter.format(amount)}
+            </td>)}
+            <td className="cash-flow-summary">{numberFormatter.format(row.monthly_average)}</td>
+            <td className="cash-flow-summary">{numberFormatter.format(row.annual_total)}</td>
+          </tr>)}
+      </tbody>)}
+    </table>)}
+  </div>;
+}

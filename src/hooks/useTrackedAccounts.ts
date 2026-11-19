@@ -5,14 +5,17 @@ import { usePreferences } from './usePreferences';
 export interface Account {
   id: string;
   name: string;
+  currency: string;
 }
 
-/** Own this in the dashboard and pass trackedAccountIds to panels that query finance data. */
+/** Load accounts once and resolve independent transaction and Cash Flow selections. */
 export function useTrackedAccounts(userId: string) {
-  // Until the first edit, track all available accounts. An empty array tracks none.
+  // Each selection defaults to all accounts independently; an empty array selects none.
   const { preferences, update } = usePreferences();
   const selection = preferences.trackedAccounts;
+  const cashFlowSelection = preferences.cashFlowAccounts;
   const setTrackedAccountIds = (ids: string[]) => update('trackedAccounts', ids);
+  const setCashFlowAccountIds = (ids: string[]) => update('cashFlowAccounts', ids);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [attempt, setAttempt] = useState(0);
@@ -24,7 +27,7 @@ export function useTrackedAccounts(userId: string) {
     async function loadAccounts() {
       try {
         const { data, error } = await supabase.schema('finance').from('account')
-          .select('id, name').order('name').abortSignal(controller.signal);
+          .select('id, name, currency').order('name').abortSignal(controller.signal);
         if (!active) return;
         if (error || data === null) {
           setStatus('error');
@@ -50,10 +53,17 @@ export function useTrackedAccounts(userId: string) {
     [accounts, selection],
   );
 
+  // Cash Flow has its own selection over all available accounts, including untracked ones.
+  const cashFlowAccountIds = useMemo(
+    () => accounts.filter((account) => cashFlowSelection === null || cashFlowSelection.includes(account.id))
+      .map((account) => account.id),
+    [accounts, cashFlowSelection],
+  );
+
   function retryAccounts() {
     setStatus('loading');
     setAttempt((previous) => previous + 1);
   }
 
-  return { accounts, trackedAccountIds, setTrackedAccountIds, status, retryAccounts };
+  return { accounts, trackedAccountIds, setTrackedAccountIds, cashFlowAccountIds, setCashFlowAccountIds, status, retryAccounts };
 }

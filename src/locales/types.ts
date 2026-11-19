@@ -1,4 +1,28 @@
 export interface LocaleMessages {
+  cashFlow: string;
+  loadingCashFlow: string;
+  cashFlowAccounts: string;
+  cashFlowYear: string;
+  cashFlowLoadingYears: string;
+  cashFlowYearsError: string;
+  cashFlowError: string;
+  cashFlowNoAccounts: string;
+  cashFlowEmpty: string;
+  cashFlowIncome: string;
+  cashFlowInvestment: string;
+  cashFlowExpense: string;
+  cashFlowIncomeTotal: string;
+  cashFlowInvestmentTotal: string;
+  cashFlowExpenseTotal: string;
+  cashFlowAverage: string;
+  cashFlowAnnual: string;
+  cashFlowAverageHelp: string;
+  cashFlowAnnualHelp: string;
+  cashFlowPeriodHelp: string;
+  cashFlowTableCaption: string;
+  cashFlowCellLabel: string;
+  cashFlowTransactionsTitle: string;
+
   loadingTransactionTotal: string;
   transactionTotal: string;
   transactionTotalEstimated: string;

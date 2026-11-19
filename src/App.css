@@ -1164,6 +1164,8 @@
   gap: 12px 24px;
 }
 
+.app-shell:has(.cash-flow-panel) { --app-max-width: 100%; }
+.cash-flow-panel { width: 100%; min-width: 0; }
 .cash-flow-heading { margin-bottom: 16px; }
 .cash-flow-panel .cash-flow-heading h1 { margin: 0; }
 .cash-flow-year { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-left: auto; }

@@ -1,6 +1,11 @@
 import type { LocaleMessages } from './types';
 
 const en: LocaleMessages = {
+  cashFlowExportCsv: "Export CSV",
+  cashFlowExportError: "Could not export cash flow. Please try again.",
+  cashFlowExportFilename: "cash-flow-{year}.csv",
+  cashFlowCurrency: "Currency",
+  cashFlowSection: "Section",
   cashFlow: "Cash Flow",
   loadingCashFlow: "Loading cash flow…",
   cashFlowAccounts: "Cash Flow accounts",
@@ -20,10 +25,8 @@ const en: LocaleMessages = {
   cashFlowAnnual: "Annual total",
   cashFlowAverageHelp: "Average across displayed months, including months with no activity.",
   cashFlowAnnualHelp: "Total for the full selected calendar year.",
-  cashFlowPeriodHelp: "This year shows January through the current month; previous years show all twelve months. Amounts use each account’s currency.",
-  cashFlowTableCaption: "{currency} · {year}",
   cashFlowCellLabel: "View transactions: {category}, {month}, {amount} {currency}",
-  cashFlowTransactionsTitle: "{category} · {month} · {currency}",
+  cashFlowTransactionsTitle: "{category} · {month}",
   loadingTransactionTotal: "Calculating filtered total…",
   transactionTotal: "Filtered total: {amount}",
   transactionTotalEstimated: "Total: {amount} (Bank of Canada {date} {rates})",

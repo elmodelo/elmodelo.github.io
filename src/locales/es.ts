@@ -1,6 +1,11 @@
 import type { LocaleMessages } from './types';
 
 const es: LocaleMessages = {
+  cashFlowExportCsv: "Exportar CSV",
+  cashFlowExportError: "No se pudo exportar el flujo de caja. Inténtalo de nuevo.",
+  cashFlowExportFilename: "flujo-de-caja-{year}.csv",
+  cashFlowCurrency: "Moneda",
+  cashFlowSection: "Sección",
   cashFlow: "Flujo de caja",
   loadingCashFlow: "Cargando flujo de caja…",
   cashFlowAccounts: "Cuentas del flujo de caja",
@@ -20,10 +25,8 @@ const es: LocaleMessages = {
   cashFlowAnnual: "Total anual",
   cashFlowAverageHelp: "Promedio de los meses mostrados, incluidos los meses sin actividad.",
   cashFlowAnnualHelp: "Total de todo el año calendario seleccionado.",
-  cashFlowPeriodHelp: "Este año muestra desde enero hasta el mes actual; los años anteriores muestran los doce meses. Los importes se muestran en la moneda de cada cuenta.",
-  cashFlowTableCaption: "{currency} · {year}",
   cashFlowCellLabel: "Ver transacciones: {category}, {month}, {amount} {currency}",
-  cashFlowTransactionsTitle: "{category} · {month} · {currency}",
+  cashFlowTransactionsTitle: "{category} · {month}",
   loadingTransactionTotal: "Calculando el total filtrado…",
   transactionTotal: "Total filtrado: {amount}",
   transactionTotalEstimated: "Total: {amount} (Bank of Canada {date} {rates})",

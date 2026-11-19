@@ -1,4 +1,6 @@
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { cashFlowRowsInDisplayOrder, downloadCashFlowCsv } from '../lib/cashFlowCsv';
 import type { LocaleMessages } from '../locales/types';
 
 export interface CashFlowRow {
@@ -25,12 +27,14 @@ interface Props {
   firstMonth: number;
   lastMonth: number;
   busy?: boolean;
+  exportTarget?: HTMLDivElement | null;
   returnFocus?: CashFlowFocusTarget | null;
   onCellClick: (row: CashFlowRow, month: number) => void;
 }
 
-export default function CashFlowTable({ messages, rows, year, firstMonth, lastMonth, onCellClick, busy = false, returnFocus }: Props) {
+export default function CashFlowTable({ messages, rows, year, firstMonth, lastMonth, onCellClick, busy = false, returnFocus, exportTarget }: Props) {
   const id = useId();
+  const [exportError, setExportError] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!returnFocus || busy) return;
@@ -47,25 +51,34 @@ export default function CashFlowTable({ messages, rows, year, firstMonth, lastMo
   const numberFormatter = new Intl.NumberFormat(messages.language, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const sectionLabels = { INCOME: messages.cashFlowIncome, INVESTMENT: messages.cashFlowInvestment, EXPENSE: messages.cashFlowExpense };
   const totalLabels = { INCOME: messages.cashFlowIncomeTotal, INVESTMENT: messages.cashFlowInvestmentTotal, EXPENSE: messages.cashFlowExpenseTotal };
-  const currencies = [...new Set(rows.map((row) => row.currency))].sort();
+  const orderedRows = cashFlowRowsInDisplayOrder(rows, messages.language);
+  const currencies = [...new Set(orderedRows.map((row) => row.currency))];
   const monthDate = (month: number) => new Date(`${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-01T00:00:00Z`);
 
-  return <div ref={scrollRef} className="panel-scroll cash-flow-scroll" tabIndex={0} role="region" aria-label={messages.cashFlow} aria-busy={busy}>
-    {currencies.map((currency) => <table key={currency} className="cash-flow-table">
-      <caption>{messages.cashFlowTableCaption.replace('{currency}', currency).replace('{year}', String(year))}</caption>
+  const exportButton = <button type="button" className="button button-secondary" disabled={busy}
+    onClick={() => {
+      try {
+        downloadCashFlowCsv(rows, { year, firstMonth, lastMonth, messages });
+        setExportError(false);
+      } catch { setExportError(true); }
+    }}>{messages.cashFlowExportCsv}</button>;
+
+  return <>
+    {exportTarget ? createPortal(exportButton, exportTarget) : <div className="cash-flow-export">{exportButton}</div>}
+    {exportError && <p className="form-message form-message-error" role="alert">{messages.cashFlowExportError}</p>}
+    <div ref={scrollRef} className="panel-scroll cash-flow-scroll" tabIndex={0} role="region" aria-label={messages.cashFlow} aria-busy={busy}>
+    {currencies.map((currency) => <table key={currency} className="cash-flow-table" aria-label={currency}>
       <thead><tr>
         <th scope="col">{messages.transactionCategory}</th>
         {months.map((month) => <th key={month} scope="col">{monthFormatter.format(monthDate(month))}</th>)}
-        <th scope="col" title={messages.cashFlowAverageHelp}>{messages.cashFlowAverage}</th>
-        <th scope="col" title={messages.cashFlowAnnualHelp}>{messages.cashFlowAnnual}</th>
+        <th scope="col" className="cash-flow-summary" title={messages.cashFlowAverageHelp}>{messages.cashFlowAverage}</th>
+        <th scope="col" className="cash-flow-summary" title={messages.cashFlowAnnualHelp}>{messages.cashFlowAnnual}</th>
       </tr></thead>
       {(['INCOME', 'INVESTMENT', 'EXPENSE'] as const).map((section) => <tbody key={section} aria-labelledby={`${id}-${currency}-${section}`}>
         <tr className="cash-flow-section"><th id={`${id}-${currency}-${section}`} scope="rowgroup" colSpan={months.length + 3}>
           {sectionLabels[section]}
         </th></tr>
-        {rows.filter((row) => row.currency === currency && row.section === section)
-          .sort((a, b) => a.row_kind !== b.row_kind ? (a.row_kind === 'total' ? 1 : -1)
-            : (a.category_name ?? '').localeCompare(b.category_name ?? '', messages.language))
+        {orderedRows.filter((row) => row.currency === currency && row.section === section)
           .map((row) => <tr key={row.category_id ?? 'total'} className={row.row_kind === 'total' ? 'cash-flow-total' : undefined}>
             <th scope="row">{row.row_kind === 'total' ? totalLabels[section] : row.category_name}</th>
             {row.monthly_amounts.map((amount, index) => <td key={months[index]}>
@@ -88,5 +101,5 @@ export default function CashFlowTable({ messages, rows, year, firstMonth, lastMo
           </tr>)}
       </tbody>)}
     </table>)}
-  </div>;
+  </div></>;
 }

@@ -31,14 +31,23 @@ year and closes any drill-down. `finance.cash_flow` supplies zero-filled monthly
 arrays, displayed-month averages, and full-calendar-year totals, with separate
 CAD/USD tables and Income, Investment, and Expense sections. Zero-activity
 categories remain visible; Visa Payment and uncategorized transactions are excluded
-from the aggregate.
+from the aggregate. Export CSV downloads the currently displayed report, including
+section totals, displayed-month averages, and annual totals. Currency has its own
+column; amounts retain their numeric values without display rounding or conversion.
+The export uses localized column labels, YYYY-MM month columns, and a UTF-8 BOM.
+It uses the loaded report and is disabled while totals refresh after category edits.
 
 Category/month amounts are keyboard-accessible buttons, including zero amounts.
 They open a modal `TransactionsPanel` with the category ID, Cash Flow accounts in
 the cell's currency, and a half-open UTC month range. Existing database pagination,
-sorting, search, filters, and writer categorization remain available; extra filters
-intersect with the cell's fixed scope. Summary cells are not clickable. Closing
-the dialog restores focus to the cell and refreshes cash flow if categories changed.
+sorting and writer categorization remain available. The popup uses the category and
+month as its main heading, with an × close button on the right; search
+and filter controls are hidden to preserve the cell's fixed scope. Multiselect and
+its checkbox column are disabled in this popup; writers can still categorize
+individual transactions using their category buttons. Summary cells are not clickable. Closing
+the dialog restores focus to the cell. Saving a category reloads the popup query,
+so transactions moved to another category disappear, and immediately refreshes the
+Cash Flow table, averages, and totals while the popup stays open.
 All new interface strings are in the English and Spanish locale files; month names
 and amounts use `Intl` formatting.
 

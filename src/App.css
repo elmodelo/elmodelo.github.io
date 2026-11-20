@@ -1240,6 +1240,10 @@
   background: color-mix(in srgb, var(--accent) 12%, var(--surface-raised));
 }
 @media (hover: hover) {
+  .cash-flow-table:hover .cash-flow-column-hover {
+    background: var(--surface-raised);
+  }
+  .cash-flow-table:hover .cash-flow-summary.cash-flow-column-hover,
   .cash-flow-table tbody tr:not(.cash-flow-section):hover > td.cash-flow-summary {
     background: color-mix(in srgb, var(--accent) 20%, var(--surface-raised));
   }

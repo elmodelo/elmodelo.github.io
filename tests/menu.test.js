@@ -13,8 +13,8 @@ test('menu renders localized sections, their separator, and the active item', as
       await server.ssrLoadModule('/src/lib/transactionFilterPresets.ts');
     const { getLocaleMessages } = await server.ssrLoadModule('/src/locales/index.ts');
     for (const [locale, labels] of [
-      ['en', ['Transactions', 'Cash Flow', 'Preferences', 'My Account']],
-      ['es', ['Transacciones', 'Flujo de caja', 'Configuración', 'Mi cuenta']],
+      ['en', ['Transactions', 'Net Worth', 'Cash Flow', 'Preferences', 'My Account']],
+      ['es', ['Transacciones', 'Patrimonio neto', 'Flujo de caja', 'Configuración', 'Mi cuenta']],
     ]) {
       const markup = renderToStaticMarkup(createElement(Menu, {
         messages: getLocaleMessages(locale), section: 'transactions', onSelect() {}, toggleTarget: null,
@@ -22,6 +22,10 @@ test('menu renders localized sections, their separator, and the active item', as
       const positions = labels.map((label) => markup.indexOf(`>${label}</button>`));
       assert.ok(positions.every((position) => position >= 0));
       assert.ok(positions.every((position, index) => !index || position > positions[index - 1]));
+      const netWorthMarkup = renderToStaticMarkup(createElement(Menu, {
+        messages: getLocaleMessages(locale), section: 'net-worth', onSelect() {}, toggleTarget: null,
+      }));
+      assert.match(netWorthMarkup, /aria-current="page">(?:Net Worth|Patrimonio neto)<\/button>/);
       const cashFlowMarkup = renderToStaticMarkup(createElement(Menu, {
         messages: getLocaleMessages(locale), section: 'cash-flow', onSelect() {}, toggleTarget: null,
       }));

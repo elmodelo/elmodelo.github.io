@@ -1,4 +1,26 @@
 export interface LocaleMessages {
+  netWorthBalances: string;
+  netWorthAllocation: string;
+  netWorthAllocationDescription: string;
+  netWorthShare: string;
+  netWorthAllocationDebt: string;
+  netWorthAllocationNonpositive: string;
+  netWorthAllocationUnavailable: string;
+  netWorthAllocationEmpty: string;
+  netWorth: string;
+  loadingNetWorth: string;
+  netWorthError: string;
+  netWorthUnavailable: string;
+  netWorthNoAccounts: string;
+  netWorthDescription: string;
+  netWorthIncomplete: string;
+  netWorthConversionError: string;
+  netWorthNoConversion: string;
+  netWorthRate: string;
+  netWorthBalance: string;
+  netWorthDate: string;
+  netWorthCad: string;
+  netWorthMissing: string;
   cashFlowExportCsv: string;
   cashFlowExportError: string;
   cashFlowExportFilename: string;

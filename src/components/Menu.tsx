@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import type { LocaleMessages } from '../locales/types';
 import type { SavedTransactionFilter } from '../lib/transactionFilterPresets';
 
-export type AppSection = 'transactions' | 'cash-flow' | 'uncategorized' | 'preferences' | 'account' | `saved-filter:${string}`;
+export type AppSection = 'transactions' | 'net-worth' | 'cash-flow' | 'uncategorized' | 'preferences' | 'account' | `saved-filter:${string}`;
 
 export function savedFilterSection(id: string): AppSection {
   return `saved-filter:${id}`;
@@ -23,6 +23,7 @@ export default function Menu({ messages, section, onSelect, toggleTarget, uncate
   const menuId = useId();
   const items: { id: AppSection; label: string }[] = [
     { id: 'transactions', label: messages.transactions },
+    { id: 'net-worth', label: messages.netWorth },
     { id: 'cash-flow', label: messages.cashFlow },
     { id: 'preferences', label: messages.preferences },
     { id: 'account', label: messages.myAccount },

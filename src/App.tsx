@@ -21,6 +21,7 @@ import './App.css';
 const RegistrationForm = lazy(() => import('./components/RegistrationForm'));
 const PreferencesPanel = lazy(() => import('./components/PreferencesPanel'));
 const TransactionsPanel = lazy(() => import('./components/TransactionsPanel'));
+const NetWorthPanel = lazy(() => import('./components/NetWorthPanel'));
 const CashFlowPanel = lazy(() => import('./components/CashFlowPanel'));
 
 function App() {
@@ -195,6 +196,17 @@ function Dashboard({
                   initialPreset={pinnedPreset}
                   onCategoriesChanged={() => setCategoryRevision((previous) => previous + 1)}
                 />
+              </FeatureBoundary>
+          ) : section === 'net-worth' ? (
+            accountsStatus === 'loading' ? <LoadingDialog label={messages.loadingAccounts} />
+              : accountsStatus === 'error' ? (
+                <section className="dashboard-panel" role="alert">
+                  <h1>{messages.netWorth}</h1>
+                  <p className="form-message form-message-error">{messages.accountsError}</p>
+                  <button className="button button-secondary" type="button" onClick={retryAccounts}>{messages.retry}</button>
+                </section>
+              ) : <FeatureBoundary messages={messages} loadingLabel={messages.loadingNetWorth}>
+                <NetWorthPanel messages={messages} accounts={accounts} trackedAccountIds={trackedAccountIds} />
               </FeatureBoundary>
           ) : section === 'cash-flow' ? (
             accountsStatus === 'loading' ? <LoadingDialog label={messages.loadingAccounts} />

@@ -22,6 +22,22 @@ Apply backend migrations through `0038_cash_flow_years.sql` before deploying thi
 In Supabase Data API settings, expose `app` alongside `finance`. Keep `operational`
 unexposed; preferences no longer requires exposing operational tables.
 
+Net Worth appears between Transactions and Cash Flow in the main menu. It uses only
+tracked accounts selected in Preferences for both the list and the total, and lists
+them alphabetically. Each account shows its latest `finance.balance` snapshot, its UTC
+date, original currency balance, and CAD equivalent. Signed balances are summed
+without intermediate rounding. Accounts without snapshots remain visible and mark
+the total incomplete. The existing Bank of Canada daily rate loader converts USD
+balances; the status bar shows the rate and observation date. If conversion fails,
+original balances remain visible and the CAD total is unavailable, with a retry
+button. The dashboard contains independent cards: the account balances card and
+an allocation pie with a legend showing each positive tracked account's CAD balance
+and percentage of signed net worth. Slices are normalized over positive balances;
+when debts exist, legend percentages can sum to more than 100%. Zero or negative
+net worth has no meaningful percentage, and conversion errors suppress the chart.
+The cards wrap onto separate rows on smaller screens. This panel requires no
+additional database migration.
+
 Cash Flow is a top-level main menu item. `CashFlowPanel` defaults to the current
 calendar year, showing January through the current month. Historical years show
 all twelve months. The top-right year selector always offers the current year;

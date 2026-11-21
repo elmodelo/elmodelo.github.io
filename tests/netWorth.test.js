@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { env } from 'node:process';
 import { createClient } from '@supabase/supabase-js';
 import { createServer } from 'vite';
 import { createElement } from 'react';
@@ -94,7 +95,10 @@ test('account batches avoid truncation of balance results', async () => {
 });
 
 test('localized account table retains USD and CAD, sorts names, and reports exact rate', async () => {
-  const server = await createServer({ server: { middlewareMode: true, ws: false }, appType: 'custom' });
+  // Importing the panel initializes its client; rendering the table makes no requests.
+  env.VITE_SUPABASE_URL = 'http://127.0.0.1:54321';
+  env.VITE_SUPABASE_ANON_KEY = 'test-key';
+  const server = await createServer({ envDir: false, server: { middlewareMode: true, ws: false }, appType: 'custom' });
   try {
     const { NetWorthTable } = await server.ssrLoadModule('/src/components/NetWorthPanel.tsx');
     const { getLocaleMessages } = await server.ssrLoadModule('/src/locales/index.ts');
@@ -138,7 +142,7 @@ test('allocation excludes nonpositive balances and uses signed CAD net worth for
 });
 
 test('allocation card renders a single-account pie, debt shares, and safe empty/error states', async () => {
-  const server = await createServer({ server: { middlewareMode: true, ws: false }, appType: 'custom' });
+  const server = await createServer({ envDir: false, server: { middlewareMode: true, ws: false }, appType: 'custom' });
   try {
     const { default: Card } = await server.ssrLoadModule('/src/components/NetWorthAllocationCard.tsx');
     const { getLocaleMessages } = await server.ssrLoadModule('/src/locales/index.ts');

@@ -17,7 +17,15 @@ import { fetchUncategorizedTransactionCount, UNCATEGORIZED_TRANSACTION_FILTERS }
 import { sortSavedTransactionFilters } from './lib/transactionFilterPresets';
 import { restoreLastPanel, rememberLastPanel } from './lib/lastPanel';
 import { supabase } from './lib/supabaseClient';
+// Keep shared foundations before feature overrides; these styles are global.
 import './App.css';
+import './styles/controls.css';
+import './styles/auth.css';
+import './styles/navigation.css';
+import './styles/preferences.css';
+import './styles/transactions.css';
+import './styles/cash-flow.css';
+import './styles/net-worth.css';
 
 const RegistrationForm = lazy(() => import('./components/RegistrationForm'));
 const PreferencesPanel = lazy(() => import('./components/PreferencesPanel'));

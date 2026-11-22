@@ -1,0 +1,122 @@
+@media (hover: hover) {
+  .cash-flow-transactions-dialog .transaction-table tbody tr:hover > td,
+  .cash-flow-table tbody tr:not(.cash-flow-section):hover > th[scope='row'],
+  .cash-flow-table tbody tr:not(.cash-flow-section):hover > td {
+    background: var(--surface-raised);
+  }
+}
+
+.cash-flow-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+}
+
+.cash-flow-panel { width: 100%; min-width: 0; }
+.cash-flow-heading { margin-bottom: 16px; }
+.cash-flow-panel .cash-flow-heading h1 { margin: 0; }
+.cash-flow-year { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-left: auto; }
+.cash-flow-export .button { margin: 0; white-space: nowrap; }
+.cash-flow-year select {
+  min-height: var(--tap-target-min);
+  padding: 8px 36px 8px 12px;
+  appearance: none;
+  background-color: var(--surface-raised);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='%23888' stroke-width='2'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 16px;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.cash-flow-year select:disabled { opacity: 0.65; }
+.cash-flow-scroll { flex: 1; }
+.cash-flow-table {
+  width: 100%;
+  border-spacing: 0;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.cash-flow-table + .cash-flow-table { margin-top: 32px; }
+.cash-flow-table th, .cash-flow-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+.cash-flow-table thead th { white-space: nowrap; }
+.cash-flow-table th:first-child { text-align: left; }
+.cash-flow-table thead th:first-child,
+.cash-flow-table tbody th[scope='row'] {
+  position: sticky;
+  left: 0;
+  min-width: 170px;
+  max-width: 250px;
+  overflow-wrap: anywhere;
+  background: var(--surface);
+  box-shadow: 1px 0 var(--border);
+}
+.cash-flow-table thead th:first-child { z-index: 3; }
+.cash-flow-table tbody th[scope='row'] { z-index: 2; font-weight: 500; }
+.cash-flow-table td { min-width: 110px; white-space: nowrap; }
+.cash-flow-table td:has(.cash-flow-cell) { padding: 0; }
+.cash-flow-cell {
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: right;
+  cursor: pointer;
+  font-variant-numeric: inherit;
+}
+.cash-flow-cell:hover { background: var(--surface-raised); color: var(--accent); }
+.cash-flow-cell:focus-visible { outline-offset: -3px; }
+.cash-flow-section th { padding-top: 20px; color: var(--accent); }
+.cash-flow-total td,
+.cash-flow-table .cash-flow-total th[scope='row'] { font-weight: 700; background: var(--surface-raised); }
+.cash-flow-table .cash-flow-summary {
+  border-left: 1px solid var(--border);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+}
+.cash-flow-table .cash-flow-total .cash-flow-summary {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-raised));
+}
+.cash-flow-table thead th,
+.cash-flow-table thead th:first-child {
+  background: var(--surface-raised);
+}
+.cash-flow-table thead th.cash-flow-summary {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-raised));
+}
+@media (hover: hover) {
+  .cash-flow-table:hover .cash-flow-column-hover {
+    background: var(--surface-raised);
+  }
+  .cash-flow-table:hover .cash-flow-summary.cash-flow-column-hover,
+  .cash-flow-table tbody tr:not(.cash-flow-section):hover > td.cash-flow-summary {
+    background: color-mix(in srgb, var(--accent) 20%, var(--surface-raised));
+  }
+}
+.cash-flow-transactions-dialog {
+  width: max-content;
+  max-width: min(1400px, calc(100% - 48px));
+  height: fit-content;
+  max-height: calc(100dvh - 32px);
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.cash-flow-transactions-dialog[open] { display: flex; flex-direction: column; gap: 20px; }
+.cash-flow-transactions-dialog::backdrop { background: rgb(0 0 0 / 55%); }
+.cash-flow-transactions-dialog > .transactions-panel { flex: 0 1 auto; min-width: 0; }
+
+@media (max-width: 640px) {
+  .cash-flow-heading { gap: 12px; flex-wrap: wrap; }
+  .cash-flow-year { gap: 6px; }
+  .cash-flow-table thead th:first-child,
+  .cash-flow-table tbody th[scope='row'] { min-width: 130px; max-width: 160px; }
+  .cash-flow-transactions-dialog { max-width: calc(100% - 16px); max-height: calc(100dvh - 16px); padding: 12px; }
+}

@@ -1,0 +1,70 @@
+.auth-layout {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 42px 24px 64px;
+}
+
+.auth-card {
+  width: min(100%, 430px);
+  box-sizing: border-box;
+  padding: 42px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.auth-card h1 {
+  margin: 0;
+  color: var(--text);
+  font-size: clamp(26px, 5vw, 32px);
+  font-weight: 600;
+  letter-spacing: -0.045em;
+  line-height: 1.18;
+}
+
+.auth-form {
+  display: grid;
+  gap: 19px;
+}
+
+.auth-card-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 25px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.status-card {
+  text-align: center;
+}
+
+.status-card .eyebrow {
+  margin-bottom: 12px;
+}
+
+.status-card .form-message {
+  margin-top: 20px;
+}
+
+.status-card > .button-primary {
+  margin-top: 22px;
+}
+
+@media (max-width: 560px) {
+  .auth-layout {
+    padding: 24px 20px 42px;
+  }
+
+  .auth-card {
+    padding: 30px 24px;
+    border-radius: 16px;
+  }
+}

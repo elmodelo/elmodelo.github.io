@@ -38,7 +38,7 @@ unit price's UTC date. Counts greater than one also show count × unit price;
 unit prices preserve additional decimal places. Count dates appear separately
 when they differ. Count and price snapshots are independently selected by greatest
 `posted_at`, including future timestamps. Zero or incomplete holdings are hidden
-unless **Show inactive assets** is selected; this toggle does not affect totals.
+unless **Show inactive assets** is selected in the heading’s overflow menu; this toggle does not affect totals.
 
 Writers can open **Update holding** from a card to add a count, a unit price, or
 both in a modal dialog. The fields start with the latest count and unit price;
@@ -60,9 +60,12 @@ allocation refresh; creating a zero holding also enables **Show inactive assets*
 so the new card remains visible. Apply migrations through `0042` before using this action. Both asset write RPCs
 use caller permissions and RLS with a read-only writer-check bridge, without
 granting clients access to the private schema.
-The menu supports keyboard navigation, Escape, and dismissal outside the menu;
+Readers and writers can toggle **Show inactive assets** in the overflow menu;
+only writers see **Add asset**. The menu supports keyboard navigation, Escape, and dismissal outside the menu;
 there is no separate empty-state action.
-The cards wrap on smaller screens, and all strings support English and Spanish.
+Asset cards stack in their own column beside allocation, independently of its
+legend height. On narrower screens, allocation and assets move below the account
+summary; mobile uses a single column. All strings support English and Spanish.
 
 Cash Flow is a top-level main menu item. `CashFlowPanel` defaults to the current
 calendar year, showing January through the current month. Historical years show

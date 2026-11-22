@@ -245,7 +245,7 @@ test('creation uses one atomic RPC and requires a confirmed asset ID', async () 
   await assert.rejects(createAsset(clientFor(() => ({ data: null })), input));
 });
 
-test('overflow actions are available only to writers and creation dialog requires all initial fields', async () => {
+test('overflow menu is available to readers and writers and creation dialog requires all initial fields', async () => {
   const server = await createServer({ envDir: false, server: { middlewareMode: true, ws: false }, appType: 'custom' });
   try {
     const { default: Actions } = await server.ssrLoadModule('/src/components/NetWorthActions.tsx');
@@ -255,8 +255,8 @@ test('overflow actions are available only to writers and creation dialog require
     for (const language of ['en', 'es']) {
       const messages = getLocaleMessages(language);
       const render = (role) => renderToStaticMarkup(createElement(PermissionsProvider, { role },
-        createElement(Actions, { messages, onAdd() {} })));
-      assert.equal(render('READER'), '');
+        createElement(Actions, { messages, onAdd() {}, showInactive: false, onShowInactiveChange() {} })));
+      assert.match(render('READER'), /aria-haspopup="menu"/);
       assert.equal(render(null), '');
       const writer = render('WRITER');
       assert.match(writer, /aria-haspopup="menu"/);

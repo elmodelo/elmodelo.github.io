@@ -1,3 +1,19 @@
+// Inputs accept plain decimals, while numeric API responses can stringify
+// small holdings as exponent notation. Preserve decimal strings when supplied.
+function decimalText(value) {
+  const text = String(value).trim().replace(/^\+/, '');
+  // Snapshot validation has rejected negatives; only negative zero remains.
+  if (text.startsWith('-')) return '0';
+  if (!/[eE]/.test(text)) return text;
+  const [coefficient, exponent] = text.toLowerCase().split('e');
+  const [whole, fraction = ''] = coefficient.split('.');
+  const digits = whole + fraction;
+  const point = whole.length + Number(exponent);
+  if (point <= 0) return '0.' + '0'.repeat(-point) + digits;
+  if (point >= digits.length) return digits + '0'.repeat(point - digits.length);
+  return digits.slice(0, point) + '.' + digits.slice(point);
+}
+
 function snapshot(rows, metric) {
   if (!Array.isArray(rows) || rows.length > 1) throw new Error('Invalid asset snapshot');
   if (!rows.length) return null;
@@ -7,7 +23,7 @@ function snapshot(rows, metric) {
     || typeof row.posted_at !== 'string' || !Number.isFinite(Date.parse(row.posted_at))) {
     throw new Error('Invalid asset snapshot');
   }
-  return { amount: Number(row[metric]), postedAt: row.posted_at };
+  return { amount: Number(row[metric]), rawAmount: decimalText(row[metric]), postedAt: row.posted_at };
 }
 
 export async function fetchLatestAssets(client, signal) {
@@ -54,7 +70,42 @@ export function assetSnapshotInput(count, value, postedAt) {
   return { p_count, p_value, p_posted_at: new Date(postedAt).toISOString() };
 }
 
+// Compare decimal text exactly, ignoring formatting differences without
+// rounding high-precision values through Number.
+function canonicalDecimal(text) {
+  const [whole, fraction = ''] = text.split('.');
+  const decimals = fraction.replace(/0+$/, '');
+  return (whole.replace(/^0+/, '') || '0') + (decimals ? '.' + decimals : '');
+}
+
+export function changedAssetSnapshotInput(asset, count, value, postedAt) {
+  if (!count.trim() && !value.trim()) return null;
+  const input = assetSnapshotInput(count, value, postedAt);
+  for (const [key, previous] of [['p_count', asset.count], ['p_value', asset.price]]) {
+    if (input[key] !== null && previous
+      && canonicalDecimal(input[key]) === canonicalDecimal(decimalText(previous.rawAmount ?? previous.amount))) {
+      input[key] = null;
+    }
+  }
+  return input.p_count === null && input.p_value === null ? null : input;
+}
+
 export async function saveAssetSnapshot(client, assetId, input) {
   const { error } = await client.schema('finance').rpc('add_asset_snapshot', { p_asset: assetId, ...input });
   if (error) throw Object.assign(new Error('Asset save failed'), { code: error.code });
+}
+
+export function newAssetInput(name, currency, count, value, postedAt) {
+  const snapshot = assetSnapshotInput(count, value, postedAt);
+  if (!name.trim() || !['CAD', 'USD'].includes(currency) || snapshot.p_count === null || snapshot.p_value === null) {
+    throw new Error('invalid');
+  }
+  return { p_name: name.trim(), p_currency: currency, ...snapshot };
+}
+
+export async function createAsset(client, input) {
+  const { data, error } = await client.schema('finance').rpc('create_asset', input);
+  if (error) throw Object.assign(new Error('Asset creation failed'), { code: error.code });
+  if (typeof data !== 'string' || !data) throw new Error('Could not confirm asset creation');
+  return data;
 }

@@ -1,4 +1,12 @@
 export interface LocaleMessages {
+  netWorthActions: string;
+  assetAdd: string;
+  assetName: string;
+  assetCurrency: string;
+  assetCreateHelp: string;
+  assetCreateInvalid: string;
+  assetNameConflict: string;
+  assetCreated: string;
   assetMissing: string;
   assetValuationDate: string;
   assetCountDate: string;

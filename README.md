@@ -18,7 +18,7 @@ Run `npm test` for the local component and transaction-query checks.
 After signing in, use the main menu to browse transactions, view the account
 email and sign out. Preferences sets the theme, language, tracked accounts, and
 the independent Cash Flow accounts.
-Apply backend migrations through `0040_finance_assets.sql` before deploying this version.
+Apply backend migrations through `0042_asset_writer_bridge.sql` before deploying this version.
 In Supabase Data API settings, expose `app` alongside `finance`. Keep `operational`
 unexposed; preferences no longer requires exposing operational tables.
 
@@ -41,15 +41,27 @@ when they differ. Count and price snapshots are independently selected by greate
 unless **Show inactive assets** is selected; this toggle does not affect totals.
 
 Writers can open **Update holding** from a card to add a count, a unit price, or
-both in a modal dialog. Blank fields leave that history unchanged and zero is
-valid. Observation date/time defaults to now in local time and may be backdated;
+both in a modal dialog. The fields start with the latest count and unit price;
+a missing snapshot leaves its field blank. Blank or numerically unchanged fields are skipped and zero is
+valid. Saving without changes to count or price closes the dialog without a
+request or new snapshots; changing only the date also saves nothing. Observation date/time defaults to now in local time and may be backdated;
 it is sent as a UTC timestamp. The dialog accepts nonnegative finite decimal
 strings (decimal point) and preserves entered precision in the RPC request.
 `finance.add_asset_snapshot` atomically saves both observations when supplied.
 Timestamp conflicts are reported without overwriting existing history. Successful
 saves reload holdings, totals, and allocation. Readers have no editing controls;
 the database checks the current WRITER role on every save. Apply migration `0040`
-before using these features. Asset creation remains outside this interface.
+before using these features. Writers can open the small overflow menu beside the Net Worth heading and
+choose **Add asset**. Its dialog requires a name, CAD/USD currency, initial count,
+unit price, and observation date/time (defaulting to now). The writer-checked
+`finance.create_asset` RPC creates all three rows atomically. Duplicate names are
+reported without creating partial holdings. On success, cards, totals, and
+allocation refresh; creating a zero holding also enables **Show inactive assets**
+so the new card remains visible. Apply migrations through `0042` before using this action. Both asset write RPCs
+use caller permissions and RLS with a read-only writer-check bridge, without
+granting clients access to the private schema.
+The menu supports keyboard navigation, Escape, and dismissal outside the menu;
+there is no separate empty-state action.
 The cards wrap on smaller screens, and all strings support English and Spanish.
 
 Cash Flow is a top-level main menu item. `CashFlowPanel` defaults to the current

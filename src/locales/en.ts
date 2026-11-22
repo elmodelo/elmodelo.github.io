@@ -1,6 +1,14 @@
 import type { LocaleMessages } from './types';
 
 const en: LocaleMessages = {
+  netWorthActions: "Net worth actions",
+  assetAdd: "Add asset",
+  assetName: "Asset name",
+  assetCurrency: "Currency",
+  assetCreateHelp: "Enter a name, currency, initial count, and current unit price. Use a decimal point for fractions. Both observations will use the selected date and time.",
+  assetCreateInvalid: "Enter an asset name, CAD or USD, a nonnegative count and unit price, and a valid date and time.",
+  assetNameConflict: "An asset with this name already exists. Choose another name.",
+  assetCreated: "Asset added. Its initial holding is included in net worth.",
   assetMissing: "Valuation unavailable",
   assetValuationDate: "Price date",
   assetCountDate: "Count date",
@@ -8,7 +16,7 @@ const en: LocaleMessages = {
   assetCount: "New count",
   assetUnitValue: "New unit price",
   assetPostedAt: "Observation date and time (local time)",
-  assetSnapshotHelp: "Enter a count, a unit price, or both. Leave a field blank to keep its history unchanged. Use a decimal point for fractions.",
+  assetSnapshotHelp: "Enter a count, a unit price, or both. Blank or unchanged fields are skipped; changing only the date saves nothing. Use a decimal point for fractions.",
   assetInvalid: "Enter at least one nonnegative decimal and a valid date and time.",
   assetConflict: "A snapshot already exists at this timestamp. Choose another date or time.",
   assetPermissionError: "Writer access is required. Your changes were not saved.",

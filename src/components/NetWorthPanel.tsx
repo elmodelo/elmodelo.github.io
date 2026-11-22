@@ -3,6 +3,8 @@ import type { LocaleMessages } from '../locales/types';
 import type { Account } from '../hooks/useTrackedAccounts';
 import { useStatusMessage } from '../hooks/useStatusMessages';
 import { supabase } from '../lib/supabaseClient';
+import NetWorthActions from './NetWorthActions';
+import AssetSnapshotDialog from './AssetSnapshotDialog';
 import AssetCard from './AssetCard';
 import NetWorthAllocationCard from './NetWorthAllocationCard';
 import { loadNetWorth, netWorthRateMessage } from '../lib/netWorth';
@@ -20,7 +22,8 @@ export default function NetWorthPanel({ messages, accounts: allAccounts, tracked
   const [loaded, setLoaded] = useState<{ accounts: Account[]; result: Result } | null>(null);
   const [failure, setFailure] = useState<Account[] | null>(null);
   const [showInactive, setShowInactive] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [saved, setSaved] = useState('');
+  const [creating, setCreating] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const available = loaded?.accounts === accounts ? loaded.result : null;
   const result = available && accountsStatus !== 'ready'
@@ -39,8 +42,16 @@ export default function NetWorthPanel({ messages, accounts: allAccounts, tracked
 
   const assets = result?.rows.filter((row) => row.kind === 'asset') ?? [];
   return <section className="dashboard-panel net-worth-panel" aria-labelledby={titleId}>
-    <h1 id={titleId}>{messages.netWorth}</h1>
-    {saved && <p role="status">{messages.assetSaved}</p>}
+    <div className="net-worth-heading">
+      <h1 id={titleId}>{messages.netWorth}</h1>
+      <NetWorthActions messages={messages} onAdd={() => setCreating(true)} />
+    </div>
+    {creating && <AssetSnapshotDialog messages={messages} onClose={() => setCreating(false)} onSaved={(inactive) => {
+      setCreating(false); setSaved(messages.assetCreated);
+      if (inactive) setShowInactive(true);
+      retry();
+    }} />}
+    {saved && <p role="status">{saved}</p>}
     <label className="asset-inactive-toggle"><input type="checkbox" checked={showInactive}
       onChange={(event) => setShowInactive(event.target.checked)} /> {messages.assetShowInactive}</label>
     {error ? <div role="alert">
@@ -78,7 +89,7 @@ export default function NetWorthPanel({ messages, accounts: allAccounts, tracked
         {assets.filter((asset) => showInactive || (asset.snapshot && asset.snapshot.amount !== 0))
           .sort((a, b) => a.name.localeCompare(b.name, messages.language) || a.id.localeCompare(b.id))
           .map((asset) => <AssetCard key={asset.id} asset={asset} messages={messages} onSaved={() => {
-            setSaved(true); retry();
+            setSaved(messages.assetSaved); retry();
           }} />)}
       </div>}
   </section>;

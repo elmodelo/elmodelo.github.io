@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 import { createServer } from 'vite';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { fetchLatestAssets, assetSnapshotInput, saveAssetSnapshot } from '../src/lib/assets.js';
+import { fetchLatestAssets, assetSnapshotInput, changedAssetSnapshotInput, saveAssetSnapshot, newAssetInput, createAsset } from '../src/lib/assets.js';
 import { loadNetWorth, netWorthAllocation } from '../src/lib/netWorth.js';
 
 const holding = { id: 'asset', name: 'Fund', currency: 'USD',
@@ -32,7 +32,8 @@ test('asset query limits each snapshot independently, retains inactive assets, a
     assert.equal(init.signal, signal);
     assert.equal(new Headers(init.headers).get('accept-profile'), 'finance');
     return { data: [holding, { ...holding, id: 'missing', asset_count: [] },
-      { ...holding, id: 'zero', asset_count: [{ count: 0, posted_at: '2026-11-22' }] }] };
+      { ...holding, id: 'zero', asset_count: [{ count: 0, posted_at: '2026-11-22' }] },
+      { ...holding, id: 'tiny', asset_count: [{ count: 1e-8, posted_at: '2026-11-22' }] }] };
   });
   const rows = await fetchLatestAssets(client, signal);
   assert.equal(rows[0].snapshot.amount, 25.3125);
@@ -40,6 +41,8 @@ test('asset query limits each snapshot independently, retains inactive assets, a
   assert.equal(rows[0].count.postedAt, '2026-11-20T00:00:00Z');
   assert.equal(rows[1].snapshot, null);
   assert.equal(rows[2].snapshot.amount, 0);
+  assert.equal(rows[3].count.rawAmount, '0.00000001');
+  assert.equal(assetSnapshotInput(rows[3].count.rawAmount, rows[3].price.rawAmount, '2026-11-22').p_count, '0.00000001');
 });
 
 test('asset pagination loads holdings beyond the API row limit', async () => {
@@ -76,6 +79,30 @@ test('snapshot inputs preserve decimal strings, distinguish zero from blank, and
   }
   assert.throws(() => assetSnapshotInput('', '', date));
   assert.throws(() => assetSnapshotInput('1', '', 'invalid'));
+});
+
+test('editing skips unchanged snapshots and date-only changes while saving only changed metrics', () => {
+  const asset = { count: { amount: 2.5, rawAmount: '2.500' }, price: { amount: 10.125, rawAmount: '10.125' } };
+  const date = '2026-11-22T00:00:00Z';
+  assert.equal(changedAssetSnapshotInput(asset, '2.5', '10.125', date), null);
+  assert.equal(changedAssetSnapshotInput(asset, '002.5000', '010.1250', date), null);
+  assert.equal(changedAssetSnapshotInput(asset, '', '', date), null);
+  assert.equal(changedAssetSnapshotInput(asset, '', '10.125', date), null);
+  assert.deepEqual(changedAssetSnapshotInput(asset, '3', '10.125', date), {
+    p_count: '3', p_value: null, p_posted_at: '2026-11-22T00:00:00.000Z',
+  });
+  assert.deepEqual(changedAssetSnapshotInput(asset, '2.5', '0', date), {
+    p_count: null, p_value: '0', p_posted_at: '2026-11-22T00:00:00.000Z',
+  });
+  assert.deepEqual(changedAssetSnapshotInput(asset, '3', '11', date), {
+    p_count: '3', p_value: '11', p_posted_at: '2026-11-22T00:00:00.000Z',
+  });
+  assert.equal(changedAssetSnapshotInput({ count: { amount: 0 }, price: { amount: 0 } }, '00.00', '.0', date), null);
+  assert.equal(changedAssetSnapshotInput({ count: null, price: null }, '0', '', date).p_count, '0');
+  const precise = { count: { amount: 1, rawAmount: '1.000000000000000001' }, price: null };
+  assert.equal(changedAssetSnapshotInput(precise, '1.000000000000000002', '', date).p_count, '1.000000000000000002');
+  assert.equal(changedAssetSnapshotInput(precise, '1.0000000000000000010', '', date), null);
+  assert.throws(() => changedAssetSnapshotInput(asset, 'NaN', '10.125', date));
 });
 
 test('saving count and value uses one RPC and preserves timestamp conflict details', async () => {
@@ -169,6 +196,81 @@ test('localized cards show quantities only above one, price dates, and writer-on
       assert.match(dialog, /<dialog/);
       assert.match(dialog, /datetime-local/);
       assert.ok(dialog.includes(messages.assetSnapshotHelp));
+      assert.match(dialog, /value="2.5"/);
+      assert.match(dialog, /value="10.125"/);
+      const zero = renderToStaticMarkup(createElement(Dialog, {
+        asset: { ...asset, count: { amount: 0, rawAmount: '0' }, price: null }, messages, onClose() {}, onSaved() {},
+      }));
+      assert.match(zero, /inputMode="decimal"[^>]*value="0"/);
+      assert.match(zero, /inputMode="decimal"[^>]*value=""/);
+      const precise = renderToStaticMarkup(createElement(Dialog, {
+        asset: { ...asset, price: { amount: 10.123456789123457, rawAmount: '10.123456789123456789' } },
+        messages, onClose() {}, onSaved() {},
+      }));
+      assert.match(precise, /value="10.123456789123456789"/);
+    }
+  } finally { await server.close(); }
+});
+
+
+test('new assets require a name, supported currency and both precise initial observations', () => {
+  const date = '2026-11-21T12:34:56Z';
+  assert.deepEqual(newAssetInput('  Home  ', 'CAD', '1', '123456.123456789123456789', date), {
+    p_name: 'Home', p_currency: 'CAD', p_count: '1', p_value: '123456.123456789123456789',
+    p_posted_at: '2026-11-21T12:34:56.000Z',
+  });
+  assert.equal(newAssetInput('Empty holding', 'USD', '0', '0', date).p_value, '0');
+  for (const args of [[' ', 'CAD', '1', '1'], ['Home', 'EUR', '1', '1'],
+    ['Home', 'CAD', '', '1'], ['Home', 'CAD', '1', ''], ['Home', 'CAD', '-1', '1'],
+    ['Home', 'CAD', '1', 'Infinity']]) {
+    assert.throws(() => newAssetInput(...args, date));
+  }
+});
+
+test('creation uses one atomic RPC and requires a confirmed asset ID', async () => {
+  const input = newAssetInput('Home', 'CAD', '1', '123456.789', '2026-11-21T00:00:00Z');
+  let requests = 0;
+  const id = await createAsset(clientFor((url, init) => {
+    requests++;
+    assert.equal(url.pathname, '/rest/v1/rpc/create_asset');
+    assert.equal(new Headers(init.headers).get('content-profile'), 'finance');
+    assert.deepEqual(JSON.parse(init.body), input);
+    return { data: 'new-asset-id' };
+  }), input);
+  assert.equal(id, 'new-asset-id');
+  assert.equal(requests, 1);
+  for (const code of ['23505', '42501']) {
+    await assert.rejects(createAsset(clientFor(() => ({ status: 409, data: { code, message: 'denied' } })), input), { code });
+  }
+  await assert.rejects(createAsset(clientFor(() => ({ data: null })), input));
+});
+
+test('overflow actions are available only to writers and creation dialog requires all initial fields', async () => {
+  const server = await createServer({ envDir: false, server: { middlewareMode: true, ws: false }, appType: 'custom' });
+  try {
+    const { default: Actions } = await server.ssrLoadModule('/src/components/NetWorthActions.tsx');
+    const { default: Dialog } = await server.ssrLoadModule('/src/components/AssetSnapshotDialog.tsx');
+    const { PermissionsProvider } = await server.ssrLoadModule('/src/hooks/usePermissions.tsx');
+    const { getLocaleMessages } = await server.ssrLoadModule('/src/locales/index.ts');
+    for (const language of ['en', 'es']) {
+      const messages = getLocaleMessages(language);
+      const render = (role) => renderToStaticMarkup(createElement(PermissionsProvider, { role },
+        createElement(Actions, { messages, onAdd() {} })));
+      assert.equal(render('READER'), '');
+      assert.equal(render(null), '');
+      const writer = render('WRITER');
+      assert.match(writer, /aria-haspopup="menu"/);
+      assert.match(writer, /aria-expanded="false"/);
+      assert.ok(writer.includes(messages.netWorthActions));
+      assert.ok(!writer.includes(messages.assetAdd), 'The action is tucked inside the closed overflow menu');
+      const dialog = renderToStaticMarkup(createElement(Dialog, { messages, onClose() {}, onSaved() {} }));
+      assert.ok(dialog.includes(messages.assetAdd));
+      assert.ok(dialog.includes(messages.assetName));
+      assert.ok(dialog.includes(messages.assetCurrency));
+      assert.match(dialog, /value="CAD"/);
+      assert.match(dialog, /value="USD"/);
+      assert.equal((dialog.match(/required=""/g) ?? []).length, 5);
+      assert.ok(dialog.includes(messages.assetCreateHelp));
     }
   } finally { await server.close(); }
 });

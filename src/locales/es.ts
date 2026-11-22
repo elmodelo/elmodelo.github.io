@@ -1,6 +1,14 @@
 import type { LocaleMessages } from './types';
 
 const es: LocaleMessages = {
+  netWorthActions: "Acciones del patrimonio neto",
+  assetAdd: "Añadir activo",
+  assetName: "Nombre del activo",
+  assetCurrency: "Moneda",
+  assetCreateHelp: "Introduce un nombre, moneda, cantidad inicial y precio unitario actual. Usa un punto decimal para las fracciones. Ambos registros usarán la fecha y hora seleccionadas.",
+  assetCreateInvalid: "Introduce un nombre de activo, CAD o USD, una cantidad y precio unitario no negativos, y una fecha y hora válidas.",
+  assetNameConflict: "Ya existe un activo con este nombre. Elige otro nombre.",
+  assetCreated: "Activo añadido. Su posición inicial se incluye en el patrimonio neto.",
   assetMissing: "Valoración no disponible",
   assetValuationDate: "Fecha del precio",
   assetCountDate: "Fecha de la cantidad",
@@ -8,7 +16,7 @@ const es: LocaleMessages = {
   assetCount: "Nueva cantidad",
   assetUnitValue: "Nuevo precio unitario",
   assetPostedAt: "Fecha y hora de observación (hora local)",
-  assetSnapshotHelp: "Introduce una cantidad, un precio unitario o ambos. Deja un campo vacío para conservar su historial. Usa un punto decimal para las fracciones.",
+  assetSnapshotHelp: "Introduce una cantidad, un precio unitario o ambos. Los campos vacíos o sin cambios se omiten; cambiar solo la fecha no guarda nada. Usa un punto decimal para las fracciones.",
   assetInvalid: "Introduce al menos un decimal no negativo y una fecha y hora válidas.",
   assetConflict: "Ya existe un registro con esa fecha y hora. Elige otra fecha u hora.",
   assetPermissionError: "Se requiere acceso de escritura. No se guardaron los cambios.",

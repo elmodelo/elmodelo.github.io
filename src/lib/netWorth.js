@@ -68,14 +68,13 @@ export function netWorthRateMessage(messages, result) {
       .map(([currency, rate]) => `1 ${currency} = ${format.format(rate)} CAD`).join('; '));
 }
 
-/** Pie geometry uses positive balances; labels use the signed net worth total. */
+/** Pie slices and labels both use the sum of positive CAD holdings. */
 export function netWorthAllocation(result) {
   const accounts = result.rows.filter(({ cad }) => cad !== null && cad > 0)
     .sort((a, b) => b.cad - a.cad || a.id.localeCompare(b.id));
   const positiveTotal = accounts.reduce((sum, { cad }) => sum + cad, 0);
   return accounts.map((account) => ({ ...account,
     pieShare: account.cad / positiveTotal,
-    netWorthShare: result.total !== null && result.total > 0 ? account.cad / result.total : null,
   }));
 }
 

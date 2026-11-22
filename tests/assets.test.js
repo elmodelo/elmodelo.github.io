@@ -129,7 +129,7 @@ test('assets contribute to CAD totals and allocation without tracked accounts', 
   const allocation = netWorthAllocation(result);
   assert.equal(allocation.length, 1);
   assert.equal(allocation[0].name, 'Fund');
-  assert.equal(allocation[0].netWorthShare, 1);
+  assert.equal(allocation[0].pieShare, 1);
 });
 
 test('incomplete holdings remain editable data and mark the total incomplete without requiring FX', async () => {

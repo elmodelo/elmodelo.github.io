@@ -128,7 +128,7 @@ test('localized account table retains USD and CAD, sorts names, and reports exac
 });
 
 
-test('allocation excludes nonpositive balances and uses signed CAD net worth for labels', () => {
+test('allocation normalizes positive CAD holdings to 100% regardless of signed net worth', () => {
   const rows = [
     { id: 'usd', name: 'USD savings', cad: 150 },
     { id: 'cad', name: 'CAD savings', cad: 50 },
@@ -137,13 +137,14 @@ test('allocation excludes nonpositive balances and uses signed CAD net worth for
     { id: 'missing', name: 'Missing', cad: null },
   ];
   const allocation = netWorthAllocation({ rows, total: 100 });
-  assert.deepEqual(allocation.map(({ id, pieShare, netWorthShare }) => ({ id, pieShare, netWorthShare })), [
-    { id: 'usd', pieShare: 0.75, netWorthShare: 1.5 },
-    { id: 'cad', pieShare: 0.25, netWorthShare: 0.5 },
+  assert.deepEqual(allocation.map(({ id, pieShare }) => ({ id, pieShare })), [
+    { id: 'usd', pieShare: 0.75 },
+    { id: 'cad', pieShare: 0.25 },
   ]);
   for (const total of [0, -50, null]) {
-    assert.ok(netWorthAllocation({ rows, total }).every(({ netWorthShare }) => netWorthShare === null));
+    assert.deepEqual(netWorthAllocation({ rows, total }).map(({ pieShare }) => pieShare), [0.75, 0.25]);
   }
+  assert.equal(allocation.reduce((sum, { pieShare }) => sum + pieShare, 0), 1);
   assert.deepEqual(netWorthAllocation({ rows: rows.slice(2), total: -100 }), []);
 });
 
@@ -161,11 +162,10 @@ test('allocation card renders a single-account pie, debt shares, and safe empty/
       assert.match(markup, /role="img"/);
       assert.match(markup, /100/);
       const debt = render({ ...single, rows: [...single.rows, { id: 'negative', name: 'Debt account', cad: -50 }], total: 100 });
-      assert.match(debt, /150/);
-      assert.ok(debt.includes(messages.netWorthAllocationDebt));
+      assert.match(debt, /<strong>100/);
       assert.ok(!debt.includes('Debt account'));
       const zero = render({ ...single, total: 0 });
-      assert.ok(zero.includes(messages.netWorthAllocationNonpositive));
+      assert.match(zero, /<strong>100/);
       assert.doesNotMatch(zero, /NaN|Infinity/);
       const incomplete = render({ ...single, incomplete: true });
       assert.ok(incomplete.includes(messages.netWorthIncomplete));

@@ -31,7 +31,9 @@ rounding, using the existing Bank of Canada daily rates for USD conversion. The
 status bar shows the rate and observation date. Missing snapshots mark the total
 incomplete; source or conversion failures keep available data visible but suppress
 the total and allocation chart until a retry succeeds. Pie slices use positive
-holdings; legend percentages use signed net worth and can exceed 100% with debt.
+holdings; legend percentages use the same positive CAD total as the pie slices,
+normalized to 100% before display rounding. Negative balances do not reduce this
+denominator, even when signed net worth is zero or negative.
 
 Each asset card shows its name, total valuation in CAD, and the latest
 unit price's UTC date. USD holdings show their original USD total just below the

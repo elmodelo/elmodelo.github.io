@@ -27,10 +27,6 @@ export interface LocaleMessages {
   assetLoadError: string;
   netWorthBalances: string;
   netWorthAllocation: string;
-  netWorthAllocationDescription: string;
-  netWorthShare: string;
-  netWorthAllocationDebt: string;
-  netWorthAllocationNonpositive: string;
   netWorthAllocationUnavailable: string;
   netWorthAllocationEmpty: string;
   netWorth: string;

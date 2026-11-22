@@ -75,8 +75,9 @@ Missing values sort last in either direction. Sorting is local to the loaded row
 Asset cards automatically stack from highest to lowest total holding value in
 CAD, independently of allocation’s legend height. The order updates when holdings
 reload after a save. Unavailable CAD valuations sort last; equal values sort by
-localized name, then ID. On narrower screens, allocation and assets move below the account
-summary; mobile uses a single column. All strings support English and Spanish.
+localized name, then ID. The desktop grid keeps net worth/account balances in the first column, assets
+in the second, and allocation in the third. On narrower panels, the first column
+spans the top row with assets and allocation below; mobile uses a single column. All strings support English and Spanish.
 
 Cash Flow is a top-level main menu item. `CashFlowPanel` defaults to the current
 calendar year, showing January through the current month. Historical years show

@@ -1303,10 +1303,17 @@
   background: var(--surface); box-shadow: var(--shadow); min-width: 0; max-width: 100%;
 }
 .net-worth-card h2 { margin: 0 0 20px; font-size: 20px; letter-spacing: -0.02em; }
-.net-worth-balances-card { width: max-content; }
+.net-worth-balances-card { flex: 2 1 560px; width: auto; }
+/* Let vertical scrolling continue into the dashboard at either table edge. */
+.net-worth-balances-card .panel-scroll { overscroll-behavior-y: auto; }
+/* Each column flows independently, so short asset cards never wait for the
+   allocation legend's height before the next card can appear. */
+.net-worth-secondary { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 24px; flex: 1 1 320px; min-width: 0; }
+.net-worth-secondary[data-has-assets="true"] { flex: 2 1 680px; }
+.net-worth-assets { display: flex; flex-direction: column; gap: 24px; flex: 1 1 280px; min-width: 0; }
 .net-worth-balances-card .net-worth-summary { inline-size: 0; min-inline-size: 100%; }
 .net-worth-summary .net-worth-total { color: var(--text); }
-.net-worth-allocation-card { width: 360px; }
+.net-worth-allocation-card { flex: 1 1 320px; width: auto; }
 .net-worth-pie { display: block; width: min(100%, 250px); height: auto; margin: 20px auto; }
 .net-worth-pie path, .net-worth-pie circle { transition: opacity 120ms; stroke: var(--surface); stroke-width: 0.012; }
 .net-worth-allocation-label { font-size: 13px; }
@@ -1322,12 +1329,12 @@
 .net-worth-legend-item strong { font-variant-numeric: tabular-nums; white-space: nowrap; }
 @media (max-width: 640px) {
   .net-worth-card { padding: 16px; }
+  .net-worth-secondary, .net-worth-secondary[data-has-assets="true"],
+  .net-worth-secondary > .net-worth-allocation-card, .net-worth-assets { flex-basis: 100%; }
   .net-worth-allocation-card { width: 100%; }
 }
 
-.asset-inactive-toggle { display: flex; align-items: center; gap: 8px; margin: 0 0 24px; }
-.asset-inactive-toggle input { width: auto; }
-.asset-card { width: 320px; }
+.asset-card { width: 100%; }
 .asset-card h2 { overflow-wrap: anywhere; }
 .asset-valuation { font-size: 1.75rem; font-weight: 700; font-variant-numeric: tabular-nums; margin: 0 0 12px; }
 .asset-calculation { font-variant-numeric: tabular-nums; }
@@ -1374,3 +1381,10 @@
   background: transparent; color: var(--text); font: inherit; white-space: nowrap; cursor: pointer;
 }
 .net-worth-actions-menu button:hover, .net-worth-actions-menu button:focus-visible { background: var(--surface-raised); }
+
+.net-worth-actions-menu .net-worth-inactive-action { display: flex; align-items: center; gap: 10px; }
+.net-worth-menu-checkbox {
+  display: inline-flex; align-items: center; justify-content: center; flex: none; width: 18px; height: 18px;
+  border: 1px solid var(--border); border-radius: 4px; font-size: 0.875rem;
+}
+.net-worth-inactive-action[aria-checked="true"] .net-worth-menu-checkbox { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }

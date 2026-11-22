@@ -40,11 +40,14 @@ export default function NetWorthPanel({ messages, accounts: allAccounts, tracked
   useStatusMessage({ message: netWorthRateMessage(messages, result) });
   const retry = () => { setLoaded(null); setFailure(null); setAttempt((value) => value + 1); };
 
-  const assets = result?.rows.filter((row) => row.kind === 'asset') ?? [];
+  const assets = (result?.rows.filter((row) => row.kind === 'asset') ?? [])
+    .filter((asset) => showInactive || (asset.snapshot && asset.snapshot.amount !== 0))
+    .sort((a, b) => a.name.localeCompare(b.name, messages.language) || a.id.localeCompare(b.id));
   return <section className="dashboard-panel net-worth-panel" aria-labelledby={titleId}>
     <div className="net-worth-heading">
       <h1 id={titleId}>{messages.netWorth}</h1>
-      <NetWorthActions messages={messages} onAdd={() => setCreating(true)} />
+      <NetWorthActions messages={messages} onAdd={() => setCreating(true)}
+        showInactive={showInactive} onShowInactiveChange={setShowInactive} />
     </div>
     {creating && <AssetSnapshotDialog messages={messages} onClose={() => setCreating(false)} onSaved={(inactive) => {
       setCreating(false); setSaved(messages.assetCreated);
@@ -52,8 +55,6 @@ export default function NetWorthPanel({ messages, accounts: allAccounts, tracked
       retry();
     }} />}
     {saved && <p role="status">{saved}</p>}
-    <label className="asset-inactive-toggle"><input type="checkbox" checked={showInactive}
-      onChange={(event) => setShowInactive(event.target.checked)} /> {messages.assetShowInactive}</label>
     {error ? <div role="alert">
       <p className="form-message form-message-error">{messages.netWorthError}</p>
       <button className="button button-secondary" type="button" onClick={retry}>{messages.retry}</button>
@@ -85,12 +86,14 @@ export default function NetWorthPanel({ messages, accounts: allAccounts, tracked
           </>}
           {accountsStatus === 'ready' && !accounts.length && <p>{messages.netWorthNoAccounts}</p>}
         </section>
-        <NetWorthAllocationCard messages={messages} result={result} />
-        {assets.filter((asset) => showInactive || (asset.snapshot && asset.snapshot.amount !== 0))
-          .sort((a, b) => a.name.localeCompare(b.name, messages.language) || a.id.localeCompare(b.id))
-          .map((asset) => <AssetCard key={asset.id} asset={asset} messages={messages} onSaved={() => {
-            setSaved(messages.assetSaved); retry();
-          }} />)}
+        <div className="net-worth-secondary" data-has-assets={assets.length > 0}>
+          {assets.length > 0 && <div className="net-worth-assets">
+            {assets.map((asset) => <AssetCard key={asset.id} asset={asset} messages={messages} onSaved={() => {
+              setSaved(messages.assetSaved); retry();
+            }} />)}
+          </div>}
+          <NetWorthAllocationCard messages={messages} result={result} />
+        </div>
       </div>}
   </section>;
 }

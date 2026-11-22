@@ -2,16 +2,23 @@ import { useEffect, useId, useRef, useState } from 'react';
 import type { LocaleMessages } from '../locales/types';
 import { usePermissions } from '../hooks/usePermissions';
 
-export default function NetWorthActions({ messages, onAdd }: { messages: LocaleMessages; onAdd: () => void }) {
-  const { canWrite } = usePermissions();
+export default function NetWorthActions({ messages, onAdd, showInactive, onShowInactiveChange }: {
+  messages: LocaleMessages; onAdd: () => void;
+  showInactive: boolean; onShowInactiveChange: (show: boolean) => void;
+}) {
+  const { canRead, canWrite } = usePermissions();
   const [open, setOpen] = useState(false);
   const id = useId();
   const container = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
-  const item = useRef<HTMLButtonElement>(null);
+  const focusLast = useRef(false);
+  const menuItems = () => Array.from(container.current?.querySelectorAll<HTMLButtonElement>(
+    '[role="menuitem"], [role="menuitemcheckbox"]',
+  ) ?? []);
   useEffect(() => {
     if (!open) return;
-    item.current?.focus();
+    const items = menuItems();
+    (focusLast.current ? items.at(-1) : items[0])?.focus();
     const outside = (event: PointerEvent) => {
       if (event.target instanceof Node && !container.current?.contains(event.target)) setOpen(false);
     };
@@ -27,25 +34,39 @@ export default function NetWorthActions({ messages, onAdd }: { messages: LocaleM
       document.removeEventListener('keydown', escape);
     };
   }, [open]);
-  if (!canWrite) return null;
+  if (!canRead) return null;
   return <div className="net-worth-actions" ref={container} onBlur={(event) => {
     if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
   }}>
     <button type="button" ref={trigger} className="net-worth-overflow" aria-label={messages.netWorthActions}
       aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined}
-      onClick={() => setOpen((value) => !value)} onKeyDown={(event) => {
+      onClick={() => { focusLast.current = false; setOpen((value) => !value); }} onKeyDown={(event) => {
         if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-          event.preventDefault(); setOpen(true); item.current?.focus();
+          event.preventDefault(); focusLast.current = event.key === 'ArrowUp';
+          if (open) {
+            const items = menuItems();
+            (focusLast.current ? items.at(-1) : items[0])?.focus();
+          } else setOpen(true);
         }
       }}><span aria-hidden="true">⋯</span></button>
-    {open && <div id={id} role="menu" aria-label={messages.netWorthActions} className="net-worth-actions-menu">
-      <button type="button" ref={item} role="menuitem" tabIndex={-1} onClick={() => {
+    {open && <div id={id} role="menu" aria-label={messages.netWorthActions} className="net-worth-actions-menu"
+      onKeyDown={(event) => {
+        if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+        event.preventDefault();
+        const items = menuItems();
+        const index = items.indexOf(document.activeElement as HTMLButtonElement);
+        const next = event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1
+          : (index + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+        items[next]?.focus();
+      }}>
+      {canWrite && <button type="button" role="menuitem" tabIndex={-1} onClick={() => {
         setOpen(false); trigger.current?.focus(); onAdd();
-      }} onKeyDown={(event) => {
-        if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
-          event.preventDefault(); item.current?.focus();
-        }
-      }}>{messages.assetAdd}</button>
+      }}>{messages.assetAdd}</button>}
+      <button type="button" role="menuitemcheckbox" aria-checked={showInactive} tabIndex={-1}
+        className="net-worth-inactive-action" onClick={() => onShowInactiveChange(!showInactive)}>
+        <span className="net-worth-menu-checkbox" aria-hidden="true">{showInactive ? '✓' : ''}</span>
+        {messages.assetShowInactive}
+      </button>
     </div>}
   </div>;
 }

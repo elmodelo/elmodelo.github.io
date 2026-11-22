@@ -18,25 +18,39 @@ Run `npm test` for the local component and transaction-query checks.
 After signing in, use the main menu to browse transactions, view the account
 email and sign out. Preferences sets the theme, language, tracked accounts, and
 the independent Cash Flow accounts.
-Apply backend migrations through `0038_cash_flow_years.sql` before deploying this version.
+Apply backend migrations through `0040_finance_assets.sql` before deploying this version.
 In Supabase Data API settings, expose `app` alongside `finance`. Keep `operational`
 unexposed; preferences no longer requires exposing operational tables.
 
-Net Worth appears between Transactions and Cash Flow in the main menu. It uses only
-tracked accounts selected in Preferences for both the list and the total, and lists
-them alphabetically. Each account shows its latest `finance.balance` snapshot, its UTC
-date, original currency balance, and CAD equivalent. Signed balances are summed
-without intermediate rounding. Accounts without snapshots remain visible and mark
-the total incomplete. The existing Bank of Canada daily rate loader converts USD
-balances; the status bar shows the rate and observation date. If conversion fails,
-original balances remain visible and the CAD total is unavailable, with a retry
-button. The dashboard contains independent cards: the account balances card and
-an allocation pie with a legend showing each positive tracked account's CAD balance
-and percentage of signed net worth. Slices are normalized over positive balances;
-when debts exist, legend percentages can sum to more than 100%. Zero or negative
-net worth has no meaningful percentage, and conversion errors suppress the chart.
-The cards wrap onto separate rows on smaller screens. This panel requires no
-additional database migration.
+Net Worth appears between Transactions and Cash Flow in the main menu. Its CAD
+net worth total and allocation chart combine the latest tracked account balances
+with independently tracked asset holdings. Assets are separate from account
+balances and remain available when no accounts are selected. Signed account
+balances and count × unit-price asset totals are summed without intermediate
+rounding, using the existing Bank of Canada daily rates for USD conversion. The
+status bar shows the rate and observation date. Missing snapshots mark the total
+incomplete; source or conversion failures keep available data visible but suppress
+the total and allocation chart until a retry succeeds. Pie slices use positive
+holdings; legend percentages use signed net worth and can exceed 100% with debt.
+
+Each asset card shows its name, valuation in the asset currency, and the latest
+unit price's UTC date. Counts greater than one also show count × unit price;
+unit prices preserve additional decimal places. Count dates appear separately
+when they differ. Count and price snapshots are independently selected by greatest
+`posted_at`, including future timestamps. Zero or incomplete holdings are hidden
+unless **Show inactive assets** is selected; this toggle does not affect totals.
+
+Writers can open **Update holding** from a card to add a count, a unit price, or
+both in a modal dialog. Blank fields leave that history unchanged and zero is
+valid. Observation date/time defaults to now in local time and may be backdated;
+it is sent as a UTC timestamp. The dialog accepts nonnegative finite decimal
+strings (decimal point) and preserves entered precision in the RPC request.
+`finance.add_asset_snapshot` atomically saves both observations when supplied.
+Timestamp conflicts are reported without overwriting existing history. Successful
+saves reload holdings, totals, and allocation. Readers have no editing controls;
+the database checks the current WRITER role on every save. Apply migration `0040`
+before using these features. Asset creation remains outside this interface.
+The cards wrap on smaller screens, and all strings support English and Spanish.
 
 Cash Flow is a top-level main menu item. `CashFlowPanel` defaults to the current
 calendar year, showing January through the current month. Historical years show

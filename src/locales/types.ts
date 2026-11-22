@@ -1,4 +1,21 @@
 export interface LocaleMessages {
+  assetMissing: string;
+  assetValuationDate: string;
+  assetCountDate: string;
+  assetUpdate: string;
+  assetCount: string;
+  assetUnitValue: string;
+  assetPostedAt: string;
+  assetSnapshotHelp: string;
+  assetInvalid: string;
+  assetConflict: string;
+  assetPermissionError: string;
+  assetSaveError: string;
+  assetSaving: string;
+  assetSave: string;
+  assetSaved: string;
+  assetShowInactive: string;
+  assetLoadError: string;
   netWorthBalances: string;
   netWorthAllocation: string;
   netWorthAllocationDescription: string;

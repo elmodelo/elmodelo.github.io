@@ -1322,3 +1322,14 @@
   .net-worth-card { padding: 16px; }
   .net-worth-allocation-card { width: 100%; }
 }
+
+.asset-inactive-toggle { display: flex; align-items: center; gap: 8px; margin: 0 0 24px; }
+.asset-inactive-toggle input { width: auto; }
+.asset-card { width: 320px; }
+.asset-card h2 { overflow-wrap: anywhere; }
+.asset-valuation { font-size: 1.75rem; font-weight: 700; font-variant-numeric: tabular-nums; margin: 0 0 12px; }
+.asset-calculation { font-variant-numeric: tabular-nums; }
+.asset-snapshot-dialog { width: min(480px, calc(100% - 32px)); max-height: calc(100dvh - 32px); overflow: auto; }
+.asset-snapshot-dialog form { display: flex; flex-direction: column; gap: 12px; }
+.asset-snapshot-dialog input { min-width: 0; width: 100%; box-sizing: border-box; }
+.asset-dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; margin-top: 12px; }

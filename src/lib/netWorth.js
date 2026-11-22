@@ -1,3 +1,4 @@
+import { fetchLatestAssets } from './assets.js';
 import { loadExchangeRates } from './transactionTotals.js';
 
 /** Limit the embedded relation, not the account list or the full balance history. */
@@ -24,8 +25,19 @@ export async function fetchLatestBalances(client, accounts, signal) {
   return accounts.map((account) => ({ ...account, snapshot: balances.get(account.id) ?? null }));
 }
 
-export async function loadNetWorth(client, accounts, signal, rateLoader = loadExchangeRates) {
-  const rows = await fetchLatestBalances(client, accounts, signal);
+export async function loadNetWorth(client, accounts, signal, rateLoader = loadExchangeRates, includeAssets = false) {
+  const sources = await Promise.allSettled([
+    fetchLatestBalances(client, accounts, signal),
+    includeAssets ? fetchLatestAssets(client, signal) : Promise.resolve([]),
+  ]);
+  if (signal?.aborted) throw new Error('Aborted');
+  if (!includeAssets && sources[0].status === 'rejected') throw sources[0].reason;
+  const accountsError = sources[0].status === 'rejected';
+  const assetsError = sources[1].status === 'rejected';
+  const rows = [
+    ...(accountsError ? [] : sources[0].value),
+    ...(assetsError ? [] : sources[1].value),
+  ];
   let rates = null;
   if (rows.some(({ currency, snapshot }) => snapshot && currency !== 'CAD')) {
     try { rates = await rateLoader(signal); }
@@ -43,8 +55,8 @@ export async function loadNetWorth(client, accounts, signal, rateLoader = loadEx
   const exchangeRates = Object.fromEntries(rows.filter(({ currency, snapshot }) => snapshot && currency !== 'CAD'
     && Number.isFinite(rates?.cadPerUnit[currency]) && rates.cadPerUnit[currency] > 0)
     .map(({ currency }) => [currency, rates.cadPerUnit[currency]]));
-  return { rows: converted, total: conversionError ? null : total, conversionError,
-    incomplete: rows.some(({ snapshot }) => !snapshot), rateDate: rates?.date ?? null, exchangeRates };
+  return { rows: converted, total: conversionError || accountsError || assetsError ? null : total, conversionError, accountsError, assetsError,
+    incomplete: accountsError || assetsError || rows.some(({ snapshot }) => !snapshot), rateDate: rates?.date ?? null, exchangeRates };
 }
 
 export function netWorthRateMessage(messages, result) {

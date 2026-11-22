@@ -198,16 +198,10 @@ function Dashboard({
                 />
               </FeatureBoundary>
           ) : section === 'net-worth' ? (
-            accountsStatus === 'loading' ? <LoadingDialog label={messages.loadingAccounts} />
-              : accountsStatus === 'error' ? (
-                <section className="dashboard-panel" role="alert">
-                  <h1>{messages.netWorth}</h1>
-                  <p className="form-message form-message-error">{messages.accountsError}</p>
-                  <button className="button button-secondary" type="button" onClick={retryAccounts}>{messages.retry}</button>
-                </section>
-              ) : <FeatureBoundary messages={messages} loadingLabel={messages.loadingNetWorth}>
-                <NetWorthPanel messages={messages} accounts={accounts} trackedAccountIds={trackedAccountIds} />
-              </FeatureBoundary>
+            <FeatureBoundary messages={messages} loadingLabel={messages.loadingNetWorth}>
+              <NetWorthPanel messages={messages} accounts={accounts} trackedAccountIds={trackedAccountIds}
+                accountsStatus={accountsStatus} onRetryAccounts={retryAccounts} />
+            </FeatureBoundary>
           ) : section === 'cash-flow' ? (
             accountsStatus === 'loading' ? <LoadingDialog label={messages.loadingAccounts} />
               : accountsStatus === 'error' ? (

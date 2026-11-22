@@ -116,7 +116,8 @@
   font-weight: 600;
 }
 
-.form-field input {
+.form-field input,
+.asset-snapshot-dialog .form-field select {
   width: 100%;
   box-sizing: border-box;
   min-height: 48px;
@@ -173,7 +174,8 @@
   opacity: 0.75;
 }
 
-.form-field input:focus-visible {
+.form-field input:focus-visible,
+.asset-snapshot-dialog .form-field select:focus-visible {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
 }
@@ -1322,3 +1324,53 @@
   .net-worth-card { padding: 16px; }
   .net-worth-allocation-card { width: 100%; }
 }
+
+.asset-inactive-toggle { display: flex; align-items: center; gap: 8px; margin: 0 0 24px; }
+.asset-inactive-toggle input { width: auto; }
+.asset-card { width: 320px; }
+.asset-card h2 { overflow-wrap: anywhere; }
+.asset-valuation { font-size: 1.75rem; font-weight: 700; font-variant-numeric: tabular-nums; margin: 0 0 12px; }
+.asset-calculation { font-variant-numeric: tabular-nums; }
+.asset-snapshot-dialog {
+  width: min(480px, calc(100% - 32px)); max-height: calc(100dvh - 32px);
+  overflow: auto; text-align: left;
+}
+.asset-snapshot-dialog h2 { font-size: 1.25rem; line-height: 1.3; overflow-wrap: anywhere; }
+.asset-dialog-help { margin: 12px 0 24px; color: var(--text-muted); font-size: 0.875rem; line-height: 1.5; }
+.asset-snapshot-dialog form { display: grid; gap: 20px; }
+.asset-identity-fields, .asset-amount-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.asset-identity-fields { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+.asset-snapshot-dialog .form-field { min-width: 0; }
+.asset-snapshot-dialog .form-field label { font-size: 0.875rem; }
+.asset-snapshot-dialog .form-field input, .asset-snapshot-dialog .form-field select { min-width: 0; font-size: 1rem; }
+.asset-snapshot-dialog select {
+  appearance: none; padding-right: 38px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='%238e819f' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 14px center;
+}
+.asset-snapshot-dialog input:disabled, .asset-snapshot-dialog select:disabled { opacity: 0.65; cursor: not-allowed; }
+.asset-snapshot-dialog .form-message { margin: 0; }
+.asset-dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; margin-top: 4px; }
+.asset-dialog-actions .button { margin-top: 0; }
+@media (max-width: 480px) {
+  .asset-identity-fields, .asset-amount-fields { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .asset-snapshot-dialog { padding: 20px; }
+}
+
+.net-worth-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+.net-worth-heading h1 { margin: 0; }
+.net-worth-actions { position: relative; flex: none; }
+.net-worth-overflow {
+  display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--border);
+  border-radius: 8px; background: var(--surface); color: var(--text); font: inherit; font-size: 1.5rem; cursor: pointer;
+}
+.net-worth-overflow:hover { background: var(--surface-raised); }
+.net-worth-actions-menu {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 10; min-width: 160px; padding: 6px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--surface); box-shadow: var(--shadow);
+}
+.net-worth-actions-menu button {
+  display: block; width: 100%; padding: 10px 12px; border: 0; border-radius: 4px; text-align: start;
+  background: transparent; color: var(--text); font: inherit; white-space: nowrap; cursor: pointer;
+}
+.net-worth-actions-menu button:hover, .net-worth-actions-menu button:focus-visible { background: var(--surface-raised); }

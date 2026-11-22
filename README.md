@@ -33,8 +33,11 @@ incomplete; source or conversion failures keep available data visible but suppre
 the total and allocation chart until a retry succeeds. Pie slices use positive
 holdings; legend percentages use signed net worth and can exceed 100% with debt.
 
-Each asset card shows its name, valuation in the asset currency, and the latest
-unit price's UTC date. Counts greater than one also show count × unit price;
+Each asset card shows its name, total valuation in CAD, and the latest
+unit price's UTC date. USD holdings show their original USD total just below the
+CAD valuation, in parentheses and a smaller font. The CAD value uses the same
+rate and conversion as net worth and allocation. If conversion
+fails, the USD value remains visible with a conversion-unavailable message. Counts greater than one also show count × unit price;
 unit prices preserve additional decimal places. Count dates appear separately
 when they differ. Count and price snapshots are independently selected by greatest
 `posted_at`, including future timestamps. Zero or incomplete holdings are hidden
@@ -63,8 +66,16 @@ granting clients access to the private schema.
 Readers and writers can toggle **Show inactive assets** in the overflow menu;
 only writers see **Add asset**. The menu supports keyboard navigation, Escape, and dismissal outside the menu;
 there is no separate empty-state action.
-Asset cards stack in their own column beside allocation, independently of its
-legend height. On narrower screens, allocation and assets move below the account
+The computed net worth total has its own card at the top left, with a separate
+account balances card directly below it. The account balances table defaults to descending CAD balance. Every column
+heading is a sort button; selecting the active heading reverses its direction.
+Account names initially sort ascending; dates and balances initially sort descending.
+Missing values sort last in either direction. Sorting is local to the loaded rows.
+
+Asset cards automatically stack from highest to lowest total holding value in
+CAD, independently of allocation’s legend height. The order updates when holdings
+reload after a save. Unavailable CAD valuations sort last; equal values sort by
+localized name, then ID. On narrower screens, allocation and assets move below the account
 summary; mobile uses a single column. All strings support English and Spanish.
 
 Cash Flow is a top-level main menu item. `CashFlowPanel` defaults to the current

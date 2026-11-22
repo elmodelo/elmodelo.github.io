@@ -7,7 +7,7 @@ import NetWorthActions from './NetWorthActions';
 import AssetSnapshotDialog from './AssetSnapshotDialog';
 import AssetCard from './AssetCard';
 import NetWorthAllocationCard from './NetWorthAllocationCard';
-import { loadNetWorth, netWorthRateMessage } from '../lib/netWorth';
+import { loadNetWorth, netWorthRateMessage, sortNetWorthAccounts } from '../lib/netWorth';
 
 interface Props {
   messages: LocaleMessages; accounts: Account[]; trackedAccountIds: string[];
@@ -19,6 +19,7 @@ export default function NetWorthPanel({ messages, accounts: allAccounts, tracked
   const accounts = useMemo(() => accountsStatus === 'ready' ? allAccounts.filter(({ id }) => trackedAccountIds.includes(id)) : [], [allAccounts, trackedAccountIds, accountsStatus]);
   const titleId = useId();
   const balancesTitleId = useId();
+  const totalTitleId = useId();
   const [loaded, setLoaded] = useState<{ accounts: Account[]; result: Result } | null>(null);
   const [failure, setFailure] = useState<Account[] | null>(null);
   const [showInactive, setShowInactive] = useState(false);
@@ -42,7 +43,12 @@ export default function NetWorthPanel({ messages, accounts: allAccounts, tracked
 
   const assets = (result?.rows.filter((row) => row.kind === 'asset') ?? [])
     .filter((asset) => showInactive || (asset.snapshot && asset.snapshot.amount !== 0))
-    .sort((a, b) => a.name.localeCompare(b.name, messages.language) || a.id.localeCompare(b.id));
+    .sort((a, b) => {
+      if (a.cad == null && b.cad != null) return 1;
+      if (a.cad != null && b.cad == null) return -1;
+      return (b.cad ?? 0) - (a.cad ?? 0)
+        || a.name.localeCompare(b.name, messages.language) || a.id.localeCompare(b.id);
+    });
   return <section className="dashboard-panel net-worth-panel" aria-labelledby={titleId}>
     <div className="net-worth-heading">
       <h1 id={titleId}>{messages.netWorth}</h1>
@@ -60,32 +66,35 @@ export default function NetWorthPanel({ messages, accounts: allAccounts, tracked
       <button className="button button-secondary" type="button" onClick={retry}>{messages.retry}</button>
     </div> : !result ? <p role="status">{messages.loadingNetWorth}</p>
       : <div className="net-worth-cards">
-        <section className="net-worth-card net-worth-balances-card" aria-labelledby={balancesTitleId}>
-          <h2 id={balancesTitleId}>{messages.netWorth}</h2>
-          <div className="net-worth-summary">
-            <p className="net-worth-total">{result.total === null ? messages.netWorthUnavailable : formatMoney(result.total, 'CAD', messages.language)}</p>
-            <p>{messages.netWorthDescription}</p>
-            {result.incomplete && <p role="status">{messages.netWorthIncomplete}</p>}
-            {result.conversionError && <div role="alert">
-              <p className="form-message form-message-error">{messages.netWorthConversionError}</p>
-              <button className="button button-secondary" type="button" onClick={retry}>{messages.retry}</button>
-            </div>}
-          </div>
-          {accountsStatus === 'loading' && <p role="status">{messages.loadingAccounts}</p>}
-          {accountsStatus === 'error' && <p role="alert">{messages.accountsError}</p>}
-          {accountsStatus === 'ready' && result.accountsError && <p role="alert">{messages.netWorthError}</p>}
-          {result.assetsError && <p role="alert">{messages.assetLoadError}</p>}
-          {((accountsStatus === 'ready' && result.accountsError) || accountsStatus === 'error' || result.assetsError)
-            && <button className="button button-secondary" type="button" onClick={() => {
-              if (accountsStatus === 'error') onRetryAccounts?.();
-              retry();
-            }}>{messages.retry}</button>}
-          {accounts.length > 0 && !result.accountsError && <>
-            <h3>{messages.netWorthBalances}</h3>
-            <NetWorthTable messages={messages} result={result} titleId={balancesTitleId} />
-          </>}
-          {accountsStatus === 'ready' && !accounts.length && <p>{messages.netWorthNoAccounts}</p>}
-        </section>
+        <div className="net-worth-primary">
+          <section className="net-worth-card net-worth-summary-card" aria-labelledby={totalTitleId}>
+            <h2 id={totalTitleId}>{messages.netWorth}</h2>
+            <div className="net-worth-summary">
+              <p className="net-worth-total">{result.total === null ? messages.netWorthUnavailable : formatMoney(result.total, 'CAD', messages.language)}</p>
+              <p>{messages.netWorthDescription}</p>
+              {result.incomplete && <p role="status">{messages.netWorthIncomplete}</p>}
+              {result.conversionError && <div role="alert">
+                <p className="form-message form-message-error">{messages.netWorthConversionError}</p>
+                <button className="button button-secondary" type="button" onClick={retry}>{messages.retry}</button>
+              </div>}
+            </div>
+            {result.assetsError && <p role="alert">{messages.assetLoadError}</p>}
+            {((accountsStatus === 'ready' && result.accountsError) || accountsStatus === 'error' || result.assetsError)
+              && <button className="button button-secondary" type="button" onClick={() => {
+                if (accountsStatus === 'error') onRetryAccounts?.();
+                retry();
+              }}>{messages.retry}</button>}
+          </section>
+          <section className="net-worth-card net-worth-balances-card" aria-labelledby={balancesTitleId}>
+            <h2 id={balancesTitleId}>{messages.netWorthBalances}</h2>
+            {accountsStatus === 'loading' && <p role="status">{messages.loadingAccounts}</p>}
+            {accountsStatus === 'error' && <p role="alert">{messages.accountsError}</p>}
+            {accountsStatus === 'ready' && result.accountsError && <p role="alert">{messages.netWorthError}</p>}
+            {accounts.length > 0 && !result.accountsError
+              && <NetWorthTable messages={messages} result={result} titleId={balancesTitleId} />}
+            {accountsStatus === 'ready' && !accounts.length && <p>{messages.netWorthNoAccounts}</p>}
+          </section>
+        </div>
         <div className="net-worth-secondary" data-has-assets={assets.length > 0}>
           {assets.length > 0 && <div className="net-worth-assets">
             {assets.map((asset) => <AssetCard key={asset.id} asset={asset} messages={messages} onSaved={() => {
@@ -104,7 +113,15 @@ function formatMoney(amount: number, currency: string, language: string) {
 
 export function NetWorthTable({ messages, result, titleId }: { messages: LocaleMessages; result: Result; titleId: string }) {
   const [hoveredColumn, setHoveredColumn] = useState<number | null>(null);
-  const rows = result.rows.filter((row) => row.kind !== 'asset').sort((a, b) => a.name.localeCompare(b.name, messages.language) || a.id.localeCompare(b.id));
+  type SortColumn = 'postedAt' | 'name' | 'balance' | 'cad';
+  const [sort, setSort] = useState<{ column: SortColumn; ascending: boolean }>({ column: 'cad', ascending: false });
+  const rows = sortNetWorthAccounts(result.rows, messages.language, sort.column, sort.ascending);
+  const columns: { id: SortColumn; label: string; amount?: boolean }[] = [
+    { id: 'postedAt', label: messages.netWorthDate },
+    { id: 'name', label: messages.transactionAccount },
+    { id: 'balance', label: messages.netWorthBalance, amount: true },
+    { id: 'cad', label: messages.netWorthCad, amount: true },
+  ];
   const columnClass = (index: number, amount = false) => [
     amount ? 'net-worth-amount' : '', hoveredColumn === index ? 'net-worth-column-hover' : '',
   ].filter(Boolean).join(' ') || undefined;
@@ -117,10 +134,17 @@ export function NetWorthTable({ messages, result, titleId }: { messages: LocaleM
       }}
       onPointerLeave={() => setHoveredColumn(null)} onPointerCancel={() => setHoveredColumn(null)}>
       <thead><tr>
-        <th scope="col" className={columnClass(0)}>{messages.netWorthDate}</th>
-        <th scope="col" className={columnClass(1)}>{messages.transactionAccount}</th>
-        <th scope="col" className={columnClass(2, true)}>{messages.netWorthBalance}</th>
-        <th scope="col" className={columnClass(3, true)}>{messages.netWorthCad}</th>
+        {columns.map((column, index) => <th key={column.id} scope="col" className={columnClass(index, column.amount)}
+          aria-sort={sort.column === column.id ? (sort.ascending ? 'ascending' : 'descending') : 'none'}>
+          <button type="button" className="sort-button" onClick={() => setSort((previous) => ({
+            column: column.id, ascending: previous.column === column.id ? !previous.ascending : column.id === 'name',
+          }))}>
+            <span className="net-worth-sort-label">{column.label}</span>
+            <span className={sort.column === column.id ? 'sort-icon active' : 'sort-icon'} aria-hidden="true">
+              {sort.column === column.id && !sort.ascending ? '▼' : '▲'}
+            </span>
+          </button>
+        </th>)}
       </tr></thead>
       <tbody>{rows.map((row) => <tr key={row.id}>
         <td className={columnClass(0)}>{row.snapshot ? <time dateTime={row.snapshot.postedAt}>{new Intl.DateTimeFormat(messages.language, {

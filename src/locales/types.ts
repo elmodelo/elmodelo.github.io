@@ -7,6 +7,7 @@ export interface LocaleMessages {
   assetCreateInvalid: string;
   assetNameConflict: string;
   assetCreated: string;
+  assetCadUnavailable: string;
   assetMissing: string;
   assetValuationDate: string;
   assetCountDate: string;

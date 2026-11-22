@@ -78,3 +78,21 @@ export function netWorthAllocation(result) {
     netWorthShare: result.total !== null && result.total > 0 ? account.cad / result.total : null,
   }));
 }
+
+
+export function sortNetWorthAccounts(rows, language, column = 'cad', ascending = false) {
+  const value = (row) => column === 'name' ? row.name : column === 'postedAt'
+    ? (row.snapshot ? Date.parse(row.snapshot.postedAt) : null)
+    : column === 'balance' ? (row.snapshot?.amount ?? null) : row.cad;
+  return rows.filter((row) => row.kind !== 'asset').sort((a, b) => {
+    const left = value(a);
+    const right = value(b);
+    // Missing balances and conversions always come last, in either direction.
+    if (left == null && right != null) return 1;
+    if (left != null && right == null) return -1;
+    const order = left == null || right == null ? 0 : column === 'name'
+      ? left.localeCompare(right, language) : left < right ? -1 : left > right ? 1 : 0;
+    return order * (ascending ? 1 : -1)
+      || a.name.localeCompare(b.name, language) || a.id.localeCompare(b.id);
+  });
+}

@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 import { createServer } from 'vite';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { fetchLatestBalances, loadNetWorth, netWorthRateMessage, netWorthAllocation } from '../src/lib/netWorth.js';
+import { fetchLatestBalances, loadNetWorth, netWorthRateMessage, netWorthAllocation, sortNetWorthAccounts } from '../src/lib/netWorth.js';
 
 const accounts = [
   { id: 'usd', name: 'Z savings', currency: 'USD' },
@@ -107,6 +107,12 @@ test('localized account table retains USD and CAD, sorts names, and reports exac
       const messages = getLocaleMessages(locale);
       const markup = renderToStaticMarkup(createElement(NetWorthTable, { messages, result, titleId: 'net-worth' }));
       assert.ok(markup.indexOf('A checking') < markup.indexOf('Z savings'));
+      assert.equal((markup.match(/class="sort-button"/g) ?? []).length, 4);
+      assert.match(markup, /aria-sort="descending"/);
+      const reorderedNames = { ...result, rows: result.rows.map((row) => ({ ...row,
+        name: row.id === 'cad' ? 'Z highest' : row.id === 'usd' ? 'A negative' : row.name })) };
+      const sorted = renderToStaticMarkup(createElement(NetWorthTable, { messages, result: reorderedNames, titleId: 'sorted' }));
+      assert.ok(sorted.indexOf('Z highest') < sorted.indexOf('A negative'), 'Default sorting uses CAD balance rather than name');
       assert.match(markup, /USD/);
       assert.match(markup, /CAD/);
       const format = (amount, currency) => new Intl.NumberFormat(locale, { style: 'currency', currency, currencyDisplay: 'code' }).format(amount);
@@ -175,4 +181,28 @@ test('allocation card renders a single-account pie, debt shares, and safe empty/
       assert.match(multiple, /25/);
     }
   } finally { await server.close(); }
+});
+
+
+test('account balance sorting handles dates, names, signed amounts and missing values in both directions', () => {
+  const rows = [
+    { id: 'a', name: 'Alpha', cad: -5, snapshot: { amount: -10, postedAt: '2026-11-20T00:00:00Z' } },
+    { id: 'z', name: 'Zulu', cad: 100, snapshot: { amount: 80, postedAt: '2026-11-19T00:00:00Z' } },
+    { id: 'b', name: 'Beta', cad: 0, snapshot: { amount: 0, postedAt: '2026-11-21T00:00:00Z' } },
+    { id: 'm', name: 'Missing', cad: null, snapshot: null },
+    { id: 'asset', name: 'Asset', kind: 'asset', cad: 999, snapshot: { amount: 999, postedAt: '2026-11-22T00:00:00Z' } },
+  ];
+  const ids = (column, ascending) => sortNetWorthAccounts(rows, 'en', column, ascending).map(({ id }) => id);
+  assert.deepEqual(sortNetWorthAccounts(rows, 'en').map(({ id }) => id), ['z', 'b', 'a', 'm']);
+  for (const column of ['cad', 'balance']) {
+    assert.deepEqual(ids(column, true), ['a', 'b', 'z', 'm']);
+    assert.deepEqual(ids(column, false), ['z', 'b', 'a', 'm']);
+  }
+  assert.deepEqual(ids('postedAt', false), ['b', 'a', 'z', 'm']);
+  assert.deepEqual(ids('postedAt', true), ['z', 'a', 'b', 'm']);
+  assert.deepEqual(ids('name', true), ['a', 'b', 'm', 'z']);
+  assert.deepEqual(ids('name', false), ['z', 'm', 'b', 'a']);
+  assert.equal(rows[0].id, 'a', 'Sorting must not mutate the loaded rows');
+  const tied = [{ ...rows[0], id: '2' }, { ...rows[0], id: '1' }];
+  assert.deepEqual(sortNetWorthAccounts(tied, 'en').map(({ id }) => id), ['1', '2']);
 });

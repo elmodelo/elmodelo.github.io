@@ -1,72 +1,27 @@
-import { useEffect, useId, useRef, useState } from 'react';
 import type { LocaleMessages } from '../locales/types';
 import { usePermissions } from '../hooks/usePermissions';
+import OverflowMenu from './OverflowMenu';
 
-export default function NetWorthActions({ messages, onAdd, showInactive, onShowInactiveChange }: {
+export default function NetWorthActions({ messages, onAdd, showInactive, onShowInactiveChange, includeResp, onIncludeRespChange }: {
   messages: LocaleMessages; onAdd: () => void;
   showInactive: boolean; onShowInactiveChange: (show: boolean) => void;
+  includeResp: boolean; onIncludeRespChange: (include: boolean) => void;
 }) {
   const { canRead, canWrite } = usePermissions();
-  const [open, setOpen] = useState(false);
-  const id = useId();
-  const container = useRef<HTMLDivElement>(null);
-  const trigger = useRef<HTMLButtonElement>(null);
-  const focusLast = useRef(false);
-  const menuItems = () => Array.from(container.current?.querySelectorAll<HTMLButtonElement>(
-    '[role="menuitem"], [role="menuitemcheckbox"]',
-  ) ?? []);
-  useEffect(() => {
-    if (!open) return;
-    const items = menuItems();
-    (focusLast.current ? items.at(-1) : items[0])?.focus();
-    const outside = (event: PointerEvent) => {
-      if (event.target instanceof Node && !container.current?.contains(event.target)) setOpen(false);
-    };
-    const escape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault(); setOpen(false); trigger.current?.focus();
-      }
-    };
-    document.addEventListener('pointerdown', outside);
-    document.addEventListener('keydown', escape);
-    return () => {
-      document.removeEventListener('pointerdown', outside);
-      document.removeEventListener('keydown', escape);
-    };
-  }, [open]);
   if (!canRead) return null;
-  return <div className="net-worth-actions" ref={container} onBlur={(event) => {
-    if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
-  }}>
-    <button type="button" ref={trigger} className="net-worth-overflow" aria-label={messages.netWorthActions}
-      aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined}
-      onClick={() => { focusLast.current = false; setOpen((value) => !value); }} onKeyDown={(event) => {
-        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-          event.preventDefault(); focusLast.current = event.key === 'ArrowUp';
-          if (open) {
-            const items = menuItems();
-            (focusLast.current ? items.at(-1) : items[0])?.focus();
-          } else setOpen(true);
-        }
-      }}><span aria-hidden="true">⋯</span></button>
-    {open && <div id={id} role="menu" aria-label={messages.netWorthActions} className="net-worth-actions-menu"
-      onKeyDown={(event) => {
-        if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
-        event.preventDefault();
-        const items = menuItems();
-        const index = items.indexOf(document.activeElement as HTMLButtonElement);
-        const next = event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1
-          : (index + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
-        items[next]?.focus();
-      }}>
-      {canWrite && <button type="button" role="menuitem" tabIndex={-1} onClick={() => {
-        setOpen(false); trigger.current?.focus(); onAdd();
-      }}>{messages.assetAdd}</button>}
-      <button type="button" role="menuitemcheckbox" aria-checked={showInactive} tabIndex={-1}
-        className="net-worth-inactive-action" onClick={() => onShowInactiveChange(!showInactive)}>
-        <span className="net-worth-menu-checkbox" aria-hidden="true">{showInactive ? '✓' : ''}</span>
-        {messages.assetShowInactive}
-      </button>
-    </div>}
-  </div>;
+  return <OverflowMenu label={messages.netWorthActions}>{(close) => <>
+    {canWrite && <button type="button" role="menuitem" tabIndex={-1} onClick={() => {
+      close(); onAdd();
+    }}>{messages.assetAdd}</button>}
+    <button type="button" role="menuitemcheckbox" aria-checked={showInactive} tabIndex={-1}
+      className="net-worth-inactive-action" onClick={() => onShowInactiveChange(!showInactive)}>
+      <span className="net-worth-menu-checkbox" aria-hidden="true">{showInactive ? '✓' : ''}</span>
+      {messages.assetShowInactive}
+    </button>
+    <button type="button" role="menuitemcheckbox" aria-checked={includeResp} tabIndex={-1}
+      className="net-worth-inactive-action" onClick={() => onIncludeRespChange(!includeResp)}>
+      <span className="net-worth-menu-checkbox" aria-hidden="true">{includeResp ? '✓' : ''}</span>
+      {messages.netWorthIncludeResp}
+    </button>
+  </>}</OverflowMenu>;
 }

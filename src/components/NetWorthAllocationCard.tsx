@@ -9,8 +9,8 @@ export default function NetWorthAllocationCard({ messages, result }: { messages:
   const titleId = useId();
   const [activeId, setActiveId] = useState<string | null>(null);
   const rows = netWorthAllocation(result);
-  const percent = new Intl.NumberFormat(messages.language, { style: 'percent', maximumFractionDigits: 1 });
-  const money = new Intl.NumberFormat(messages.language, { style: 'currency', currency: 'CAD', currencyDisplay: 'code' });
+  const percent = new Intl.NumberFormat(messages.language, { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const money = new Intl.NumberFormat(messages.language, { style: 'currency', currency: 'CAD', currencyDisplay: 'code', minimumFractionDigits: 0, maximumFractionDigits: 0 });
   const rowKey = (row: typeof rows[number]) => `${row.kind ?? 'account'}:${row.id}`;
   const label = (row: typeof rows[number]) => `${row.name}: ${money.format(row.cad)} · ${percent.format(row.pieShare)}`;
   let cumulative = 0;

@@ -15,6 +15,7 @@ import { useTheme, type Theme } from './hooks/useTheme';
 import { useTrackedAccounts } from './hooks/useTrackedAccounts';
 import { fetchUncategorizedTransactionCount, UNCATEGORIZED_TRANSACTION_FILTERS } from './lib/transactionQuery';
 import { sortSavedTransactionFilters } from './lib/transactionFilterPresets';
+import { restoreLastPanel, rememberLastPanel } from './lib/lastPanel';
 import { supabase } from './lib/supabaseClient';
 import './App.css';
 
@@ -135,13 +136,16 @@ function Dashboard({
   onThemeChange,
   onLanguageChange,
 }: DashboardProps) {
-  const [selectedSection, setSection] = useState<AppSection>('transactions');
   const { preferences, update } = usePreferences();
   const savedFilters = sortSavedTransactionFilters(preferences.transaction_filters, messages.language);
   const pinnedFilters = savedFilters.filter((preset) => preset.pin_to_menu === true);
+  const [selectedSection, setSection] = useState<AppSection>(() => restoreLastPanel(userId, pinnedFilters.map(({ id }) => id)));
   const pinnedPreset = pinnedFilters.find((preset) => savedFilterSection(preset.id) === selectedSection);
   const section = selectedSection.startsWith('saved-filter:') && !pinnedPreset ? 'transactions' : selectedSection;
   if (section !== selectedSection) setSection(section);
+  useEffect(() => {
+    rememberLastPanel(userId, section);
+  }, [userId, section]);
   const { accounts, trackedAccountIds, setTrackedAccountIds, cashFlowAccountIds, setCashFlowAccountIds, status: accountsStatus, retryAccounts } = useTrackedAccounts(userId);
   const [categoryRevision, setCategoryRevision] = useState(0);
   const [uncategorizedResult, setUncategorizedResult] = useState<{ accountIds: string[]; count: number } | null>(null);

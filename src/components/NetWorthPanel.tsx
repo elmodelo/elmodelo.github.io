@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useState } from 'react';
 import type { LocaleMessages } from '../locales/types';
 import type { Account } from '../hooks/useTrackedAccounts';
+import { usePreferences } from '../hooks/usePreferences';
 import { useStatusMessage } from '../hooks/useStatusMessages';
 import { supabase } from '../lib/supabaseClient';
 import NetWorthActions from './NetWorthActions';
@@ -16,28 +17,35 @@ interface Props {
 type Result = Awaited<ReturnType<typeof loadNetWorth>>;
 
 export default function NetWorthPanel({ messages, accounts: allAccounts, trackedAccountIds, accountsStatus = 'ready', onRetryAccounts }: Props) {
+  const { preferences, update } = usePreferences();
+  const includeResp = preferences.netWorthIncludeResp;
   const accounts = useMemo(() => accountsStatus === 'ready' ? allAccounts.filter(({ id }) => trackedAccountIds.includes(id)) : [], [allAccounts, trackedAccountIds, accountsStatus]);
   const titleId = useId();
   const balancesTitleId = useId();
   const totalTitleId = useId();
-  const [loaded, setLoaded] = useState<{ accounts: Account[]; result: Result } | null>(null);
-  const [failure, setFailure] = useState<Account[] | null>(null);
+  const [loaded, setLoaded] = useState<{ accounts: Account[]; includeResp: boolean; result: Result } | null>(null);
+  const [failure, setFailure] = useState<{ accounts: Account[]; includeResp: boolean } | null>(null);
   const [showInactive, setShowInactive] = useState(false);
-  const [saved, setSaved] = useState('');
+  const [saved, setSaved] = useState<{ message: string } | null>(null);
   const [creating, setCreating] = useState(false);
   const [attempt, setAttempt] = useState(0);
-  const available = loaded?.accounts === accounts ? loaded.result : null;
+  const available = loaded?.accounts === accounts && loaded.includeResp === includeResp ? loaded.result : null;
   const result = available && accountsStatus !== 'ready'
     ? { ...available, total: null, accountsError: true, incomplete: true } : available;
-  const error = failure === accounts;
+  const error = failure?.accounts === accounts && failure.includeResp === includeResp;
+  useEffect(() => {
+    if (!saved) return;
+    const timer = window.setTimeout(() => setSaved(null), 5000);
+    return () => window.clearTimeout(timer);
+  }, [saved]);
   useEffect(() => {
     let active = true;
     const controller = new AbortController();
-    void loadNetWorth(supabase, accounts, controller.signal, undefined, true).then((result) => {
-      if (active) setLoaded({ accounts, result });
-    }).catch(() => { if (active) setFailure(accounts); });
+    void loadNetWorth(supabase, accounts, controller.signal, undefined, true, includeResp).then((result) => {
+      if (active) setLoaded({ accounts, includeResp, result });
+    }).catch(() => { if (active) setFailure({ accounts, includeResp }); });
     return () => { active = false; controller.abort(); };
-  }, [accounts, attempt]);
+  }, [accounts, attempt, includeResp]);
   useStatusMessage({ message: netWorthRateMessage(messages, result) });
   const retry = () => { setLoaded(null); setFailure(null); setAttempt((value) => value + 1); };
 
@@ -53,14 +61,15 @@ export default function NetWorthPanel({ messages, accounts: allAccounts, tracked
     <div className="net-worth-heading">
       <h1 id={titleId}>{messages.netWorth}</h1>
       <NetWorthActions messages={messages} onAdd={() => setCreating(true)}
-        showInactive={showInactive} onShowInactiveChange={setShowInactive} />
+        showInactive={showInactive} onShowInactiveChange={setShowInactive}
+        includeResp={includeResp} onIncludeRespChange={(value) => update('netWorthIncludeResp', value)} />
     </div>
     {creating && <AssetSnapshotDialog messages={messages} onClose={() => setCreating(false)} onSaved={(inactive) => {
-      setCreating(false); setSaved(messages.assetCreated);
+      setCreating(false); setSaved({ message: messages.assetCreated });
       if (inactive) setShowInactive(true);
       retry();
     }} />}
-    {saved && <p role="status">{saved}</p>}
+    {saved && <p role="status">{saved.message}</p>}
     {error ? <div role="alert">
       <p className="form-message form-message-error">{messages.netWorthError}</p>
       <button className="button button-secondary" type="button" onClick={retry}>{messages.retry}</button>
@@ -97,7 +106,7 @@ export default function NetWorthPanel({ messages, accounts: allAccounts, tracked
         </div>
           {assets.length > 0 && <div className="net-worth-assets">
             {assets.map((asset) => <AssetCard key={asset.id} asset={asset} messages={messages} onSaved={() => {
-              setSaved(messages.assetSaved); retry();
+              setSaved({ message: messages.assetSaved }); retry();
             }} />)}
           </div>}
         <NetWorthAllocationCard messages={messages} result={result} />
@@ -106,7 +115,7 @@ export default function NetWorthPanel({ messages, accounts: allAccounts, tracked
 }
 
 function formatMoney(amount: number, currency: string, language: string) {
-  return new Intl.NumberFormat(language, { style: 'currency', currency, currencyDisplay: 'code' }).format(amount);
+  return new Intl.NumberFormat(language, { style: 'currency', currency, currencyDisplay: 'code', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
 }
 
 export function NetWorthTable({ messages, result, titleId }: { messages: LocaleMessages; result: Result; titleId: string }) {
@@ -148,7 +157,9 @@ export function NetWorthTable({ messages, result, titleId }: { messages: LocaleM
         <td className={columnClass(0)}>{row.snapshot ? <time dateTime={row.snapshot.postedAt}>{new Intl.DateTimeFormat(messages.language, {
           year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC',
         }).format(new Date(row.snapshot.postedAt))}</time> : '—'}</td>
-        <th scope="row" className={columnClass(1)}>{row.name}</th>
+        <th scope="row" className={columnClass(1)}>{row.name}
+          {row.excludedFromNetWorth && <small className="net-worth-excluded">{messages.netWorthExcluded}</small>}
+        </th>
         <td className={columnClass(2, true)}>{row.snapshot ? formatMoney(row.snapshot.amount, row.currency, messages.language) : messages.netWorthMissing}</td>
         <td className={columnClass(3, true)}>{row.cad === null ? '—' : formatMoney(row.cad, 'CAD', messages.language)}</td>
       </tr>)}</tbody>

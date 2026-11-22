@@ -15,6 +15,11 @@ npm run dev
 Run `npm run build` to generate `dist/` and `npm run preview` to preview it.
 Run `npm test` for the local component and transaction-query checks.
 
+The last viewed panel is remembered per signed-in user in browser `localStorage`
+and restored on return, including pinned transaction filters. Unknown panels or
+filters that were removed or unpinned fall back to Transactions. Storage failures
+do not block navigation. This setting is local to the browser.
+
 After signing in, use the main menu to browse transactions, view the account
 email and sign out. Preferences sets the theme, language, tracked accounts, and
 the independent Cash Flow accounts.
@@ -40,18 +45,24 @@ unit price's UTC date. USD holdings show their original USD total just below the
 CAD valuation, in parentheses and a smaller font. The CAD value uses the same
 rate and conversion as net worth and allocation. If conversion
 fails, the USD value remains visible with a conversion-unavailable message. Counts greater than one also show count × unit price;
-unit prices preserve additional decimal places. Count dates appear separately
+displayed unit prices use whole currency amounts. Count dates appear separately
 when they differ. Count and price snapshots are independently selected by greatest
 `posted_at`, including future timestamps. Zero or incomplete holdings are hidden
 unless **Show inactive assets** is selected in the heading’s overflow menu; this toggle does not affect totals.
 
-Writers can open **Update holding** from a card to add a count, a unit price, or
+Writers can open **Update holding** from the overflow menu at the top right of a card to add a count, a unit price, or
 both in a modal dialog. The fields start with the latest count and unit price;
 a missing snapshot leaves its field blank. Blank or numerically unchanged fields are skipped and zero is
 valid. Saving without changes to count or price closes the dialog without a
 request or new snapshots; changing only the date also saves nothing. Observation date/time defaults to now in local time and may be backdated;
 it is sent as a UTC timestamp. The dialog accepts nonnegative finite decimal
-strings (decimal point) and preserves entered precision in the RPC request.
+strings (decimal point), or arithmetic expressions using `+`, `-`, `*`, `/`,
+and parentheses. Multiplication/division take precedence; expressions resolve
+on blur or submit. Arithmetic uses exact rational calculations, preserving
+terminating decimals and rounding recurring division to 20 decimal places only
+at the final result. Invalid expressions, division by zero and negative final
+results are rejected. Only evaluated decimal strings are sent to the RPC, and
+equivalent results still skip unchanged snapshots.
 `finance.add_asset_snapshot` atomically saves both observations when supplied.
 Timestamp conflicts are reported without overwriting existing history. Successful
 saves reload holdings, totals, and allocation. Readers have no editing controls;
@@ -68,8 +79,21 @@ granting clients access to the private schema.
 Readers and writers can toggle **Show inactive assets** in the overflow menu;
 only writers see **Add asset**. The menu supports keyboard navigation, Escape, and dismissal outside the menu;
 there is no separate empty-state action.
+The Net Worth overflow menu includes **Include RESP**, off by default. The
+`netWorthIncludeResp` boolean is saved in the user's existing database preferences
+JSON, with the same saving/error/retry behavior as other preferences; no migration
+is needed. The tracked account named `RESP` (case-insensitive, trimmed) stays in
+the balances table with an exclusion note when disabled, but contributes neither
+to net worth nor allocation. Enabling the option includes its balance in both.
+Tracked-account selections still apply, and asset valuations are unaffected.
+
 The computed net worth total has its own card at the top left, with a separate
-account balances card directly below it. The account balances table defaults to descending CAD balance. Every column
+account balances card directly below it. Displayed account balances, asset values (including unit prices), allocation
+amounts, and overall net worth are rounded to whole currency amounts. Stored
+values, calculations, and snapshot inputs retain precision; fractional counts
+and one-decimal allocation percentages are unchanged.
+
+The account balances table defaults to descending CAD balance. Every column
 heading is a sort button; selecting the active heading reverses its direction.
 Account names initially sort ascending; dates and balances initially sort descending.
 Missing values sort last in either direction. Sorting is local to the loaded rows.

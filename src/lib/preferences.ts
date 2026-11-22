@@ -6,6 +6,7 @@ export interface ApplicationPreferences extends Record<string, unknown> {
   language: 'en' | 'es' | null;
   trackedAccounts: string[] | null;
   cashFlowAccounts: string[] | null;
+  netWorthIncludeResp: boolean;
   transactions: TransactionPreferences;
   transaction_filters: SavedTransactionFilter[];
 }
@@ -23,6 +24,7 @@ export function parsePreferences(value: unknown): ApplicationPreferences {
       ? data.trackedAccounts : null,
     cashFlowAccounts: Array.isArray(data.cashFlowAccounts) && data.cashFlowAccounts.every((id) => typeof id === 'string')
       ? data.cashFlowAccounts : null,
+    netWorthIncludeResp: data.netWorthIncludeResp === true,
     transactions: isTransactionPreferences(data.transactions) ? data.transactions : DEFAULT_TRANSACTION_PREFERENCES,
   };
 }

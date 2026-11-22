@@ -12,9 +12,15 @@ test('database preferences validate fields, retain unknown keys, and preserve da
   try {
     const { parsePreferences } = await server.ssrLoadModule('/src/lib/preferences.ts');
     const { DEFAULT_TRANSACTION_PREFERENCES: defaults, isTransactionPreferences: validate, changeTransactionSort } = await server.ssrLoadModule('/src/lib/transactionPreferences.ts');
-    assert.deepEqual(parsePreferences(null), { theme: null, language: null, trackedAccounts: null, cashFlowAccounts: null, transactions: defaults, transaction_filters: [] });
-    const saved = { transaction_filters: [], theme: 'dark', language: 'es', trackedAccounts: [], cashFlowAccounts: ['cash-only'], transactions: { ...defaults, pageSize: 100 }, future: { enabled: true } };
+    assert.deepEqual(parsePreferences(null), { theme: null, language: null, trackedAccounts: null, cashFlowAccounts: null, netWorthIncludeResp: false, transactions: defaults, transaction_filters: [] });
+    const saved = { transaction_filters: [], theme: 'dark', language: 'es', trackedAccounts: [], cashFlowAccounts: ['cash-only'], netWorthIncludeResp: false, transactions: { ...defaults, pageSize: 100 }, future: { enabled: true } };
     assert.deepEqual(parsePreferences(saved), saved);
+    assert.equal(parsePreferences({ ...saved, netWorthIncludeResp: true }).netWorthIncludeResp, true);
+    for (const invalid of [undefined, null, 'true', 'false', 1, {}, []]) {
+      assert.equal(parsePreferences({ ...saved, netWorthIncludeResp: invalid }).netWorthIncludeResp, false);
+    }
+    const withResp = parsePreferences({ ...saved, netWorthIncludeResp: true });
+    assert.deepEqual(parsePreferences(JSON.parse(JSON.stringify(withResp))), withResp);
     assert.deepEqual(parsePreferences({ ...saved, theme: 'unknown', trackedAccounts: [1] }), { ...saved, theme: null, trackedAccounts: null });
     for (const cashFlowAccounts of [null, [], ['cash-only']]) {
       const parsed = parsePreferences({ ...saved, trackedAccounts: ['transactions-only'], cashFlowAccounts });

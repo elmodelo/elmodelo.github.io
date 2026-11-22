@@ -1,7 +1,14 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { LocaleMessages } from '../locales/types';
 import { changedAssetSnapshotInput, saveAssetSnapshot, newAssetInput, createAsset } from '../lib/assets';
+import { evaluateAssetExpression } from '../lib/decimalExpression';
 import { supabase } from '../lib/supabaseClient';
+
+function resolveArithmetic(text: string, update: (value: string) => void) {
+  if (!text.trim()) return;
+  try { update(evaluateAssetExpression(text)); }
+  catch { /* Keep invalid input editable; submit displays the validation error. */ }
+}
 
 function localNow() {
   const now = new Date();
@@ -71,13 +78,13 @@ export default function AssetSnapshotDialog({ asset, messages, onClose, onSaved 
       <div className="asset-amount-fields">
         <div className="form-field">
           <label htmlFor={`${id}-count`}>{messages.assetCount}</label>
-          <input id={`${id}-count`} type="text" inputMode="decimal" autoFocus={!!asset} required={!asset} value={count} disabled={saving}
-            onChange={(event) => setCount(event.target.value)} placeholder="0" />
+          <input id={`${id}-count`} type="text" inputMode="text" autoFocus={!!asset} required={!asset} value={count} disabled={saving}
+            onChange={(event) => setCount(event.target.value)} onBlur={() => resolveArithmetic(count, setCount)} placeholder="0" />
         </div>
         <div className="form-field">
           <label htmlFor={`${id}-value`}>{messages.assetUnitValue} ({asset?.currency ?? currency})</label>
-          <input id={`${id}-value`} type="text" inputMode="decimal" required={!asset} value={value} disabled={saving}
-            onChange={(event) => setValue(event.target.value)} placeholder="0.00" />
+          <input id={`${id}-value`} type="text" inputMode="text" required={!asset} value={value} disabled={saving}
+            onChange={(event) => setValue(event.target.value)} onBlur={() => resolveArithmetic(value, setValue)} placeholder="0.00" />
         </div>
       </div>
       <div className="form-field">

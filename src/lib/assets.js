@@ -1,3 +1,5 @@
+import { evaluateAssetExpression } from './decimalExpression.js';
+
 // Inputs accept plain decimals, while numeric API responses can stringify
 // small holdings as exponent notation. Preserve decimal strings when supplied.
 function decimalText(value) {
@@ -57,10 +59,7 @@ export function assetSnapshotInput(count, value, postedAt) {
   const parse = (text) => {
     const trimmed = text.trim();
     if (!trimmed) return null;
-    if (!/^(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)$/.test(trimmed) || !Number.isFinite(Number(trimmed))) {
-      throw new Error('invalid');
-    }
-    return trimmed;
+    return evaluateAssetExpression(trimmed);
   };
   const p_count = parse(count);
   const p_value = parse(value);

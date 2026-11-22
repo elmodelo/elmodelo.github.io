@@ -181,9 +181,9 @@ test('localized cards show quantities only above one, price dates, and writer-on
       const allocation = renderToStaticMarkup(createElement(Allocation, { result, messages }));
       assert.ok(allocation.includes('Fund'), 'Assets appear in allocation');
       const converted = renderToStaticMarkup(createElement(Card, { asset: result.rows[0], messages, onSaved() {} }));
-      const cadFormat = new Intl.NumberFormat(language, { style: 'currency', currency: 'CAD', currencyDisplay: 'code' });
+      const cadFormat = new Intl.NumberFormat(language, { style: 'currency', currency: 'CAD', currencyDisplay: 'code', minimumFractionDigits: 0, maximumFractionDigits: 0 });
       assert.ok(converted.includes('class="asset-valuation">' + cadFormat.format(result.rows[0].cad)));
-      const usdFormat = new Intl.NumberFormat(language, { style: 'currency', currency: 'USD', currencyDisplay: 'code' });
+      const usdFormat = new Intl.NumberFormat(language, { style: 'currency', currency: 'USD', currencyDisplay: 'code', minimumFractionDigits: 0, maximumFractionDigits: 0 });
       assert.ok(converted.includes('class="asset-native-value">(' + usdFormat.format(asset.snapshot.amount) + ')</p>'));
       assert.ok(converted.includes(cadFormat.format(result.rows[0].cad)));
       assert.match(converted, /USD/);
@@ -196,12 +196,17 @@ test('localized cards show quantities only above one, price dates, and writer-on
       assert.match(reader, /USD/);
       assert.ok(reader.includes(messages.assetCadUnavailable));
       assert.match(reader, /×/);
-      const unitPrice = new Intl.NumberFormat(language, { style: 'currency', currency: 'USD', currencyDisplay: 'code', maximumFractionDigits: 20 }).format(10.125);
-      assert.ok(reader.includes(unitPrice), 'Unit price retains fractional cents');
+      const unitPrice = new Intl.NumberFormat(language, { style: 'currency', currency: 'USD', currencyDisplay: 'code', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(10.125);
+      assert.ok(reader.includes(unitPrice), 'Unit price displays without decimals');
       assert.match(reader, /dateTime="2026-11-21T00:00:00Z"/);
       assert.ok(reader.includes(messages.assetCountDate));
       assert.ok(!reader.includes(messages.assetUpdate));
-      assert.ok(render('WRITER').includes(messages.assetUpdate));
+      const writer = render('WRITER');
+      assert.ok(writer.includes(messages.assetActions.replace('{name}', asset.name)));
+      assert.match(writer, /aria-haspopup="menu"/);
+      assert.ok(!writer.includes(messages.assetUpdate), 'Update holding is inside the closed overflow menu');
+      assert.ok(!writer.includes('button button-secondary'), 'No standalone update button');
+      assert.doesNotMatch(reader, /aria-haspopup="menu"/);
       assert.doesNotMatch(render('WRITER', 1), /×/);
       assert.doesNotMatch(render('WRITER', 0.5), /×/);
       const dialog = renderToStaticMarkup(createElement(Dialog, { asset, messages, onClose() {}, onSaved() {} }));
@@ -213,8 +218,8 @@ test('localized cards show quantities only above one, price dates, and writer-on
       const zero = renderToStaticMarkup(createElement(Dialog, {
         asset: { ...asset, count: { amount: 0, rawAmount: '0' }, price: null }, messages, onClose() {}, onSaved() {},
       }));
-      assert.match(zero, /inputMode="decimal"[^>]*value="0"/);
-      assert.match(zero, /inputMode="decimal"[^>]*value=""/);
+      assert.match(zero, /inputMode="text"[^>]*value="0"/);
+      assert.match(zero, /inputMode="text"[^>]*value=""/);
       const precise = renderToStaticMarkup(createElement(Dialog, {
         asset: { ...asset, price: { amount: 10.123456789123457, rawAmount: '10.123456789123456789' } },
         messages, onClose() {}, onSaved() {},
@@ -267,7 +272,7 @@ test('overflow menu is available to readers and writers and creation dialog requ
     for (const language of ['en', 'es']) {
       const messages = getLocaleMessages(language);
       const render = (role) => renderToStaticMarkup(createElement(PermissionsProvider, { role },
-        createElement(Actions, { messages, onAdd() {}, showInactive: false, onShowInactiveChange() {} })));
+        createElement(Actions, { messages, onAdd() {}, showInactive: false, onShowInactiveChange() {}, includeResp: false, onIncludeRespChange() {} })));
       assert.match(render('READER'), /aria-haspopup="menu"/);
       assert.equal(render(null), '');
       const writer = render('WRITER');
@@ -285,4 +290,17 @@ test('overflow menu is available to readers and writers and creation dialog requ
       assert.ok(dialog.includes(messages.assetCreateHelp));
     }
   } finally { await server.close(); }
+});
+
+test('RESP preference affects account balances without excluding a separately named RESP asset', async () => {
+  const client = clientFor((url) => ({ data: url.pathname.endsWith('asset')
+    ? [{ ...holding, name: 'RESP', currency: 'CAD' }]
+    : [{ id: 'resp', balance: [{ balance: 200, posted_at: '2026-11-22' }] }] }));
+  const accounts = [{ id: 'resp', name: 'RESP', currency: 'CAD' }];
+  const excluded = await loadNetWorth(client, accounts, undefined, rates, true, false);
+  assert.equal(excluded.total, 25.3125);
+  assert.equal(netWorthAllocation(excluded).length, 1);
+  const included = await loadNetWorth(client, accounts, undefined, rates, true, true);
+  assert.equal(included.total, 225.3125);
+  assert.equal(netWorthAllocation(included).length, 2);
 });

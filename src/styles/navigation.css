@@ -13,6 +13,10 @@
   gap: 4px;
 }
 
+.menu-backdrop {
+  display: none;
+}
+
 .menu-toggle {
   display: none;
   width: var(--tap-target-min);
@@ -79,12 +83,31 @@
     top: 0;
     left: 0;
     width: min(240px, 100%);
-    z-index: 1;
+    z-index: 21;
     pointer-events: none;
   }
 
   .menu-toggle {
+    position: relative;
+    z-index: 21;
     display: grid;
+  }
+
+  /* Cover the app while keeping the menu and its toggle above the dimming. */
+  .menu-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: rgb(0 0 0 / 65%);
+    pointer-events: none;
   }
 
   .menu-items {
@@ -93,21 +116,29 @@
     border-radius: 10px;
     background: var(--surface);
     box-shadow: var(--shadow);
+    transform: translateY(-16px);
+  }
+
+  .menu-backdrop,
+  .menu-items {
     visibility: hidden;
     opacity: 0;
-    transform: translateY(-16px);
     transition:
       transform 200ms ease,
       opacity 150ms ease 50ms,
       visibility 0s linear 200ms;
   }
 
+  .menu-backdrop[data-expanded='true'],
   .menu-items[data-expanded='true'] {
     pointer-events: auto;
     visibility: visible;
     opacity: 1;
-    transform: translateY(0);
     transition-delay: 0s;
+  }
+
+  .menu-items[data-expanded='true'] {
+    transform: translateY(0);
   }
 }
 .net-worth-actions { position: relative; flex: none; }

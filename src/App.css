@@ -1304,6 +1304,8 @@
 }
 .net-worth-card h2 { margin: 0 0 20px; font-size: 20px; letter-spacing: -0.02em; }
 .net-worth-balances-card { flex: 2 1 560px; width: auto; }
+/* Let vertical scrolling continue into the dashboard at either table edge. */
+.net-worth-balances-card .panel-scroll { overscroll-behavior-y: auto; }
 /* Each column flows independently, so short asset cards never wait for the
    allocation legend's height before the next card can appear. */
 .net-worth-secondary { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 24px; flex: 1 1 320px; min-width: 0; }

@@ -1281,6 +1281,7 @@
 .net-worth-table { width: 100%; table-layout: fixed; border-collapse: collapse; text-align: left; }
 .net-worth-table th, .net-worth-table td { padding: 10px 8px; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
 .net-worth-table th[scope='row'] { font-weight: 500; }
+.net-worth-excluded { display: block; color: var(--text-muted); font-size: 0.875rem; }
 .net-worth-table .net-worth-amount { text-align: right; font-variant-numeric: tabular-nums; }
 .net-worth-table thead th { padding: 0; }
 .net-worth-table thead th:first-child { width: 20%; }
@@ -1326,7 +1327,6 @@
 .net-worth-allocation-card > p { inline-size: 0; min-inline-size: 100%; }
 .net-worth-pie { display: block; width: min(100%, 250px); height: auto; margin: 20px auto; }
 .net-worth-pie path, .net-worth-pie circle { transition: opacity 120ms; stroke: var(--surface); stroke-width: 0.012; }
-.net-worth-allocation-label { font-size: 13px; }
 .net-worth-allocation-legend { list-style: none; padding: 0; margin: 0; }
 .net-worth-legend-item {
   display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
@@ -1345,9 +1345,12 @@
   .net-worth-legend-account small { white-space: normal; }
 }
 
-.asset-card { width: 100%; }
+.asset-card { position: relative; width: 100%; }
 .asset-card h2 { overflow-wrap: anywhere; }
-.asset-valuation { font-size: 1.75rem; font-weight: 700; font-variant-numeric: tabular-nums; margin: 0 0 12px; }
+.asset-card-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 20px; padding-inline-end: 44px; }
+.asset-card-heading h2 { margin: 0; min-width: 0; }
+.asset-card-heading > .net-worth-actions { position: absolute; top: 8px; right: 8px; }
+.asset-valuation { font-size: 1.75rem; font-weight: 700; font-variant-numeric: tabular-nums; margin: 0 0 12px; overflow-wrap: anywhere; }
 .asset-card .asset-valuation, .asset-card .asset-native-value { color: var(--text); }
 .asset-native-value { margin: -12px 0 12px; font-size: 1.375rem; font-variant-numeric: tabular-nums; }
 .asset-calculation { font-variant-numeric: tabular-nums; }

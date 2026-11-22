@@ -1,4 +1,6 @@
 export interface LocaleMessages {
+  netWorthIncludeResp: string;
+  netWorthExcluded: string;
   netWorthActions: string;
   assetAdd: string;
   assetName: string;
@@ -11,6 +13,7 @@ export interface LocaleMessages {
   assetMissing: string;
   assetValuationDate: string;
   assetCountDate: string;
+  assetActions: string;
   assetUpdate: string;
   assetCount: string;
   assetUnitValue: string;
@@ -27,10 +30,6 @@ export interface LocaleMessages {
   assetLoadError: string;
   netWorthBalances: string;
   netWorthAllocation: string;
-  netWorthAllocationDescription: string;
-  netWorthShare: string;
-  netWorthAllocationDebt: string;
-  netWorthAllocationNonpositive: string;
   netWorthAllocationUnavailable: string;
   netWorthAllocationEmpty: string;
   netWorth: string;

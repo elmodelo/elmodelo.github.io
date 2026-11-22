@@ -25,7 +25,7 @@ export async function fetchLatestBalances(client, accounts, signal) {
   return accounts.map((account) => ({ ...account, snapshot: balances.get(account.id) ?? null }));
 }
 
-export async function loadNetWorth(client, accounts, signal, rateLoader = loadExchangeRates, includeAssets = false) {
+export async function loadNetWorth(client, accounts, signal, rateLoader = loadExchangeRates, includeAssets = false, includeResp = false) {
   const sources = await Promise.allSettled([
     fetchLatestBalances(client, accounts, signal),
     includeAssets ? fetchLatestAssets(client, signal) : Promise.resolve([]),
@@ -35,7 +35,9 @@ export async function loadNetWorth(client, accounts, signal, rateLoader = loadEx
   const accountsError = sources[0].status === 'rejected';
   const assetsError = sources[1].status === 'rejected';
   const rows = [
-    ...(accountsError ? [] : sources[0].value),
+    ...(accountsError ? [] : sources[0].value.map((row) => ({ ...row,
+      excludedFromNetWorth: !includeResp && row.name.trim().toUpperCase() === 'RESP',
+    }))),
     ...(assetsError ? [] : sources[1].value),
   ];
   let rates = null;
@@ -47,16 +49,16 @@ export async function loadNetWorth(client, accounts, signal, rateLoader = loadEx
   const converted = rows.map((row) => {
     const rate = row.currency === 'CAD' ? 1 : rates?.cadPerUnit[row.currency];
     const cad = row.snapshot && Number.isFinite(rate) && rate > 0 ? row.snapshot.amount * rate : null;
-    if (row.snapshot && (cad === null || !Number.isFinite(cad))) conversionError = true;
+    if (!row.excludedFromNetWorth && row.snapshot && (cad === null || !Number.isFinite(cad))) conversionError = true;
     return { ...row, cad: Number.isFinite(cad) ? cad : null };
   });
-  const total = converted.reduce((sum, { cad }) => sum + (cad ?? 0), 0);
+  const total = converted.filter((row) => !row.excludedFromNetWorth).reduce((sum, { cad }) => sum + (cad ?? 0), 0);
   if (!Number.isFinite(total)) conversionError = true;
   const exchangeRates = Object.fromEntries(rows.filter(({ currency, snapshot }) => snapshot && currency !== 'CAD'
     && Number.isFinite(rates?.cadPerUnit[currency]) && rates.cadPerUnit[currency] > 0)
     .map(({ currency }) => [currency, rates.cadPerUnit[currency]]));
   return { rows: converted, total: conversionError || accountsError || assetsError ? null : total, conversionError, accountsError, assetsError,
-    incomplete: accountsError || assetsError || rows.some(({ snapshot }) => !snapshot), rateDate: rates?.date ?? null, exchangeRates };
+    incomplete: accountsError || assetsError || rows.some(({ snapshot, excludedFromNetWorth }) => !excludedFromNetWorth && !snapshot), rateDate: rates?.date ?? null, exchangeRates };
 }
 
 export function netWorthRateMessage(messages, result) {
@@ -68,14 +70,13 @@ export function netWorthRateMessage(messages, result) {
       .map(([currency, rate]) => `1 ${currency} = ${format.format(rate)} CAD`).join('; '));
 }
 
-/** Pie geometry uses positive balances; labels use the signed net worth total. */
+/** Pie slices and labels both use the sum of positive CAD holdings. */
 export function netWorthAllocation(result) {
-  const accounts = result.rows.filter(({ cad }) => cad !== null && cad > 0)
+  const accounts = result.rows.filter(({ cad, excludedFromNetWorth }) => !excludedFromNetWorth && cad !== null && cad > 0)
     .sort((a, b) => b.cad - a.cad || a.id.localeCompare(b.id));
   const positiveTotal = accounts.reduce((sum, { cad }) => sum + cad, 0);
   return accounts.map((account) => ({ ...account,
     pieShare: account.cad / positiveTotal,
-    netWorthShare: result.total !== null && result.total > 0 ? account.cad / result.total : null,
   }));
 }
 

@@ -115,7 +115,7 @@ test('localized account table retains USD and CAD, sorts names, and reports exac
       assert.ok(sorted.indexOf('Z highest') < sorted.indexOf('A negative'), 'Default sorting uses CAD balance rather than name');
       assert.match(markup, /USD/);
       assert.match(markup, /CAD/);
-      const format = (amount, currency) => new Intl.NumberFormat(locale, { style: 'currency', currency, currencyDisplay: 'code' }).format(amount);
+      const format = (amount, currency) => new Intl.NumberFormat(locale, { style: 'currency', currency, currencyDisplay: 'code', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
       assert.ok(markup.includes(format(-10.25, 'USD')));
       assert.ok(markup.includes(format(-14.09375, 'CAD')));
       assert.ok(markup.includes(messages.netWorthMissing));
@@ -128,7 +128,7 @@ test('localized account table retains USD and CAD, sorts names, and reports exac
 });
 
 
-test('allocation excludes nonpositive balances and uses signed CAD net worth for labels', () => {
+test('allocation normalizes positive CAD holdings to 100% regardless of signed net worth', () => {
   const rows = [
     { id: 'usd', name: 'USD savings', cad: 150 },
     { id: 'cad', name: 'CAD savings', cad: 50 },
@@ -137,13 +137,14 @@ test('allocation excludes nonpositive balances and uses signed CAD net worth for
     { id: 'missing', name: 'Missing', cad: null },
   ];
   const allocation = netWorthAllocation({ rows, total: 100 });
-  assert.deepEqual(allocation.map(({ id, pieShare, netWorthShare }) => ({ id, pieShare, netWorthShare })), [
-    { id: 'usd', pieShare: 0.75, netWorthShare: 1.5 },
-    { id: 'cad', pieShare: 0.25, netWorthShare: 0.5 },
+  assert.deepEqual(allocation.map(({ id, pieShare }) => ({ id, pieShare })), [
+    { id: 'usd', pieShare: 0.75 },
+    { id: 'cad', pieShare: 0.25 },
   ]);
   for (const total of [0, -50, null]) {
-    assert.ok(netWorthAllocation({ rows, total }).every(({ netWorthShare }) => netWorthShare === null));
+    assert.deepEqual(netWorthAllocation({ rows, total }).map(({ pieShare }) => pieShare), [0.75, 0.25]);
   }
+  assert.equal(allocation.reduce((sum, { pieShare }) => sum + pieShare, 0), 1);
   assert.deepEqual(netWorthAllocation({ rows: rows.slice(2), total: -100 }), []);
 });
 
@@ -161,11 +162,10 @@ test('allocation card renders a single-account pie, debt shares, and safe empty/
       assert.match(markup, /role="img"/);
       assert.match(markup, /100/);
       const debt = render({ ...single, rows: [...single.rows, { id: 'negative', name: 'Debt account', cad: -50 }], total: 100 });
-      assert.match(debt, /150/);
-      assert.ok(debt.includes(messages.netWorthAllocationDebt));
+      assert.ok(debt.includes('<strong>' + new Intl.NumberFormat(language, { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(1) + '</strong>'));
       assert.ok(!debt.includes('Debt account'));
       const zero = render({ ...single, total: 0 });
-      assert.ok(zero.includes(messages.netWorthAllocationNonpositive));
+      assert.match(zero, /<strong>100[.,]0/);
       assert.doesNotMatch(zero, /NaN|Infinity/);
       const incomplete = render({ ...single, incomplete: true });
       assert.ok(incomplete.includes(messages.netWorthIncomplete));
@@ -205,4 +205,51 @@ test('account balance sorting handles dates, names, signed amounts and missing v
   assert.equal(rows[0].id, 'a', 'Sorting must not mutate the loaded rows');
   const tied = [{ ...rows[0], id: '2' }, { ...rows[0], id: '1' }];
   assert.deepEqual(sortNetWorthAccounts(tied, 'en').map(({ id }) => id), ['1', '2']);
+});
+
+test('RESP is excluded by default from net worth and allocation but retained in the balances table data', async () => {
+  const selection = [
+    { id: 'checking', name: 'Checking', currency: 'CAD' },
+    { id: 'resp', name: '  resp  ', currency: 'CAD' },
+  ];
+  const data = [
+    { id: 'checking', balance: [{ balance: 100, posted_at: '2026-11-22' }] },
+    { id: 'resp', balance: [{ balance: 200, posted_at: '2026-11-22' }] },
+  ];
+  const excluded = await loadNetWorth(clientFor(data), selection, undefined, rates);
+  assert.equal(excluded.total, 100);
+  assert.equal(excluded.rows.length, 2);
+  assert.equal(excluded.rows[1].cad, 200);
+  assert.equal(excluded.rows[1].excludedFromNetWorth, true);
+  assert.deepEqual(netWorthAllocation(excluded).map(({ id, pieShare }) => ({ id, pieShare })), [{ id: 'checking', pieShare: 1 }]);
+  const included = await loadNetWorth(clientFor(data), selection, undefined, rates, false, true);
+  assert.equal(included.total, 300);
+  assert.equal(included.rows[1].excludedFromNetWorth, false);
+  assert.deepEqual(netWorthAllocation(included).map(({ id, pieShare }) => ({ id, pieShare })), [
+    { id: 'resp', pieShare: 2 / 3 }, { id: 'checking', pieShare: 1 / 3 },
+  ]);
+  const notResp = await loadNetWorth(clientFor(data), [selection[0], { ...selection[1], name: 'RESP savings' }], undefined, rates);
+  assert.equal(notResp.total, 300, 'Match the specific RESP account name, not arbitrary substrings');
+});
+
+test('excluded RESP missing snapshots or conversions do not make the computed total unavailable or incomplete', async () => {
+  const selection = [
+    { id: 'checking', name: 'Checking', currency: 'CAD' },
+    { id: 'resp', name: 'RESP', currency: 'USD' },
+  ];
+  const noRates = async () => { throw new Error('offline'); };
+  for (const balance of [[], [{ balance: 200, posted_at: '2026-11-22' }]]) {
+    const data = [{ id: 'checking', balance: [{ balance: 100, posted_at: '2026-11-22' }] }, { id: 'resp', balance }];
+    const excluded = await loadNetWorth(clientFor(data), selection, undefined, noRates);
+    assert.equal(excluded.total, 100);
+    assert.equal(excluded.incomplete, false);
+    assert.equal(excluded.conversionError, false);
+    const included = await loadNetWorth(clientFor(data), selection, undefined, noRates, false, true);
+    if (balance.length) {
+      assert.equal(included.total, null);
+      assert.equal(included.conversionError, true);
+    } else {
+      assert.equal(included.incomplete, true);
+    }
+  }
 });

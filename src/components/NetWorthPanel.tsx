@@ -74,7 +74,7 @@ export default function NetWorthPanel({ messages, accounts: allAccounts, tracked
       <p className="form-message form-message-error">{messages.netWorthError}</p>
       <button className="button button-secondary" type="button" onClick={retry}>{messages.retry}</button>
     </div> : !result ? <p role="status">{messages.loadingNetWorth}</p>
-      : <div className="net-worth-cards">
+      : <div className="net-worth-cards" data-has-assets={assets.length > 0}>
         <div className="net-worth-primary">
           <section className="net-worth-card net-worth-summary-card" aria-labelledby={totalTitleId}>
             <h2 id={totalTitleId}>{messages.netWorth}</h2>
@@ -104,14 +104,12 @@ export default function NetWorthPanel({ messages, accounts: allAccounts, tracked
             {accountsStatus === 'ready' && !accounts.length && <p>{messages.netWorthNoAccounts}</p>}
           </section>
         </div>
-        <div className="net-worth-secondary" data-has-assets={assets.length > 0}>
           {assets.length > 0 && <div className="net-worth-assets">
             {assets.map((asset) => <AssetCard key={asset.id} asset={asset} messages={messages} onSaved={() => {
               setSaved({ message: messages.assetSaved }); retry();
             }} />)}
           </div>}
-          <NetWorthAllocationCard messages={messages} result={result} />
-        </div>
+        <NetWorthAllocationCard messages={messages} result={result} />
       </div>}
   </section>;
 }

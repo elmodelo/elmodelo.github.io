@@ -23,7 +23,7 @@ export default function NetWorthActions({ messages, onAdd, showInactive, onShowI
     <button type="button" role="menuitemcheckbox" aria-checked={showInactive} tabIndex={-1}
       className="net-worth-inactive-action" onClick={() => onShowInactiveChange(!showInactive)}>
       <span className="net-worth-menu-checkbox" aria-hidden="true">{showInactive ? '✓' : ''}</span>
-      {messages.assetShowInactive}
+      {messages.netWorthShowInactive}
     </button>
     <button type="button" role="menuitemcheckbox" aria-checked={includeResp} tabIndex={-1}
       className="net-worth-inactive-action" onClick={() => onIncludeRespChange(!includeResp)}>

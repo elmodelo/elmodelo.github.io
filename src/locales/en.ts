@@ -1,9 +1,18 @@
 import type { LocaleMessages } from './types';
 
 const en: LocaleMessages = {
+  netWorthAssets: "Assets",
+  netWorthLiabilities: "Liabilities",
+  netWorthAssetsEmpty: "No assets to display.",
+  netWorthLiabilitiesEmpty: "No liabilities to display.",
+  netWorthTableDate: "Date",
+  netWorthTableName: "Name",
+  netWorthTableAmount: "Amount",
+  netWorthTableCad: "Amount (CAD)",
+  netWorthTableTotal: "Total",
+  netWorthShowInactive: "Show inactive accounts, assets and liabilities",
   netWorthHistorical: "Historical",
   netWorthHistoricalAsOf: "Historical view: {date}",
-  netWorthHistoricalDescription: "Latest balances, counts, and prices on or before the selected date (UTC), in CAD. Observation dates may differ. This view is read-only.",
   netWorthHistoricalHelp: "Choose a date within the available history. Values carry forward until the next observation. USD conversion uses the Bank of Canada rate closest to your selected date.",
   netWorthHistoryLoading: "Loading available dates…",
   netWorthHistoryError: "Could not load available dates. Please retry.",
@@ -58,7 +67,6 @@ const en: LocaleMessages = {
   netWorthError: "Could not load account balances. Please retry.",
   netWorthUnavailable: "Total unavailable",
   netWorthNoAccounts: "No tracked accounts selected. Asset holdings are shown independently.",
-  netWorthDescription: "Latest tracked account balances and asset holdings, in CAD. Observation dates may differ.",
   netWorthIncomplete: "Incomplete total: unavailable sources and holdings without snapshots are excluded.",
   netWorthConversionError: "Currency conversion unavailable. Balances remain visible; the CAD total is unavailable.",
   netWorthNoConversion: "No currency conversion was needed for the available balances and assets.",

@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 import { createServer } from 'vite';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { fetchLatestBalances, loadNetWorth, netWorthRateMessage, netWorthAllocation, sortNetWorthAccounts } from '../src/lib/netWorth.js';
+import { fetchLatestBalances, loadNetWorth, recalculateNetWorth, netWorthRateMessage, netWorthAllocation, sortNetWorthAccounts } from '../src/lib/netWorth.js';
 
 const accounts = [
   { id: 'usd', name: 'Z savings', currency: 'USD' },
@@ -100,18 +100,18 @@ test('localized account table retains USD and CAD, sorts names, and reports exac
   env.VITE_SUPABASE_ANON_KEY = 'test-key';
   const server = await createServer({ envDir: false, server: { middlewareMode: true, ws: false }, appType: 'custom' });
   try {
-    const { NetWorthTable } = await server.ssrLoadModule('/src/components/NetWorthPanel.tsx');
+    const { NetWorthTable } = await server.ssrLoadModule('/src/components/NetWorthTableCard.tsx');
     const { getLocaleMessages } = await server.ssrLoadModule('/src/locales/index.ts');
     const result = await loadNetWorth(clientFor(snapshots), accounts, undefined, rates);
     for (const locale of ['en', 'es']) {
       const messages = getLocaleMessages(locale);
-      const markup = renderToStaticMarkup(createElement(NetWorthTable, { messages, result, titleId: 'net-worth' }));
+      const markup = renderToStaticMarkup(createElement(NetWorthTable, { messages, rows: result.rows, titleId: 'net-worth' }));
       assert.ok(markup.indexOf('A checking') < markup.indexOf('Z savings'));
       assert.equal((markup.match(/class="sort-button"/g) ?? []).length, 4);
       assert.match(markup, /aria-sort="descending"/);
       const reorderedNames = { ...result, rows: result.rows.map((row) => ({ ...row,
         name: row.id === 'cad' ? 'Z highest' : row.id === 'usd' ? 'A negative' : row.name })) };
-      const sorted = renderToStaticMarkup(createElement(NetWorthTable, { messages, result: reorderedNames, titleId: 'sorted' }));
+      const sorted = renderToStaticMarkup(createElement(NetWorthTable, { messages, rows: reorderedNames.rows, titleId: 'sorted' }));
       assert.ok(sorted.indexOf('Z highest') < sorted.indexOf('A negative'), 'Default sorting uses CAD balance rather than name');
       assert.match(markup, /USD/);
       assert.match(markup, /CAD/);
@@ -252,4 +252,45 @@ test('excluded RESP missing snapshots or conversions do not make the computed to
       assert.equal(included.incomplete, true);
     }
   }
+});
+
+
+test('RESP inclusion recalculates loaded conversions and allocation without further requests', async () => {
+  let requests = 0;
+  let rateRequests = 0;
+  const selection = [{ id: 'checking', name: 'Checking', currency: 'CAD' }, { id: 'resp', name: ' RESP ', currency: 'USD' }];
+  const data = [{ id: 'checking', balance: [{ balance: 100, posted_at: '2026-11-23' }] },
+    { id: 'resp', balance: [{ balance: 200, posted_at: '2026-11-23' }] }];
+  const original = await loadNetWorth(clientFor(data, () => requests++), selection, undefined,
+    async () => { rateRequests++; return { date: '2026-11-23', cadPerUnit: { USD: 1.4 } }; });
+  const included = recalculateNetWorth(original, true);
+  assert.equal(original.total, 100);
+  assert.equal(included.total, 380);
+  assert.equal(included.rows[1].cad, 280);
+  assert.equal(included.rows[1].excludedFromNetWorth, false);
+  assert.equal(original.rows[1].excludedFromNetWorth, true, 'Loaded result is not mutated');
+  assert.equal(netWorthAllocation(included).length, 2);
+  assert.equal(recalculateNetWorth(included, false).total, 100);
+  assert.equal(requests, 1);
+  assert.equal(rateRequests, 1);
+  assert.equal(included.rateDate, original.rateDate);
+  assert.deepEqual(included.exchangeRates, original.exchangeRates);
+});
+
+test('local RESP toggles recompute missing/conversion errors and preserve source failures', () => {
+  const checking = { id: 'cash', name: 'Cash', currency: 'CAD', cad: 100, snapshot: { amount: 100 } };
+  const resp = { id: 'resp', name: 'RESP', currency: 'USD', cad: null, snapshot: { amount: 200 } };
+  const base = { rows: [checking, resp], accountsError: false, assetsError: false };
+  assert.equal(recalculateNetWorth(base, false).conversionError, false);
+  const included = recalculateNetWorth(base, true);
+  assert.equal(included.total, null);
+  assert.equal(included.conversionError, true);
+  assert.equal(recalculateNetWorth(included, false).total, 100);
+  const missing = recalculateNetWorth({ ...base, rows: [checking, { ...resp, snapshot: null }] }, true);
+  assert.equal(missing.incomplete, true);
+  assert.equal(recalculateNetWorth(missing, false).incomplete, false);
+  assert.equal(recalculateNetWorth({ ...base, accountsError: true }, false).total, null);
+  assert.equal(recalculateNetWorth({ ...base, assetsError: true }, false).total, null);
+  const asset = { ...resp, kind: 'asset', type: 'ASSET', cad: 280 };
+  assert.equal(recalculateNetWorth({ ...base, rows: [asset] }, false).total, 280, 'A separately named RESP asset remains included');
 });

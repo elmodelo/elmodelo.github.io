@@ -3,6 +3,7 @@ export interface LocaleMessages {
   netWorthExcluded: string;
   netWorthActions: string;
   liabilityAdd: string;
+  liability: string;
   liabilityName: string;
   liabilityCreateHelp: string;
   liabilitySnapshotHelp: string;

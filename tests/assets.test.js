@@ -370,3 +370,46 @@ test('liability creation and update dialogs identify the type in each locale', a
     }
   } finally { await server.close(); }
 });
+
+test('liability cues cover negative balances, paid-off cards, and debt-only allocation', async () => {
+  const server = await createServer({ envDir: false, server: { ws: false } });
+  try {
+    const { default: Card } = await server.ssrLoadModule('/src/components/AssetCard.tsx');
+    const { default: Allocation } = await server.ssrLoadModule('/src/components/NetWorthAllocationCard.tsx');
+    const { NetWorthTable } = await server.ssrLoadModule('/src/components/NetWorthPanel.tsx');
+    const { getLocaleMessages } = await server.ssrLoadModule('/src/locales/index.ts');
+    const snapshot = { amount: -100, postedAt: '2026-11-23T00:00:00Z' };
+    const loan = { id: 'loan', name: 'Loan', type: 'LIABILITY', kind: 'asset', currency: 'USD',
+      snapshot, cad: -140, count: { amount: 1, postedAt: snapshot.postedAt }, price: snapshot };
+    const account = { id: 'credit', name: 'Credit card', currency: 'CAD', cad: -50,
+      snapshot: { ...snapshot, amount: -50 } };
+    const asset = { ...loan, id: 'fund', name: 'Fund', type: 'ASSET', cad: 200, snapshot: { ...snapshot, amount: 200 } };
+    for (const language of ['en', 'es']) {
+      const messages = getLocaleMessages(language);
+      const renderCard = (row) => renderToStaticMarkup(createElement(Card, { asset: row, messages, onSaved() {} }));
+      const negative = renderCard(loan);
+      assert.ok(negative.includes(messages.liability));
+      assert.match(negative, /circle-minus-icon/);
+      assert.equal((negative.match(/data-negative="true"/g) ?? []).length, 3, 'Liability name and both currency amounts use the cue');
+      const paid = renderCard({ ...loan, cad: 0, snapshot: { ...snapshot, amount: 0 } });
+      assert.ok(paid.includes(messages.liability), 'Paid-off liabilities retain their identity');
+      assert.equal((paid.match(/data-negative="true"/g) ?? []).length, 3, 'Liability name and zero amounts retain the cue');
+      assert.ok(!renderCard(asset).includes('liability-badge'));
+      const missing = renderCard({ ...loan, cad: null });
+      assert.ok(missing.includes(messages.assetCadUnavailable));
+      assert.doesNotMatch(missing, /asset-valuation" data-negative/, 'Unavailable conversion stays neutral');
+      const result = { rows: [asset, loan, account, { ...account, id: 'excluded', name: 'Excluded debt', excludedFromNetWorth: true }] };
+      const allocation = renderToStaticMarkup(createElement(Allocation, { result, messages }));
+      assert.ok(allocation.includes(messages.netWorthAllocation));
+      assert.ok(allocation.includes('Fund'));
+      assert.ok(!allocation.includes('Loan') && !allocation.includes('Credit card') && !allocation.includes('Excluded debt'));
+      const debtOnly = renderToStaticMarkup(createElement(Allocation, { result: { rows: [loan, account] }, messages }));
+      assert.ok(debtOnly.includes(messages.netWorthAllocationEmpty));
+      assert.ok(!debtOnly.includes('Credit card') && !debtOnly.includes('Loan'));
+      assert.ok(!debtOnly.includes('<svg class="net-worth-pie"'), 'No positive holdings means no pie');
+      const table = renderToStaticMarkup(createElement(NetWorthTable, { result, messages, titleId: 'balances' }));
+      assert.equal((table.match(/data-negative="true"/g) ?? []).length, 6, 'Negative account names and both balance columns use the cue');
+      assert.ok(!table.includes('Loan'), 'Liabilities stay in their own cards');
+    }
+  } finally { await server.close(); }
+});

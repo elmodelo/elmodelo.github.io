@@ -148,7 +148,7 @@ test('allocation normalizes positive CAD holdings to 100% regardless of signed n
   assert.deepEqual(netWorthAllocation({ rows: rows.slice(2), total: -100 }), []);
 });
 
-test('allocation card renders a single-account pie, debt shares, and safe empty/error states', async () => {
+test('allocation card renders a single-account pie, excludes debts, and safe empty/error states', async () => {
   const server = await createServer({ envDir: false, server: { middlewareMode: true, ws: false }, appType: 'custom' });
   try {
     const { default: Card } = await server.ssrLoadModule('/src/components/NetWorthAllocationCard.tsx');

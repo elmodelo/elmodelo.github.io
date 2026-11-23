@@ -14,6 +14,7 @@
   --accent-pink: #ff8faf;
   --accent-gold: #ffd05a;
   --error: #ffb4ab;
+  --negative-value: #ffb4ab;
   --error-surface: #38202a;
   --success: #42d8d5;
   --success-surface: #193437;
@@ -43,6 +44,7 @@
   --accent-pink: #c74478;
   --accent-gold: #946000;
   --error: #a13d30;
+  --negative-value: #a13d30;
   --error-surface: #fff0ed;
   --success: #087f8c;
   --success-surface: #e2f6f5;

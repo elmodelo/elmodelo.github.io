@@ -8,6 +8,7 @@ import NetWorthActions from './NetWorthActions';
 import AssetSnapshotDialog from './AssetSnapshotDialog';
 import AssetCard from './AssetCard';
 import NetWorthAllocationCard from './NetWorthAllocationCard';
+import CircleMinusIcon from './CircleMinusIcon';
 import { loadNetWorth, netWorthRateMessage, sortNetWorthAccounts } from '../lib/netWorth';
 
 interface Props {
@@ -157,11 +158,14 @@ export function NetWorthTable({ messages, result, titleId }: { messages: LocaleM
         <td className={columnClass(0)}>{row.snapshot ? <time dateTime={row.snapshot.postedAt}>{new Intl.DateTimeFormat(messages.language, {
           year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC',
         }).format(new Date(row.snapshot.postedAt))}</time> : '—'}</td>
-        <th scope="row" className={columnClass(1)}>{row.name}
+        <th scope="row" className={columnClass(1)}>
+          <span className="net-worth-account-name" data-negative={(row.snapshot?.amount ?? 0) < 0 || undefined}>
+            {(row.snapshot?.amount ?? 0) < 0 && <CircleMinusIcon />}{row.name}
+          </span>
           {row.excludedFromNetWorth && <small className="net-worth-excluded">{messages.netWorthExcluded}</small>}
         </th>
-        <td className={columnClass(2, true)}>{row.snapshot ? formatMoney(row.snapshot.amount, row.currency, messages.language) : messages.netWorthMissing}</td>
-        <td className={columnClass(3, true)}>{row.cad === null ? '—' : formatMoney(row.cad, 'CAD', messages.language)}</td>
+        <td className={columnClass(2, true)} data-negative={(row.snapshot?.amount ?? 0) < 0 || undefined}>{row.snapshot ? formatMoney(row.snapshot.amount, row.currency, messages.language) : messages.netWorthMissing}</td>
+        <td className={columnClass(3, true)} data-negative={(row.cad ?? 0) < 0 || undefined}>{row.cad === null ? '—' : formatMoney(row.cad, 'CAD', messages.language)}</td>
       </tr>)}</tbody>
     </table>
   </div>;

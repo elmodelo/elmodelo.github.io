@@ -1,6 +1,6 @@
 // Parse arithmetic without executing JavaScript. Rational BigInt arithmetic keeps
 // terminating decimals exact; repeating results round to 20 decimal places.
-export function evaluateAssetExpression(expression) {
+export function evaluateAssetExpression(expression, allowNegative = false) {
   const text = expression.trim();
   if (!text || text.length > 4096) throw new Error('invalid');
   if (/^(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)$/.test(text)) {
@@ -72,7 +72,7 @@ export function evaluateAssetExpression(expression) {
   };
   const { n, d } = sum(0);
   skip();
-  if (position !== text.length || n < 0n) throw new Error('invalid');
+  if (position !== text.length || (!allowNegative && n < 0n)) throw new Error('invalid');
   let remainder = d;
   let twos = 0;
   let fives = 0;
@@ -80,10 +80,10 @@ export function evaluateAssetExpression(expression) {
   while (remainder % 5n === 0n) { remainder /= 5n; fives++; }
   const places = remainder === 1n ? Math.max(twos, fives) : 20;
   if (places > 4096) throw new Error('invalid');
-  const scaled = n * 10n ** BigInt(places);
+  const scaled = (n < 0n ? -n : n) * 10n ** BigInt(places);
   const rounded = scaled / d + (2n * (scaled % d) >= d ? 1n : 0n);
   const digits = rounded.toString().padStart(places + 1, '0');
   const result = places ? (digits.slice(0, -places) + '.' + digits.slice(-places)).replace(/\.?0+$/, '') : digits;
   if (!Number.isFinite(Number(result))) throw new Error('invalid');
-  return result;
+  return n < 0n && rounded !== 0n ? '-' + result : result;
 }

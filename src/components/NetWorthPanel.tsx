@@ -27,7 +27,7 @@ export default function NetWorthPanel({ messages, accounts: allAccounts, tracked
   const [failure, setFailure] = useState<{ accounts: Account[]; includeResp: boolean } | null>(null);
   const [showInactive, setShowInactive] = useState(false);
   const [saved, setSaved] = useState<{ message: string } | null>(null);
-  const [creating, setCreating] = useState(false);
+  const [creating, setCreating] = useState<'ASSET' | 'LIABILITY' | null>(null);
   const [attempt, setAttempt] = useState(0);
   const available = loaded?.accounts === accounts && loaded.includeResp === includeResp ? loaded.result : null;
   const result = available && accountsStatus !== 'ready'
@@ -60,12 +60,12 @@ export default function NetWorthPanel({ messages, accounts: allAccounts, tracked
   return <section className="dashboard-panel net-worth-panel" aria-labelledby={titleId}>
     <div className="net-worth-heading">
       <h1 id={titleId}>{messages.netWorth}</h1>
-      <NetWorthActions messages={messages} onAdd={() => setCreating(true)}
+      <NetWorthActions messages={messages} onAdd={setCreating}
         showInactive={showInactive} onShowInactiveChange={setShowInactive}
         includeResp={includeResp} onIncludeRespChange={(value) => update('netWorthIncludeResp', value)} />
     </div>
-    {creating && <AssetSnapshotDialog messages={messages} onClose={() => setCreating(false)} onSaved={(inactive) => {
-      setCreating(false); setSaved({ message: messages.assetCreated });
+    {creating && <AssetSnapshotDialog messages={messages} creationType={creating} onClose={() => setCreating(null)} onSaved={(inactive) => {
+      setCreating(null); setSaved({ message: creating === 'LIABILITY' ? messages.liabilityCreated : messages.assetCreated });
       if (inactive) setShowInactive(true);
       retry();
     }} />}

@@ -50,3 +50,14 @@ test('both creation and updates submit evaluated decimal strings and still skip 
   assert.equal(assetSnapshotInput('', '110 + 23.32', date).p_count, null);
   assert.equal(changedAssetSnapshotInput(asset, '2.5 - 2.5', '', date).p_count, '0');
 });
+
+
+test('signed liability arithmetic preserves exact fractions and rounds magnitudes symmetrically', () => {
+  for (const [input, expected] of [['1 - 2', '-1'], ['-0.1 - 0.2', '-0.3'],
+    ['-2 / 3', '-0.66666666666666666667'], ['-1.000000000000000001', '-1.000000000000000001'],
+    ['-20000 + 500', '-19500'], ['-0', '0']]) {
+    assert.equal(evaluateAssetExpression(input, true), expected);
+  }
+  assert.throws(() => evaluateAssetExpression('-1'));
+  assert.throws(() => evaluateAssetExpression('1 / 0', true));
+});

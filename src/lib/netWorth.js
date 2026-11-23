@@ -1,15 +1,20 @@
 import { fetchLatestAssets } from './assets.js';
 import { loadExchangeRates } from './transactionTotals.js';
+import { historicalCutoff } from './historicalDates.js';
+import { loadHistoricalExchangeRates } from './historicalExchangeRates.js';
 
 /** Limit the embedded relation, not the account list or the full balance history. */
-export async function fetchLatestBalances(client, accounts, signal) {
+export async function fetchLatestBalances(client, accounts, signal, historicalDate = null) {
+  const cutoff = historicalCutoff(historicalDate);
   const balances = new Map();
   for (let offset = 0; offset < accounts.length; offset += 100) {
     const ids = accounts.slice(offset, offset + 100).map(({ id }) => id);
-    const { data, error } = await client.schema('finance').from('account')
+    let query = client.schema('finance').from('account')
       .select('id,balance(balance,posted_at)').in('id', ids)
       .order('posted_at', { referencedTable: 'balance', ascending: false })
-      .limit(1, { referencedTable: 'balance' }).abortSignal(signal);
+      .limit(1, { referencedTable: 'balance' });
+    if (cutoff) query = query.lt('balance.posted_at', cutoff);
+    const { data, error } = await query.abortSignal(signal);
     if (error) throw new Error('Balances unavailable', { cause: error });
     if (!Array.isArray(data)) throw new Error('Invalid balances');
     for (const row of data) {
@@ -25,10 +30,10 @@ export async function fetchLatestBalances(client, accounts, signal) {
   return accounts.map((account) => ({ ...account, snapshot: balances.get(account.id) ?? null }));
 }
 
-export async function loadNetWorth(client, accounts, signal, rateLoader = loadExchangeRates, includeAssets = false, includeResp = false) {
+export async function loadNetWorth(client, accounts, signal, rateLoader = null, includeAssets = false, includeResp = false, historicalDate = null) {
   const sources = await Promise.allSettled([
-    fetchLatestBalances(client, accounts, signal),
-    includeAssets ? fetchLatestAssets(client, signal) : Promise.resolve([]),
+    fetchLatestBalances(client, accounts, signal, historicalDate),
+    includeAssets ? fetchLatestAssets(client, signal, historicalDate) : Promise.resolve([]),
   ]);
   if (signal?.aborted) throw new Error('Aborted');
   if (!includeAssets && sources[0].status === 'rejected') throw sources[0].reason;
@@ -39,10 +44,11 @@ export async function loadNetWorth(client, accounts, signal, rateLoader = loadEx
       excludedFromNetWorth: !includeResp && row.name.trim().toUpperCase() === 'RESP',
     }))),
     ...(assetsError ? [] : sources[1].value),
-  ];
+  ].filter((row) => !historicalDate || (row.kind === 'asset' ? row.count || row.price : row.snapshot));
   let rates = null;
   if (rows.some(({ currency, snapshot }) => snapshot && currency !== 'CAD')) {
-    try { rates = await rateLoader(signal); }
+    try { rates = await (rateLoader ? rateLoader(signal) : historicalDate
+      ? loadHistoricalExchangeRates(historicalDate, signal) : loadExchangeRates(signal)); }
     catch (error) { if (signal?.aborted) throw error; }
   }
   let conversionError = false;

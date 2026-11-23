@@ -1,4 +1,16 @@
 export interface LocaleMessages {
+  netWorthHistorical: string;
+  netWorthHistoricalAsOf: string;
+  netWorthHistoricalDescription: string;
+  netWorthHistoricalHelp: string;
+  netWorthHistoryLoading: string;
+  netWorthHistoryError: string;
+  netWorthHistoryEmpty: string;
+  netWorthHistoryYear: string;
+  netWorthHistoryMonth: string;
+  netWorthHistoryDay: string;
+  netWorthHistoryApply: string;
+  netWorthCurrent: string;
   netWorthIncludeResp: string;
   netWorthExcluded: string;
   netWorthActions: string;

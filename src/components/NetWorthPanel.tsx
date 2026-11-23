@@ -9,6 +9,7 @@ import AssetSnapshotDialog from './AssetSnapshotDialog';
 import AssetCard from './AssetCard';
 import NetWorthAllocationCard from './NetWorthAllocationCard';
 import CircleMinusIcon from './CircleMinusIcon';
+import HistoricalNetWorthDialog from './HistoricalNetWorthDialog';
 import { loadNetWorth, netWorthRateMessage, sortNetWorthAccounts } from '../lib/netWorth';
 
 interface Props {
@@ -24,16 +25,18 @@ export default function NetWorthPanel({ messages, accounts: allAccounts, tracked
   const titleId = useId();
   const balancesTitleId = useId();
   const totalTitleId = useId();
-  const [loaded, setLoaded] = useState<{ accounts: Account[]; includeResp: boolean; result: Result } | null>(null);
-  const [failure, setFailure] = useState<{ accounts: Account[]; includeResp: boolean } | null>(null);
+  const [historicalDate, setHistoricalDate] = useState<string | null>(null);
+  const [choosingDate, setChoosingDate] = useState(false);
+  const [loaded, setLoaded] = useState<{ accounts: Account[]; includeResp: boolean; historicalDate: string | null; result: Result } | null>(null);
+  const [failure, setFailure] = useState<{ accounts: Account[]; includeResp: boolean; historicalDate: string | null } | null>(null);
   const [showInactive, setShowInactive] = useState(false);
   const [saved, setSaved] = useState<{ message: string } | null>(null);
   const [creating, setCreating] = useState<'ASSET' | 'LIABILITY' | null>(null);
   const [attempt, setAttempt] = useState(0);
-  const available = loaded?.accounts === accounts && loaded.includeResp === includeResp ? loaded.result : null;
+  const available = loaded?.accounts === accounts && loaded.includeResp === includeResp && loaded.historicalDate === historicalDate ? loaded.result : null;
   const result = available && accountsStatus !== 'ready'
     ? { ...available, total: null, accountsError: true, incomplete: true } : available;
-  const error = failure?.accounts === accounts && failure.includeResp === includeResp;
+  const error = failure?.accounts === accounts && failure.includeResp === includeResp && failure.historicalDate === historicalDate;
   useEffect(() => {
     if (!saved) return;
     const timer = window.setTimeout(() => setSaved(null), 5000);
@@ -42,11 +45,11 @@ export default function NetWorthPanel({ messages, accounts: allAccounts, tracked
   useEffect(() => {
     let active = true;
     const controller = new AbortController();
-    void loadNetWorth(supabase, accounts, controller.signal, undefined, true, includeResp).then((result) => {
-      if (active) setLoaded({ accounts, includeResp, result });
-    }).catch(() => { if (active) setFailure({ accounts, includeResp }); });
+    void loadNetWorth(supabase, accounts, controller.signal, undefined, true, includeResp, historicalDate).then((result) => {
+      if (active) setLoaded({ accounts, includeResp, historicalDate, result });
+    }).catch(() => { if (active) setFailure({ accounts, includeResp, historicalDate }); });
     return () => { active = false; controller.abort(); };
-  }, [accounts, attempt, includeResp]);
+  }, [accounts, attempt, includeResp, historicalDate]);
   useStatusMessage({ message: netWorthRateMessage(messages, result) });
   const retry = () => { setLoaded(null); setFailure(null); setAttempt((value) => value + 1); };
 
@@ -62,10 +65,19 @@ export default function NetWorthPanel({ messages, accounts: allAccounts, tracked
     <div className="net-worth-heading">
       <h1 id={titleId}>{messages.netWorth}</h1>
       <NetWorthActions messages={messages} onAdd={setCreating}
+        historical={historicalDate !== null} historyAvailable={accountsStatus === 'ready'} onHistorical={() => setChoosingDate(true)}
         showInactive={showInactive} onShowInactiveChange={setShowInactive}
         includeResp={includeResp} onIncludeRespChange={(value) => update('netWorthIncludeResp', value)} />
     </div>
-    {creating && <AssetSnapshotDialog messages={messages} creationType={creating} onClose={() => setCreating(null)} onSaved={(inactive) => {
+    {historicalDate && <div className="net-worth-historical-bar">
+      <p role="status">{messages.netWorthHistoricalAsOf.replace('{date}', new Intl.DateTimeFormat(messages.language, {
+        year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC',
+      }).format(new Date(historicalDate)))}</p>
+      <button type="button" className="button button-secondary" onClick={() => setHistoricalDate(null)}>{messages.netWorthCurrent}</button>
+    </div>}
+    {choosingDate && <HistoricalNetWorthDialog messages={messages} accounts={accounts} selectedDate={historicalDate}
+      onClose={() => setChoosingDate(false)} onSelect={(date) => { setHistoricalDate(date); setChoosingDate(false); }} />}
+    {creating && !historicalDate && <AssetSnapshotDialog messages={messages} creationType={creating} onClose={() => setCreating(null)} onSaved={(inactive) => {
       setCreating(null); setSaved({ message: creating === 'LIABILITY' ? messages.liabilityCreated : messages.assetCreated });
       if (inactive) setShowInactive(true);
       retry();
@@ -81,7 +93,7 @@ export default function NetWorthPanel({ messages, accounts: allAccounts, tracked
             <h2 id={totalTitleId}>{messages.netWorth}</h2>
             <div className="net-worth-summary">
               <p className="net-worth-total">{result.total === null ? messages.netWorthUnavailable : formatMoney(result.total, 'CAD', messages.language)}</p>
-              <p>{messages.netWorthDescription}</p>
+              <p>{historicalDate ? messages.netWorthHistoricalDescription : messages.netWorthDescription}</p>
               {result.incomplete && <p role="status">{messages.netWorthIncomplete}</p>}
               {result.conversionError && <div role="alert">
                 <p className="form-message form-message-error">{messages.netWorthConversionError}</p>
@@ -106,7 +118,7 @@ export default function NetWorthPanel({ messages, accounts: allAccounts, tracked
           </section>
         </div>
           {assets.length > 0 && <div className="net-worth-assets">
-            {assets.map((asset) => <AssetCard key={asset.id} asset={asset} messages={messages} onSaved={() => {
+            {assets.map((asset) => <AssetCard key={asset.id} asset={asset} messages={messages} readOnly={historicalDate !== null} onSaved={() => {
               setSaved({ message: messages.assetSaved }); retry();
             }} />)}
           </div>}

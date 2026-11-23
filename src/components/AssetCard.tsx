@@ -11,7 +11,7 @@ const money = (amount: number, currency: string, language: string) => new Intl.N
   style: 'currency', currency, currencyDisplay: 'code', minimumFractionDigits: 0, maximumFractionDigits: 0,
 }).format(amount);
 
-export default function AssetCard({ asset, messages, onSaved }: { asset: Asset; messages: LocaleMessages; onSaved: () => void }) {
+export default function AssetCard({ asset, messages, onSaved, readOnly = false }: { asset: Asset; messages: LocaleMessages; onSaved: () => void; readOnly?: boolean }) {
   const titleId = useId();
   const { canWrite } = usePermissions();
   const [editing, setEditing] = useState(false);
@@ -28,7 +28,7 @@ export default function AssetCard({ asset, messages, onSaved }: { asset: Asset; 
         </h2>
         {liability && <span className="liability-badge">{messages.liability}</span>}
       </div>
-      {canWrite && <OverflowMenu label={messages.assetActions.replace('{name}', asset.name)}>{(close) =>
+      {canWrite && !readOnly && <OverflowMenu label={messages.assetActions.replace('{name}', asset.name)}>{(close) =>
         <button type="button" role="menuitem" tabIndex={-1} onClick={() => {
           close(); setEditing(true);
         }}>{messages.assetUpdate}</button>
@@ -47,7 +47,7 @@ export default function AssetCard({ asset, messages, onSaved }: { asset: Asset; 
     </p>}
     <p>{messages.assetValuationDate}: {asset.price ? date(asset.price.postedAt) : '—'}</p>
     {asset.count && asset.count.postedAt !== asset.price?.postedAt && <p>{messages.assetCountDate}: {date(asset.count.postedAt)}</p>}
-    {editing && <AssetSnapshotDialog asset={asset} messages={messages} onClose={() => setEditing(false)} onSaved={() => {
+    {editing && !readOnly && <AssetSnapshotDialog asset={asset} messages={messages} onClose={() => setEditing(false)} onSaved={() => {
       setEditing(false); onSaved();
     }} />}
   </section>;

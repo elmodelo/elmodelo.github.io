@@ -119,3 +119,10 @@
 
 .net-worth-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
 .net-worth-heading h1 { margin: 0; }
+.net-worth-historical-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
+.net-worth-historical-bar p { margin: 0; font-weight: 600; }
+.net-worth-historical-bar .button { margin: 0; }
+.historical-date-fields { display: grid; grid-template-columns: minmax(80px, 1fr) minmax(120px, 2fr) minmax(64px, 1fr); gap: 12px; }
+@media (max-width: 400px) {
+  .historical-date-fields { grid-template-columns: minmax(0, 1fr); }
+}

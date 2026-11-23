@@ -87,6 +87,34 @@ the balances table with an exclusion note when disabled, but contributes neither
 to net worth nor allocation. Enabling the option includes its balance in both.
 Tracked-account selections still apply, and asset valuations are unaffected.
 
+Readers and writers can choose **Historical** from the Net Worth overflow menu.
+Its year, month and day choices are bounded by the earliest and latest available
+snapshots for tracked accounts and all assets, queried directly from Supabase.
+The panel selects each account balance, asset count and unit price independently
+using the latest observation before the following UTC midnight. This includes
+the full selected day, carries zeros forward and never uses a later observation.
+Accounts without a balance by that day, and assets/liabilities without either
+a count or price by that day, are omitted even when inactive holdings are shown.
+They do not mark totals incomplete. Assets with only one of count/price available
+remain incomplete holdings. Current
+tracked accounts, RESP inclusion and inactive-holding visibility still apply;
+historical account names and tracked-account preferences are not reconstructed.
+The selected date is held in panel state only. Historical mode hides create/update
+actions and displays the selected date with **Return to current**.
+
+Historical USD conversion uses BoC `FXUSDCAD` observations within ±3 days of the
+selected date, widening to ±7 and ±14 days when no valid rate is present. The
+closest observation wins, with the earlier date winning ties; the status bar
+shows its actual date. A missing rate keeps native values visible and suppresses
+the CAD total. Only public rates are cached in memory, keyed by selected date
+(up to 256 entries). Dates within the last seven days or in the future expire
+after one hour; older dates remain cached until eviction or page reload.
+Concurrent requests for one date share a fetch; canceled consumers do not
+cancel other consumers. Failed requests are not cached. Database snapshots and
+date bounds are reloaded, not cached; obsolete panel requests are canceled and
+late responses cannot replace the active date. No new RPCs or migrations are
+required for this feature.
+
 The computed net worth total has its own card at the top left, with a separate
 account balances card directly below it. Displayed account balances, asset values (including unit prices), allocation
 amounts, and overall net worth are rounded to whole currency amounts. Stored

@@ -1,6 +1,18 @@
 import type { LocaleMessages } from './types';
 
 const es: LocaleMessages = {
+  netWorthHistorical: "Histórico",
+  netWorthHistoricalAsOf: "Vista histórica: {date}",
+  netWorthHistoricalDescription: "Últimos saldos, cantidades y precios hasta la fecha seleccionada (UTC), en CAD. Las fechas de observación pueden variar. Esta vista es de solo lectura.",
+  netWorthHistoricalHelp: "Elige una fecha dentro del historial disponible. Los valores se mantienen hasta la siguiente observación. La conversión de USD usa el tipo del Banco de Canadá más cercano a la fecha seleccionada.",
+  netWorthHistoryLoading: "Cargando fechas disponibles…",
+  netWorthHistoryError: "No se pudieron cargar las fechas disponibles. Inténtalo de nuevo.",
+  netWorthHistoryEmpty: "No hay historial de cuentas ni activos disponible.",
+  netWorthHistoryYear: "Año",
+  netWorthHistoryMonth: "Mes",
+  netWorthHistoryDay: "Día",
+  netWorthHistoryApply: "Ver fecha",
+  netWorthCurrent: "Volver a la vista actual",
   netWorthIncludeResp: "Incluir RESP",
   netWorthExcluded: "Excluida del patrimonio neto",
   netWorthActions: "Acciones del patrimonio neto",

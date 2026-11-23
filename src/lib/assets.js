@@ -1,4 +1,5 @@
 import { evaluateAssetExpression } from './decimalExpression.js';
+import { historicalCutoff } from './historicalDates.js';
 
 // Inputs accept plain decimals, while numeric API responses can stringify
 // small holdings as exponent notation. Preserve decimal strings when supplied.
@@ -35,16 +36,19 @@ function snapshot(rows, metric, type = 'ASSET') {
   return { amount: Number(row[metric]), rawAmount: decimalText(row[metric]), postedAt: row.posted_at };
 }
 
-export async function fetchLatestAssets(client, signal) {
+export async function fetchLatestAssets(client, signal, historicalDate = null) {
+  const cutoff = historicalCutoff(historicalDate);
   const assets = [];
   for (let offset = 0; ; offset += 500) {
-    const { data, error } = await client.schema('finance').from('asset')
+    let query = client.schema('finance').from('asset')
       .select('id,name,currency,type,asset_count(count,posted_at),asset_value(value,posted_at)')
       .order('id').range(offset, offset + 499)
       .order('posted_at', { referencedTable: 'asset_count', ascending: false })
       .limit(1, { referencedTable: 'asset_count' })
       .order('posted_at', { referencedTable: 'asset_value', ascending: false })
-      .limit(1, { referencedTable: 'asset_value' }).abortSignal(signal);
+      .limit(1, { referencedTable: 'asset_value' });
+    if (cutoff) query = query.lt('asset_count.posted_at', cutoff).lt('asset_value.posted_at', cutoff);
+    const { data, error } = await query.abortSignal(signal);
     if (error || !Array.isArray(data)) throw new Error('Assets unavailable', { cause: error });
     for (const row of data) {
       if (typeof row.id !== 'string' || typeof row.name !== 'string' || !['CAD', 'USD'].includes(row.currency) || !['ASSET', 'LIABILITY'].includes(row.type)) {

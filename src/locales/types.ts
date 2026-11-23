@@ -2,6 +2,12 @@ export interface LocaleMessages {
   netWorthIncludeResp: string;
   netWorthExcluded: string;
   netWorthActions: string;
+  liabilityAdd: string;
+  liabilityName: string;
+  liabilityCreateHelp: string;
+  liabilitySnapshotHelp: string;
+  liabilityInvalid: string;
+  liabilityCreated: string;
   assetAdd: string;
   assetName: string;
   assetCurrency: string;

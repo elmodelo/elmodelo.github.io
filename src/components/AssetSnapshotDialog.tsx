@@ -4,9 +4,9 @@ import { changedAssetSnapshotInput, saveAssetSnapshot, newAssetInput, createAsse
 import { evaluateAssetExpression } from '../lib/decimalExpression';
 import { supabase } from '../lib/supabaseClient';
 
-function resolveArithmetic(text: string, update: (value: string) => void) {
+function resolveArithmetic(text: string, update: (value: string) => void, allowNegative = false) {
   if (!text.trim()) return;
-  try { update(evaluateAssetExpression(text)); }
+  try { update(evaluateAssetExpression(text, allowNegative)); }
   catch { /* Keep invalid input editable; submit displays the validation error. */ }
 }
 
@@ -15,13 +15,15 @@ function localNow() {
   return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 19);
 }
 
-export default function AssetSnapshotDialog({ asset, messages, onClose, onSaved }: {
+export default function AssetSnapshotDialog({ asset, messages, onClose, onSaved, creationType = 'ASSET' }: {
   asset?: {
-    id: string; name: string; currency: string;
+    id: string; name: string; currency: string; type?: 'ASSET' | 'LIABILITY';
     count?: { amount: number; rawAmount?: string } | null;
     price?: { amount: number; rawAmount?: string } | null;
-  }; messages: LocaleMessages; onClose: () => void; onSaved: (inactive?: boolean) => void;
+  }; creationType?: 'ASSET' | 'LIABILITY'; messages: LocaleMessages; onClose: () => void; onSaved: (inactive?: boolean) => void;
 }) {
+  const liability = (asset?.type ?? creationType) === 'LIABILITY';
+  const addLabel = liability ? messages.liabilityAdd : messages.assetAdd;
   const id = useId();
   const dialog = useRef<HTMLDialogElement>(null);
   const pending = useRef(false);
@@ -41,15 +43,15 @@ export default function AssetSnapshotDialog({ asset, messages, onClose, onSaved 
     aria-describedby={`${id}-help`} onCancel={(event) => {
       if (pending.current) event.preventDefault();
     }} onClose={(event) => { if (!event.currentTarget.open && !pending.current) onClose(); }}>
-    <h2 id={`${id}-title`}>{asset ? `${messages.assetUpdate}: ${asset.name}` : messages.assetAdd}</h2>
-    <p id={`${id}-help`} className="asset-dialog-help">{asset ? messages.assetSnapshotHelp : messages.assetCreateHelp}</p>
+    <h2 id={`${id}-title`}>{asset ? `${messages.assetUpdate}: ${asset.name}` : addLabel}</h2>
+    <p id={`${id}-help`} className="asset-dialog-help">{asset ? (liability ? messages.liabilitySnapshotHelp : messages.assetSnapshotHelp) : liability ? messages.liabilityCreateHelp : messages.assetCreateHelp}</p>
     <form aria-busy={saving} onSubmit={async (event) => {
       event.preventDefault();
       if (pending.current) return;
       let input;
       try { input = asset ? changedAssetSnapshotInput(asset, count, value, postedAt)
-        : newAssetInput(name, currency, count, value, postedAt); }
-      catch { setError(asset ? messages.assetInvalid : messages.assetCreateInvalid); return; }
+        : newAssetInput(name, currency, count, value, postedAt, creationType); }
+      catch { setError(liability ? messages.liabilityInvalid : asset ? messages.assetInvalid : messages.assetCreateInvalid); return; }
       if (input === null) { onClose(); return; }
       pending.current = true; setSaving(true); setError('');
       try {
@@ -63,7 +65,7 @@ export default function AssetSnapshotDialog({ asset, messages, onClose, onSaved 
     }}>
       {!asset && <div className="asset-identity-fields">
         <div className="form-field">
-          <label htmlFor={`${id}-name`}>{messages.assetName}</label>
+          <label htmlFor={`${id}-name`}>{liability ? messages.liabilityName : messages.assetName}</label>
           <input id={`${id}-name`} type="text" required autoFocus value={name} disabled={saving}
             onChange={(event) => setName(event.target.value)} />
         </div>
@@ -84,7 +86,7 @@ export default function AssetSnapshotDialog({ asset, messages, onClose, onSaved 
         <div className="form-field">
           <label htmlFor={`${id}-value`}>{messages.assetUnitValue} ({asset?.currency ?? currency})</label>
           <input id={`${id}-value`} type="text" inputMode="text" required={!asset} value={value} disabled={saving}
-            onChange={(event) => setValue(event.target.value)} onBlur={() => resolveArithmetic(value, setValue)} placeholder="0.00" />
+            onChange={(event) => setValue(event.target.value)} onBlur={() => resolveArithmetic(value, setValue, liability)} placeholder="0.00" />
         </div>
       </div>
       <div className="form-field">
@@ -95,7 +97,7 @@ export default function AssetSnapshotDialog({ asset, messages, onClose, onSaved 
       {error && <p className="form-message form-message-error" role="alert">{error}</p>}
       <div className="asset-dialog-actions">
         <button type="button" className="button button-secondary" disabled={saving} onClick={onClose}>{messages.cancel}</button>
-        <button type="submit" className="button button-primary" disabled={saving}>{saving ? messages.assetSaving : asset ? messages.assetSave : messages.assetAdd}</button>
+        <button type="submit" className="button button-primary" disabled={saving}>{saving ? messages.assetSaving : asset ? messages.assetSave : addLabel}</button>
       </div>
     </form>
   </dialog>;

@@ -8,7 +8,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { fetchLatestAssets, assetSnapshotInput, changedAssetSnapshotInput, saveAssetSnapshot, newAssetInput, createAsset } from '../src/lib/assets.js';
 import { loadNetWorth, netWorthAllocation } from '../src/lib/netWorth.js';
 
-const holding = { id: 'asset', name: 'Fund', currency: 'USD',
+const holding = { id: 'asset', name: 'Fund', currency: 'USD', type: 'ASSET',
   asset_count: [{ count: '2.5', posted_at: '2026-11-20T00:00:00Z' }],
   asset_value: [{ value: '10.125', posted_at: '2026-11-21T00:00:00Z' }] };
 function clientFor(handler) {
@@ -233,7 +233,7 @@ test('localized cards show quantities only above one, price dates, and writer-on
 test('new assets require a name, supported currency and both precise initial observations', () => {
   const date = '2026-11-21T12:34:56Z';
   assert.deepEqual(newAssetInput('  Home  ', 'CAD', '1', '123456.123456789123456789', date), {
-    p_name: 'Home', p_currency: 'CAD', p_count: '1', p_value: '123456.123456789123456789',
+    p_name: 'Home', p_currency: 'CAD', p_type: 'ASSET', p_count: '1', p_value: '123456.123456789123456789',
     p_posted_at: '2026-11-21T12:34:56.000Z',
   });
   assert.equal(newAssetInput('Empty holding', 'USD', '0', '0', date).p_value, '0');
@@ -303,4 +303,70 @@ test('RESP preference affects account balances without excluding a separately na
   const included = await loadNetWorth(client, accounts, undefined, rates, true, true);
   assert.equal(included.total, 225.3125);
   assert.equal(netWorthAllocation(included).length, 2);
+});
+
+
+test('liabilities retain signed prices, reduce net worth, and remain available after payoff', async () => {
+  const loan = { ...holding, id: 'loan', name: 'Loan', type: 'LIABILITY', currency: 'CAD',
+    asset_count: [{ count: '1', posted_at: '2026-11-22' }],
+    asset_value: [{ value: '-20000.123456789123456789', posted_at: '2026-11-22' }] };
+  const result = await loadNetWorth(clientFor(() => ({ data: [{ ...holding, currency: 'CAD' }, loan] })), [], undefined, rates, true);
+  assert.equal(result.total, 25.3125 - Number(loan.asset_value[0].value.slice(1)));
+  assert.deepEqual(netWorthAllocation(result).map(({ id }) => id), ['asset']);
+  assert.equal(result.rows[1].type, 'LIABILITY');
+  assert.equal(result.rows[1].price.rawAmount, '-20000.123456789123456789');
+  const paid = await fetchLatestAssets(clientFor(() => ({ data: [{ ...loan,
+    asset_count: [{ count: 0, posted_at: '2026-11-23' }] }] })));
+  assert.equal(paid[0].snapshot.amount, 0);
+  assert.equal(paid[0].price.rawAmount, loan.asset_value[0].value);
+  const tiny = await fetchLatestAssets(clientFor(() => ({ data: [{ ...loan,
+    asset_value: [{ value: -1e-8, posted_at: '2026-11-22' }] }] })));
+  assert.equal(tiny[0].price.rawAmount, '-0.00000001');
+  for (const invalid of [{ ...loan, type: 'OTHER' }, { ...loan, type: 'ASSET' },
+    { ...loan, asset_value: holding.asset_value },
+    { ...loan, asset_count: [{ count: '-1', posted_at: '2026-11-22' }] }]) {
+    await assert.rejects(fetchLatestAssets(clientFor(() => ({ data: [invalid] }))));
+  }
+});
+
+test('liability inputs enforce signs, preserve precision, and skip equivalent signed values', () => {
+  const date = '2026-11-23';
+  const input = newAssetInput('Loan', 'CAD', '1', '-20000.123456789123456789', date, 'LIABILITY');
+  assert.equal(input.p_type, 'LIABILITY');
+  assert.equal(input.p_value, '-20000.123456789123456789');
+  const loan = { type: 'LIABILITY', count: { amount: 1 }, price: { rawAmount: input.p_value } };
+  assert.equal(changedAssetSnapshotInput(loan, '1', '-020000.1234567891234567890', date), null);
+  assert.equal(changedAssetSnapshotInput(loan, '0', input.p_value, date).p_count, '0');
+  assert.equal(changedAssetSnapshotInput(loan, '', '-20000 + 500', date).p_value, '-19500');
+  for (const type of ['ASSET', 'LIABILITY']) {
+    assert.equal(newAssetInput('Zero', 'CAD', '0', '0', date, type).p_value, '0');
+    assert.equal(assetSnapshotInput('1', '-0', date, type).p_value, '0');
+  }
+  for (const [count, value, type] of [['-1', '-2', 'LIABILITY'], ['1', '2', 'LIABILITY'],
+    ['1', '-2', 'ASSET'], ['1', '0', 'OTHER']]) {
+    assert.throws(() => newAssetInput('Loan', 'CAD', count, value, date, type));
+  }
+  // Sign checks use decimal text, including values smaller than Number can hold.
+  assert.throws(() => assetSnapshotInput('1', '-0.' + '0'.repeat(330) + '1', date, 'ASSET'));
+});
+
+test('liability creation and update dialogs identify the type in each locale', async () => {
+  const server = await createServer({ envDir: false, server: { ws: false } });
+  try {
+    const { default: Dialog } = await server.ssrLoadModule('/src/components/AssetSnapshotDialog.tsx');
+    const { getLocaleMessages } = await server.ssrLoadModule('/src/locales/index.ts');
+    for (const language of ['en', 'es']) {
+      const messages = getLocaleMessages(language);
+      const props = { messages, onClose() {}, onSaved() {} };
+      const creation = renderToStaticMarkup(createElement(Dialog, { ...props, creationType: 'LIABILITY' }));
+      assert.ok(creation.includes(messages.liabilityAdd));
+      assert.ok(creation.includes(messages.liabilityName));
+      assert.ok(creation.includes(messages.liabilityCreateHelp));
+      assert.ok(!creation.includes(messages.assetAdd));
+      const update = renderToStaticMarkup(createElement(Dialog, { ...props,
+        asset: { id: 'loan', name: 'Loan', currency: 'CAD', type: 'LIABILITY', price: { amount: -20000 } } }));
+      assert.ok(update.includes(messages.liabilitySnapshotHelp));
+      assert.match(update, /value="-20000"/);
+    }
+  } finally { await server.close(); }
 });

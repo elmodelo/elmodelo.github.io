@@ -3,7 +3,7 @@ import { usePermissions } from '../hooks/usePermissions';
 import OverflowMenu from './OverflowMenu';
 
 export default function NetWorthActions({ messages, onAdd, showInactive, onShowInactiveChange, includeResp, onIncludeRespChange }: {
-  messages: LocaleMessages; onAdd: () => void;
+  messages: LocaleMessages; onAdd: (type: 'ASSET' | 'LIABILITY') => void;
   showInactive: boolean; onShowInactiveChange: (show: boolean) => void;
   includeResp: boolean; onIncludeRespChange: (include: boolean) => void;
 }) {
@@ -11,8 +11,11 @@ export default function NetWorthActions({ messages, onAdd, showInactive, onShowI
   if (!canRead) return null;
   return <OverflowMenu label={messages.netWorthActions}>{(close) => <>
     {canWrite && <button type="button" role="menuitem" tabIndex={-1} onClick={() => {
-      close(); onAdd();
+      close(); onAdd('ASSET');
     }}>{messages.assetAdd}</button>}
+    {canWrite && <button type="button" role="menuitem" tabIndex={-1} onClick={() => {
+      close(); onAdd('LIABILITY');
+    }}>{messages.liabilityAdd}</button>}
     <button type="button" role="menuitemcheckbox" aria-checked={showInactive} tabIndex={-1}
       className="net-worth-inactive-action" onClick={() => onShowInactiveChange(!showInactive)}>
       <span className="net-worth-menu-checkbox" aria-hidden="true">{showInactive ? '✓' : ''}</span>

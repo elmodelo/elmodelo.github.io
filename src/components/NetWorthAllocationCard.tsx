@@ -18,33 +18,35 @@ export default function NetWorthAllocationCard({ messages, result }: { messages:
   return <section className="net-worth-card net-worth-allocation-card" aria-labelledby={titleId}>
     <h2 id={titleId}>{messages.netWorthAllocation}</h2>
     {(result.conversionError || result.accountsError || result.assetsError) ? <p>{messages.netWorthAllocationUnavailable}</p>
-      : !rows.length ? <p>{messages.netWorthAllocationEmpty}</p> : <>
+      : <>
         {result.incomplete && <p>{messages.netWorthIncomplete}</p>}
-        <svg className="net-worth-pie" viewBox="-1.1 -1.1 2.2 2.2" role="img" aria-labelledby={titleId}
-          onPointerLeave={() => setActiveId(null)}>
-          {rows.map((row, index) => {
-            const start = cumulative * 2 * Math.PI - Math.PI / 2;
-            cumulative += row.pieShare;
-            const end = cumulative * 2 * Math.PI - Math.PI / 2;
-            const color = colors[index % colors.length];
-            const props = { fill: color, opacity: activeId && activeId !== rowKey(row) ? 0.4 : 1,
-              onPointerEnter: () => setActiveId(rowKey(row)) };
-            return rows.length === 1 ? <circle key={rowKey(row)} r="1" {...props}><title>{label(row)}</title></circle>
-              : <path key={rowKey(row)} d={`M 0 0 L ${Math.cos(start)} ${Math.sin(start)} A 1 1 0 ${row.pieShare > 0.5 ? 1 : 0} 1 ${Math.cos(end)} ${Math.sin(end)} Z`}
-                {...props}><title>{label(row)}</title></path>;
-          })}
-        </svg>
-        <ul className="net-worth-allocation-legend">
-          {rows.map((row, index) => <li key={rowKey(row)}>
-            <button type="button" className="net-worth-legend-item" data-active={activeId === rowKey(row)}
-              onPointerEnter={() => setActiveId(rowKey(row))} onPointerLeave={() => setActiveId(null)}
-              onFocus={() => setActiveId(rowKey(row))} onBlur={() => setActiveId(null)} aria-label={label(row)}>
-              <span className="net-worth-swatch" style={{ background: colors[index % colors.length] }} aria-hidden="true" />
-              <span className="net-worth-legend-account">{row.name}<small>{money.format(row.cad)}</small></span>
-              <strong>{percent.format(row.pieShare)}</strong>
-            </button>
-          </li>)}
-        </ul>
+        {!rows.length ? <p>{messages.netWorthAllocationEmpty}</p> : <>
+          <svg className="net-worth-pie" viewBox="-1.1 -1.1 2.2 2.2" role="img" aria-labelledby={titleId}
+            onPointerLeave={() => setActiveId(null)}>
+            {rows.map((row, index) => {
+              const start = cumulative * 2 * Math.PI - Math.PI / 2;
+              cumulative += row.pieShare;
+              const end = cumulative * 2 * Math.PI - Math.PI / 2;
+              const color = colors[index % colors.length];
+              const props = { fill: color, opacity: activeId && activeId !== rowKey(row) ? 0.4 : 1,
+                onPointerEnter: () => setActiveId(rowKey(row)) };
+              return rows.length === 1 ? <circle key={rowKey(row)} r="1" {...props}><title>{label(row)}</title></circle>
+                : <path key={rowKey(row)} d={`M 0 0 L ${Math.cos(start)} ${Math.sin(start)} A 1 1 0 ${row.pieShare > 0.5 ? 1 : 0} 1 ${Math.cos(end)} ${Math.sin(end)} Z`}
+                  {...props}><title>{label(row)}</title></path>;
+            })}
+          </svg>
+          <ul className="net-worth-allocation-legend">
+            {rows.map((row, index) => <li key={rowKey(row)}>
+              <button type="button" className="net-worth-legend-item" data-active={activeId === rowKey(row)}
+                onPointerEnter={() => setActiveId(rowKey(row))} onPointerLeave={() => setActiveId(null)}
+                onFocus={() => setActiveId(rowKey(row))} onBlur={() => setActiveId(null)} aria-label={label(row)}>
+                <span className="net-worth-swatch" style={{ background: colors[index % colors.length] }} aria-hidden="true" />
+                <span className="net-worth-legend-account">{row.name}<small>{money.format(row.cad)}</small></span>
+                <strong>{percent.format(row.pieShare)}</strong>
+              </button>
+            </li>)}
+          </ul>
+        </>}
       </>}
   </section>;
 }

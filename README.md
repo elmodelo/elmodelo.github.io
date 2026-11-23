@@ -131,6 +131,10 @@ tracked accounts, RESP inclusion and inactive-holding visibility still apply;
 historical account names and tracked-account preferences are not reconstructed.
 The selected date is held in panel state only. Historical mode hides create/update
 actions and displays the selected date with **Return to current**.
+Changing dates, returning to current, or retrying keeps the existing cards mounted
+beneath a loading-spinner dialog. Values and their displayed date update together
+when the request completes. A failed request removes the spinner, retains the
+previous view, and offers retry; obsolete responses cannot replace newer results.
 
 Historical USD conversion uses BoC `FXUSDCAD` observations within ±3 days of the
 selected date, widening to ±7 and ±14 days when no valid rate is present. The

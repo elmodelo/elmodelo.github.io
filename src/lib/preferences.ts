@@ -7,6 +7,7 @@ export interface ApplicationPreferences extends Record<string, unknown> {
   trackedAccounts: string[] | null;
   cashFlowAccounts: string[] | null;
   netWorthIncludeResp: boolean;
+  netWorthChartsStartMonth: string | null;
   transactions: TransactionPreferences;
   transaction_filters: SavedTransactionFilter[];
 }
@@ -25,6 +26,8 @@ export function parsePreferences(value: unknown): ApplicationPreferences {
     cashFlowAccounts: Array.isArray(data.cashFlowAccounts) && data.cashFlowAccounts.every((id) => typeof id === 'string')
       ? data.cashFlowAccounts : null,
     netWorthIncludeResp: data.netWorthIncludeResp === true,
+    netWorthChartsStartMonth: typeof data.netWorthChartsStartMonth === 'string'
+      && /^(?!0000)\d{4}-(0[1-9]|1[0-2])$/.test(data.netWorthChartsStartMonth) ? data.netWorthChartsStartMonth : null,
     transactions: isTransactionPreferences(data.transactions) ? data.transactions : DEFAULT_TRANSACTION_PREFERENCES,
   };
 }

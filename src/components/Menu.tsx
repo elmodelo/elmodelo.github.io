@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import type { LocaleMessages } from '../locales/types';
 import type { SavedTransactionFilter } from '../lib/transactionFilterPresets';
 
-export type AppSection = 'transactions' | 'net-worth' | 'cash-flow' | 'uncategorized' | 'preferences' | 'account' | `saved-filter:${string}`;
+export type AppSection = 'transactions' | 'net-worth' | 'net-worth-charts' | 'cash-flow' | 'uncategorized' | 'preferences' | 'account' | `saved-filter:${string}`;
 
 export function savedFilterSection(id: string): AppSection {
   return `saved-filter:${id}`;
@@ -81,6 +81,11 @@ export default function Menu({ messages, section, onSelect, toggleTarget, uncate
               >
                 {item.label}
               </button>
+              {item.id === 'net-worth' && <button type="button" className="menu-button menu-subsection"
+                aria-current={section === 'net-worth-charts' ? 'page' : undefined}
+                onClick={() => { onSelect('net-worth-charts'); setExpanded(false); }}>
+                {messages.netWorthCharts}
+              </button>}
               {item.id === 'transactions' && uncategorizedCount > 0 && (
                 <button
                   type="button"

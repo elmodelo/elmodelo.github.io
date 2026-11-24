@@ -1,6 +1,19 @@
 import type { LocaleMessages } from './types';
 
 const en: LocaleMessages = {
+  netWorthCharts: "Charts",
+  netWorthChartsStart: "Start date",
+  netWorthChartsTotals: "Monthly assets, liabilities and net worth (CAD)",
+  netWorthChartsGrowth: "Net worth month-over-month growth",
+  netWorthChartsAverage: "12-month rolling average",
+  netWorthChartsPortfolio: "Monthly portfolio value (CAD)",
+  netWorthChartsHelp: "Each month uses the latest known values, carried forward until updated. CAD conversion uses the closest historical Bank of Canada rate to month end, or the latest observation date in the final month.",
+  netWorthChartsGrowthHelp: "Growth is the change from the previous month divided by its net worth, including contributions and withdrawals. Growth is unavailable when the previous value is zero or negative. The rolling average requires 12 consecutive valid monthly growth rates.",
+  netWorthChartsPortfolioHelp: "Positive tracked account balances and assets only. Excludes liabilities, House and RESP.",
+  netWorthChartsIncomplete: "Some monthly values are unavailable because snapshots or currency conversions are missing. Gaps are shown instead of estimated totals.",
+  netWorthChartsError: "Could not load chart history. Please retry.",
+  netWorthChartsInspect: "Hover, tap or focus a month to inspect its values. Scroll horizontally to explore the full history.",
+  netWorthChartsData: "View monthly values",
   netWorthAssets: "Assets",
   netWorthLiabilities: "Liabilities",
   netWorthAssetsEmpty: "No assets to display.",

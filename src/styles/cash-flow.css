@@ -18,20 +18,6 @@
 .cash-flow-panel .cash-flow-heading h1 { margin: 0; }
 .cash-flow-year { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-left: auto; }
 .cash-flow-export .button { margin: 0; white-space: nowrap; }
-.cash-flow-year select {
-  min-height: var(--tap-target-min);
-  padding: 8px 36px 8px 12px;
-  appearance: none;
-  background-color: var(--surface-raised);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='%23888' stroke-width='2'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 10px center;
-  background-size: 16px;
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-}
-.cash-flow-year select:disabled { opacity: 0.65; }
 .cash-flow-scroll { flex: 1; }
 .cash-flow-table {
   width: 100%;

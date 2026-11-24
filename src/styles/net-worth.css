@@ -172,8 +172,8 @@
 .net-worth-chart-data table { width: max-content; min-width: 0; margin-inline: auto; font-size: 0.875rem; }
 .net-worth-chart-data thead th { text-align: center; }
 .net-worth-chart-wrapped-header { display: inline-block; max-width: 16ch; white-space: normal; overflow-wrap: anywhere; }
-.net-worth-chart-viewport { position: relative; display: grid; grid-template-columns: 88px minmax(0, 1fr); }
-.net-worth-chart-y-axis { display: block; }
+.net-worth-chart-viewport { position: relative; display: grid; grid-template-columns: 48px minmax(0, 1fr); }
+.net-worth-chart-y-axis { display: block; pointer-events: none; }
 .net-worth-chart-axis-label { fill: var(--text-muted); font: 11px system-ui, sans-serif; }
 .net-worth-chart-grid { stroke: var(--border); }
 

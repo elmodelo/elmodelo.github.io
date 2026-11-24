@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { LocaleMessages } from '../locales/types';
 import type { Account } from '../hooks/useTrackedAccounts';
 import { usePreferences } from '../hooks/usePreferences';
@@ -56,6 +56,16 @@ export default function NetWorthChartsPanel({ messages, accounts: allAccounts, t
 }
 
 function Charts({ messages, rows }: { messages: LocaleMessages; rows: MonthlyRow[] }) {
+  const [axisWidth, setAxisWidth] = useState(48);
+  const widestAxis = useRef(0);
+  const measureAxis = useCallback((labelWidth: number) => {
+    const required = Math.ceil(labelWidth) + 12;
+    // Share the widest label across all charts; never shrink during a scroll.
+    if (required > widestAxis.current) {
+      widestAxis.current = required;
+      setAxisWidth(required);
+    }
+  }, []);
   const [viewport, setViewport] = useState({ scrollLeft: 0, width: 720 });
   const contentWidth = rows.length * MONTH_WIDTH;
   const coordinator = useMemo(() => createChartScrollCoordinator(setViewport, contentWidth), [contentWidth]);
@@ -73,10 +83,10 @@ function Charts({ messages, rows }: { messages: LocaleMessages; rows: MonthlyRow
   }), [messages]);
   return <div className="net-worth-cards">
     <MonthlyChart messages={messages} title={messages.netWorthChartsTotals} rows={rows} viewport={viewport}
-      registerViewport={coordinator.register} series={series.totals} />
+      registerViewport={coordinator.register} axisWidth={axisWidth} onAxisWidth={measureAxis} series={series.totals} />
     <MonthlyChart messages={messages} title={messages.netWorthChartsGrowth} rows={rows} viewport={viewport}
-      registerViewport={coordinator.register} percent series={series.growth} />
+      registerViewport={coordinator.register} axisWidth={axisWidth} onAxisWidth={measureAxis} percent series={series.growth} />
     <MonthlyChart messages={messages} title={messages.netWorthChartsPortfolio} rows={rows} viewport={viewport}
-      registerViewport={coordinator.register} series={series.portfolio} />
+      registerViewport={coordinator.register} axisWidth={axisWidth} onAxisWidth={measureAxis} series={series.portfolio} />
   </div>;
 }

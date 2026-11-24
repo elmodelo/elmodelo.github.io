@@ -4,13 +4,15 @@ import { MONTH_WIDTH, visibleChartDomain } from '../lib/netWorthChartViewport';
 
 export type MonthlyRow = { month: string; date: string; assets: number | null; liabilities: number | null; netWorth: number | null; portfolio: number | null; growth: number | null; average: number | null };
 export type MonthlySeries = { key: 'assets' | 'liabilities' | 'netWorth' | 'portfolio' | 'growth' | 'average'; label: string; color: string };
-export default function MonthlyChart({ messages, title, description, rows, series, percent = false, viewport = { scrollLeft: 0, width: 720 }, registerViewport }: {
+export default function MonthlyChart({ messages, title, description, rows, series, percent = false, viewport = { scrollLeft: 0, width: 720 }, registerViewport, axisWidth = 48, onAxisWidth }: {
   messages: LocaleMessages; title: string; description?: string; rows: MonthlyRow[]; series: MonthlySeries[]; percent?: boolean;
   viewport?: { scrollLeft: number; width: number }; registerViewport?: (element: HTMLDivElement) => () => void;
+  axisWidth?: number; onAxisWidth?: (labelWidth: number) => void;
 }) {
   const id = useId();
   const [active, setActive] = useState<{ month: string; x: number; y: number; keyboard: boolean } | null>(null);
   const [popupPosition, setPopupPosition] = useState({ left: 0, top: 0 });
+  const axisRef = useRef<SVGSVGElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -29,6 +31,12 @@ export default function MonthlyChart({ messages, title, description, rows, serie
     : { style: 'currency', currency: 'CAD', currencyDisplay: 'code', maximumFractionDigits: 0 }), [messages.language, percent]);
   const axis = useMemo(() => new Intl.NumberFormat(messages.language, percent
     ? { style: 'percent', maximumFractionDigits: 1 } : { notation: 'compact', maximumFractionDigits: 1 }), [messages.language, percent]);
+  const axisLabels = useMemo(() => [0, 1, 2, 3, 4].map((tick) => axis.format(min + (max - min) * tick / 4)), [axis, min, max]);
+  useLayoutEffect(() => {
+    if (!axisRef.current || !onAxisWidth) return;
+    const widths = [...axisRef.current.querySelectorAll('text')].map((text) => text.getComputedTextLength());
+    onAxisWidth(Math.max(0, ...widths));
+  }, [axisLabels, onAxisWidth]);
   const monthFormat = useMemo(() => new Intl.DateTimeFormat(messages.language,
     { year: 'numeric', month: 'short', timeZone: 'UTC' }), [messages.language]);
   const formattedRows = useMemo(() => rows.map((row) => {
@@ -81,12 +89,12 @@ export default function MonthlyChart({ messages, title, description, rows, serie
     <ul className="net-worth-chart-legend">{series.map((s) => <li key={s.key}>
       <span className="net-worth-swatch" style={{ background: s.color }} aria-hidden="true" />{s.label}
     </li>)}</ul>
-    <div ref={viewportRef} className="net-worth-chart-viewport" onPointerLeave={() => setActive(null)}
+    <div ref={viewportRef} className="net-worth-chart-viewport" style={{ gridTemplateColumns: `${axisWidth}px minmax(0, 1fr)` }} onPointerLeave={() => setActive(null)}
       onKeyDown={(event) => { if (event.key === 'Escape') setActive(null); }}>
-      <svg className="net-worth-chart-y-axis" width="88" height="330" aria-hidden="true">
+      <svg ref={axisRef} className="net-worth-chart-y-axis" width={axisWidth} height="330" aria-hidden="true">
         {[0, 1, 2, 3, 4].map((tick) => {
           const value = min + (max - min) * tick / 4;
-          return <text className="net-worth-chart-axis-label" key={tick} x="78" y={y(value) + 4} textAnchor="end">{axis.format(value)}</text>;
+          return <text className="net-worth-chart-axis-label" key={tick} x="0" y={y(value) + 4} textAnchor="start">{axisLabels[tick]}</text>;
         })}
       </svg>
       <div ref={scrollRef} onScroll={() => {

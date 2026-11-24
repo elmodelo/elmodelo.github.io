@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabaseClient';
 import { buildMonthlyNetWorth, loadNetWorthCharts } from '../lib/netWorthCharts';
 import LoadingDialog from './LoadingDialog';
 import { MONTH_WIDTH, createChartScrollCoordinator } from '../lib/netWorthChartViewport';
-import MonthlyChart, { type MonthlyRow } from './NetWorthMonthlyChart';
+import MonthlyChart, { type MonthlyRow, type MonthlySeries } from './NetWorthMonthlyChart';
 type Result = Awaited<ReturnType<typeof loadNetWorthCharts>>;
 interface Props {
   messages: LocaleMessages; accounts: Account[]; trackedAccountIds: string[];
@@ -59,20 +59,24 @@ function Charts({ messages, rows }: { messages: LocaleMessages; rows: MonthlyRow
   const [viewport, setViewport] = useState({ scrollLeft: 0, width: 720 });
   const contentWidth = rows.length * MONTH_WIDTH;
   const coordinator = useMemo(() => createChartScrollCoordinator(setViewport, contentWidth), [contentWidth]);
-  return (
-      <div className="net-worth-cards">
-        <MonthlyChart messages={messages} title={messages.netWorthChartsTotals} rows={rows} viewport={viewport} registerViewport={coordinator.register} series={[
-          { key: 'liabilities', label: messages.netWorthLiabilities, color: '#cf6b29' },
-          { key: 'assets', label: messages.netWorthAssets, color: '#2878b5' },
-          { key: 'netWorth', label: messages.netWorth, color: '#339875' },
-        ]} />
-        <MonthlyChart messages={messages} title={messages.netWorthChartsGrowth} rows={rows} viewport={viewport} registerViewport={coordinator.register} percent series={[
-          { key: 'growth', label: messages.netWorthChartsGrowth, color: '#2878b5' },
-          { key: 'average', label: messages.netWorthChartsAverage, color: '#cf6b29' },
-        ]} />
-        <MonthlyChart messages={messages} title={messages.netWorthChartsPortfolio} rows={rows} viewport={viewport} registerViewport={coordinator.register} series={[
-          { key: 'portfolio', label: messages.netWorthChartsPortfolio, color: '#2878b5' },
-        ]} />
-      </div>
-  );
+  const series = useMemo<Record<'totals' | 'growth' | 'portfolio', MonthlySeries[]>>(() => ({
+    totals: [
+      { key: 'liabilities', label: messages.netWorthLiabilities, color: '#cf6b29' },
+      { key: 'assets', label: messages.netWorthAssets, color: '#2878b5' },
+      { key: 'netWorth', label: messages.netWorth, color: '#339875' },
+    ],
+    growth: [
+      { key: 'growth', label: messages.netWorthChartsGrowth, color: '#2878b5' },
+      { key: 'average', label: messages.netWorthChartsAverage, color: '#cf6b29' },
+    ],
+    portfolio: [{ key: 'portfolio', label: messages.netWorthChartsPortfolio, color: '#2878b5' }],
+  }), [messages]);
+  return <div className="net-worth-cards">
+    <MonthlyChart messages={messages} title={messages.netWorthChartsTotals} rows={rows} viewport={viewport}
+      registerViewport={coordinator.register} series={series.totals} />
+    <MonthlyChart messages={messages} title={messages.netWorthChartsGrowth} rows={rows} viewport={viewport}
+      registerViewport={coordinator.register} percent series={series.growth} />
+    <MonthlyChart messages={messages} title={messages.netWorthChartsPortfolio} rows={rows} viewport={viewport}
+      registerViewport={coordinator.register} series={series.portfolio} />
+  </div>;
 }

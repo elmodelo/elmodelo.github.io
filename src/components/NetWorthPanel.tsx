@@ -68,18 +68,22 @@ export default function NetWorthPanel({ messages, accounts: allAccounts, tracked
   const holdingSaved = () => { setSaved({ message: messages.assetSaved }); retry(); };
   return <section className="dashboard-panel net-worth-panel" aria-labelledby={titleId}>
     <div className="net-worth-heading">
-      <h1 id={titleId}>{messages.netWorth}</h1>
-      <NetWorthActions messages={messages} onAdd={setCreating}
-        historical={displayedDate !== null} historyAvailable={accountsStatus === 'ready'} onHistorical={() => setChoosingDate(true)}
-        showInactive={showInactive} onShowInactiveChange={setShowInactive}
-        includeResp={includeResp} onIncludeRespChange={(value) => update('netWorthIncludeResp', value)} />
+      <div className="net-worth-heading-labels">
+        <h1 id={titleId}>{messages.netWorth}</h1>
+        {displayedDate && <time className="net-worth-historical-bar" role="status" dateTime={displayedDate}>
+          ({new Intl.DateTimeFormat(messages.language, {
+            year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC',
+          }).format(new Date(displayedDate))})
+        </time>}
+      </div>
+      <div className="net-worth-heading-controls">
+        {displayedDate && <button type="button" className="button button-secondary" onClick={() => selectDate(null)}>{messages.netWorthCurrent}</button>}
+        <NetWorthActions messages={messages} onAdd={setCreating}
+          historical={displayedDate !== null} historyAvailable={accountsStatus === 'ready'} onHistorical={() => setChoosingDate(true)}
+          showInactive={showInactive} onShowInactiveChange={setShowInactive}
+          includeResp={includeResp} onIncludeRespChange={(value) => update('netWorthIncludeResp', value)} />
+      </div>
     </div>
-    {displayedDate && <div className="net-worth-historical-bar">
-      <p role="status">{messages.netWorthHistoricalAsOf.replace('{date}', new Intl.DateTimeFormat(messages.language, {
-        year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC',
-      }).format(new Date(displayedDate)))}</p>
-      <button type="button" className="button button-secondary" onClick={() => selectDate(null)}>{messages.netWorthCurrent}</button>
-    </div>}
     {choosingDate && <HistoricalNetWorthDialog messages={messages} accounts={accounts} selectedDate={displayedDate}
       onClose={() => setChoosingDate(false)} onSelect={(date) => { selectDate(date); setChoosingDate(false); }} />}
     {creating && !displayedDate && <AssetSnapshotDialog messages={messages} creationType={creating} onClose={() => setCreating(null)} onSaved={(inactive) => {

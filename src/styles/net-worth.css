@@ -135,11 +135,24 @@
   .asset-snapshot-dialog { padding: 20px; }
 }
 
-.net-worth-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
-.net-worth-heading h1 { margin: 0; }
-.net-worth-historical-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
-.net-worth-historical-bar p { margin: 0; font-weight: 600; }
-.net-worth-historical-bar .button { margin: 0; }
+.net-worth-heading { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 44px; margin-bottom: 24px; }
+.net-worth-heading-labels { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; font-size: clamp(24px, 4vw, 30px); line-height: 1.2; }
+.net-worth-heading h1 { margin: 0; min-width: 0; white-space: nowrap; font-size: inherit; line-height: inherit; }
+.net-worth-heading-controls { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.net-worth-heading-controls .button { margin: 0; white-space: nowrap; }
+.net-worth-historical-bar { margin: 0; min-width: 0; font-size: inherit; line-height: inherit; color: inherit; }
+@media (max-height: 500px) and (orientation: landscape) {
+  .net-worth-heading-labels { font-size: 20px; }
+}
+@container net-worth (max-width: 640px) {
+  /* Use the existing heading-to-card gap for the date on narrow panels, so
+     historical mode never adds a row of height above the cards. */
+  .net-worth-heading { margin-bottom: 40px; }
+  .net-worth-historical-bar { position: absolute; inset-inline-start: 0; top: 100%; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .net-worth-heading h1 { overflow: hidden; text-overflow: ellipsis; }
+  .net-worth-heading-controls { gap: 8px; }
+  .net-worth-heading-controls .button { max-width: 128px; padding-inline: 10px; white-space: normal; line-height: 1.2; }
+}
 .historical-date-fields { display: grid; grid-template-columns: minmax(80px, 1fr) minmax(120px, 2fr) minmax(64px, 1fr); gap: 12px; }
 @media (max-width: 400px) {
   .historical-date-fields { grid-template-columns: minmax(0, 1fr); }

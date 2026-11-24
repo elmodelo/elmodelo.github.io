@@ -131,6 +131,10 @@ tracked accounts, RESP inclusion and inactive-holding visibility still apply;
 historical account names and tracked-account preferences are not reconstructed.
 The selected date is held in panel state only. Historical mode hides create/update
 actions and displays the selected date with **Return to current**.
+The historical date appears in parentheses beside the panel title at the same
+font size, and **Return to current** sits to the left of the overflow button.
+In the single-column layout, the date appears directly under the title in space
+reserved in both modes, keeping the cards' top position unchanged between modes.
 Changing dates, returning to current, or retrying keeps the existing cards mounted
 beneath a loading-spinner dialog. Values and their displayed date update together
 when the request completes. A failed request removes the spinner, retains the

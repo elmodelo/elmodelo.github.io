@@ -12,7 +12,6 @@ const en: LocaleMessages = {
   netWorthTableTotal: "Total",
   netWorthShowInactive: "Show inactive accounts, assets and liabilities",
   netWorthHistorical: "Historical",
-  netWorthHistoricalAsOf: "Historical view: {date}",
   netWorthHistoricalHelp: "Choose a date within the available history. Values carry forward until the next observation. USD conversion uses the Bank of Canada rate closest to your selected date.",
   netWorthHistoryLoading: "Loading available dates…",
   netWorthHistoryError: "Could not load available dates. Please retry.",

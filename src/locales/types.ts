@@ -10,7 +10,6 @@ export interface LocaleMessages {
   netWorthTableTotal: string;
   netWorthShowInactive: string;
   netWorthHistorical: string;
-  netWorthHistoricalAsOf: string;
   netWorthHistoricalHelp: string;
   netWorthHistoryLoading: string;
   netWorthHistoryError: string;

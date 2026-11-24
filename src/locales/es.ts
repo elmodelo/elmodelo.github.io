@@ -12,7 +12,6 @@ const es: LocaleMessages = {
   netWorthTableTotal: "Total",
   netWorthShowInactive: "Mostrar cuentas, activos y pasivos inactivos",
   netWorthHistorical: "Histórico",
-  netWorthHistoricalAsOf: "Vista histórica: {date}",
   netWorthHistoricalHelp: "Elige una fecha dentro del historial disponible. Los valores se mantienen hasta la siguiente observación. La conversión de USD usa el tipo del Banco de Canadá más cercano a la fecha seleccionada.",
   netWorthHistoryLoading: "Cargando fechas disponibles…",
   netWorthHistoryError: "No se pudieron cargar las fechas disponibles. Inténtalo de nuevo.",

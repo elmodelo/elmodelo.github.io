@@ -158,9 +158,6 @@
 
 .net-worth-charts-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px; }
 .net-worth-charts-heading h1 { margin: 0; }
-.net-worth-charts-date { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.net-worth-charts-date > span { width: 100%; color: var(--text-muted); font-size: 0.875rem; }
-.net-worth-charts-date select { width: auto; min-width: 80px; }
 .net-worth-charts-help { color: var(--text-muted); line-height: 1.5; font-size: 0.875rem; margin: 0 0 20px; }
 .net-worth-chart-legend { display: flex; flex-wrap: wrap; gap: 12px 24px; list-style: none; margin: 0 0 12px; padding: 0; font-size: 0.875rem; }
 .net-worth-chart-legend li { display: flex; align-items: center; gap: 8px; }
@@ -171,11 +168,24 @@
 .net-worth-chart-zero { stroke: var(--text-muted); stroke-width: 1; }
 .net-worth-chart-scroll svg g:focus { outline: none; }
 .net-worth-chart-scroll svg g:focus > rect:first-of-type { opacity: 0.1; stroke: var(--text); }
-.net-worth-chart-readout { min-height: 3em; margin: 8px 0; font-size: 0.875rem; font-variant-numeric: tabular-nums; line-height: 1.5; }
 .net-worth-chart-data summary { cursor: pointer; color: var(--text-muted); padding: 8px 0; }
-.net-worth-chart-data table { font-size: 0.875rem; }
-.net-worth-chart-data caption { text-align: left; padding: 12px 8px; }
-.net-worth-chart-viewport { display: grid; grid-template-columns: 88px minmax(0, 1fr); }
-.net-worth-chart-y-axis { display: block; }
+.net-worth-chart-data table { width: max-content; min-width: 0; margin-inline: auto; font-size: 0.875rem; }
+.net-worth-chart-data thead th { text-align: center; }
+.net-worth-chart-wrapped-header { display: inline-block; max-width: 16ch; white-space: normal; overflow-wrap: anywhere; }
+.net-worth-chart-viewport { position: relative; display: grid; grid-template-columns: 48px minmax(0, 1fr); }
+.net-worth-chart-y-axis { display: block; pointer-events: none; }
 .net-worth-chart-axis-label { fill: var(--text-muted); font: 11px system-ui, sans-serif; }
 .net-worth-chart-grid { stroke: var(--border); }
+
+.net-worth-chart-tooltip {
+  position: absolute; z-index: 10; pointer-events: none; width: max-content;
+  max-width: min(360px, calc(100% - 16px)); max-height: calc(100% - 16px);
+  padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--surface-raised); color: var(--text); box-shadow: var(--shadow);
+  font-size: 0.875rem; line-height: 1.4;
+}
+.net-worth-chart-tooltip > strong { display: block; margin-bottom: 8px; }
+.net-worth-chart-tooltip dl { display: grid; gap: 8px; margin: 0; }
+.net-worth-chart-tooltip dl > div { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.net-worth-chart-tooltip dt { display: flex; align-items: baseline; gap: 6px; min-width: 0; overflow-wrap: anywhere; }
+.net-worth-chart-tooltip dd { margin: 0; flex-shrink: 0; font-variant-numeric: tabular-nums; white-space: nowrap; }

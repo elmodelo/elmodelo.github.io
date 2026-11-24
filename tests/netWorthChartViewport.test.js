@@ -16,63 +16,116 @@ test('visible month slots include partial months and exclude offscreen outliers'
   assert.ok(Number.isFinite(empty.min) && empty.max > empty.min);
 });
 
-test('scrolling any of three plots synchronizes all positions, avoids feedback and handles resize/cleanup', () => {
-  const viewports = [];
-  const observers = [];
-  const coordinator = createChartScrollCoordinator((viewport) => viewports.push(viewport), 720, (resize) => {
+
+function harness(contentWidth = 720, initialWidth = 300) {
+  const viewports = [], observers = [], callbacks = new Map();
+  let nextFrame = 0, canceled = 0, layoutReads = 0;
+  const frames = {
+    request(callback) { callbacks.set(++nextFrame, callback); return nextFrame; },
+    cancel(id) { canceled++; callbacks.delete(id); },
+  };
+  const coordinator = createChartScrollCoordinator((viewport) => viewports.push(viewport), contentWidth, (resize) => {
     const observer = { resize, observe() {}, disconnect() { observer.disconnected = true; } };
-    observers.push(observer);
-    return observer;
-  });
+    observers.push(observer); return observer;
+  }, frames);
   const elements = Array.from({ length: 3 }, () => {
-    const listeners = new Map();
-    return { clientWidth: 300, scrollWidth: 720, scrollLeft: 0,
+    const listeners = new Map(); let left = 0;
+    return { width: initialWidth, writes: 0,
+      get clientWidth() { layoutReads++; return this.width; },
+      get scrollLeft() { return left; },
+      set scrollLeft(value) { this.writes++; left = value; },
       addEventListener(event, listener) { listeners.set(event, listener); },
       removeEventListener(event) { listeners.delete(event); },
       scroll() { listeners.get('scroll')?.(); },
+      native(value) { left = value; this.scroll(); },
     };
   });
   const cleanup = elements.map(coordinator.register);
-  assert.deepEqual(viewports.at(-1), { scrollLeft: 420, width: 300 });
-  assert.deepEqual(elements.map(({ scrollLeft }) => scrollLeft), [420, 420, 420], 'all three plots initially show the latest month');
-  for (let index = 0; index < elements.length; index++) {
+  return { viewports, observers, elements, cleanup,
+    positions: () => elements.map(({ scrollLeft }) => scrollLeft),
+    pending: () => callbacks.size,
+    layoutReads: () => layoutReads,
+    canceled: () => canceled,
+    flush() { const pending = [...callbacks.values()]; callbacks.clear(); pending.forEach((callback) => callback()); },
+  };
+}
+
+test('scroll bursts synchronize once per frame without rewriting the native source or measuring layout', () => {
+  const h = harness();
+  assert.deepEqual(h.positions(), [420, 420, 420], 'all three plots initially show the latest month');
+  const reads = h.layoutReads();
+  for (let index = 0; index < h.elements.length; index++) {
+    h.elements.forEach((element) => { element.writes = 0; });
     const left = 72 * (index + 1);
-    elements[index].scrollLeft = left;
-    elements[index].scroll();
-    assert.deepEqual(elements.map(({ scrollLeft }) => scrollLeft), [left, left, left]);
-    assert.deepEqual(viewports.at(-1), { scrollLeft: left, width: 300 });
-    const count = viewports.length;
-    elements.forEach((element) => element.scroll());
-    assert.equal(viewports.length, count, 'programmatic scroll events do not create a feedback loop');
+    h.elements[index].native(left);
+    h.elements[index].native(left + 2);
+    assert.equal(h.pending(), 1);
+    h.flush();
+    assert.deepEqual(h.positions(), [left + 2, left + 2, left + 2]);
+    assert.equal(h.elements[index].writes, 0, 'source retains control of momentum scrolling');
+    assert.ok(h.elements.filter((_, i) => i !== index).every(({ writes }) => writes === 1));
+    const count = h.viewports.length;
+    h.elements.forEach((element) => element.scroll());
+    assert.equal(h.pending(), 0, 'programmatic follower events do not create more frames');
+    assert.equal(h.viewports.length, count);
   }
-  elements.forEach((element) => { element.clientWidth = 180; });
-  observers[0].resize();
-  assert.deepEqual(viewports.at(-1), { scrollLeft: 216, width: 180 });
-  cleanup.forEach((remove) => remove());
-  assert.ok(observers.every(({ disconnected }) => disconnected));
-  const count = viewports.length;
-  elements[0].scrollLeft = 0;
-  elements[0].scroll();
-  assert.equal(viewports.length, count);
+  assert.equal(h.layoutReads(), reads, 'scroll handling does not read clientWidth');
+  h.cleanup.forEach((remove) => remove());
 });
 
-test('initial end position uses month content width and waits for a measurable viewport', () => {
-  let resize;
-  const viewports = [];
-  const coordinator = createChartScrollCoordinator((viewport) => viewports.push(viewport), 216, (callback) => {
-    resize = callback;
-    return { observe() {}, disconnect() {} };
-  });
-  const element = { clientWidth: 0, scrollWidth: 720, scrollLeft: 0, addEventListener() {}, removeEventListener() {} };
-  const remove = coordinator.register(element);
-  element.clientWidth = 144;
-  resize();
-  assert.equal(element.scrollLeft, 72, 'initial placeholder SVG width does not add blank months');
-  assert.deepEqual(viewports.at(-1), { scrollLeft: 72, width: 144 });
-  remove();
+test('a delayed follower event cannot pull an ongoing gesture back to an older position', () => {
+  const h = harness();
+  h.elements[0].native(73); h.flush();
+  h.elements[0].native(76);
+  h.elements[1].scroll(); // Previous frame's programmatic follower event.
+  h.flush();
+  assert.deepEqual(h.positions(), [76, 76, 76]);
+  h.elements[2].native(133.5); h.flush();
+  assert.deepEqual(h.positions(), [133.5, 133.5, 133.5], 'gestures can originate on any chart');
+  h.cleanup.forEach((remove) => remove());
+});
 
-  const short = createChartScrollCoordinator(() => {}, 72, () => ({ observe() {}, disconnect() {} }));
-  const fitting = { ...element, clientWidth: 300, scrollLeft: 0 };
-  short.register(fitting)();
-  assert.equal(fitting.scrollLeft, 0, 'a range that fits needs no scrolling');
+test('React updates only when visible months or viewport width change', () => {
+  const h = harness();
+  h.elements[0].native(73); h.flush();
+  const count = h.viewports.length;
+  for (let left = 74; left < 90; left++) { h.elements[0].native(left); h.flush(); }
+  assert.equal(h.viewports.length, count, 'pixel movement within the same month slots needs no rerender');
+  assert.deepEqual(h.positions(), [89, 89, 89], 'native scroll positions still track every frame');
+  h.elements[0].native(133); h.flush();
+  assert.equal(h.viewports.length, count + 1, 'a newly visible month updates y-axis ranges');
+  h.elements.forEach((element) => { element.width = 180; });
+  h.observers[0].resize();
+  assert.deepEqual(h.viewports.at(-1), { scrollLeft: 133, width: 180 });
+  h.elements[0].native(200);
+  assert.equal(h.pending(), 1);
+  h.cleanup.forEach((remove) => remove());
+  assert.equal(h.pending(), 0);
+  assert.equal(h.canceled(), 1);
+  assert.ok(h.observers.every(({ disconnected }) => disconnected));
+  h.observers[0].resize();
+  assert.equal(h.pending(), 0);
+});
+
+test('initial end position waits for measurement and avoids blank months in a short range', () => {
+  const h = harness(216, 0);
+  h.elements.forEach((element) => { element.width = 144; });
+  h.observers[0].resize();
+  assert.deepEqual(h.positions(), [72, 72, 72]);
+  assert.deepEqual(h.viewports.at(-1), { scrollLeft: 72, width: 144 });
+  h.cleanup.forEach((remove) => remove());
+  const short = harness(72, 300);
+  assert.deepEqual(short.positions(), [0, 0, 0]);
+  short.cleanup.forEach((remove) => remove());
+});
+
+test('resizing the label gutter keeps charts pinned to the latest month when already at the end', () => {
+  const h = harness();
+  h.elements.forEach((element) => { element.width = 288; });
+  h.observers.forEach((observer) => observer.resize());
+  assert.deepEqual(h.positions(), [432, 432, 432]);
+  h.elements.forEach((element) => { element.width = 320; });
+  h.observers.forEach((observer) => observer.resize());
+  assert.deepEqual(h.positions(), [400, 400, 400]);
+  h.cleanup.forEach((remove) => remove());
 });

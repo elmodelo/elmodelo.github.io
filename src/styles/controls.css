@@ -324,8 +324,7 @@
 }
 
 /* Shared date dropdowns for dashboard reports. */
-.cash-flow-year select,
-.net-worth-charts-date select {
+.cash-flow-year select {
   min-height: var(--tap-target-min);
   padding: 8px 36px 8px 12px;
   appearance: none;
@@ -338,5 +337,4 @@
   border: 1px solid var(--border);
   border-radius: 8px;
 }
-.cash-flow-year select:disabled,
-.net-worth-charts-date select:disabled { opacity: 0.65; }
+.cash-flow-year select:disabled { opacity: 0.65; }

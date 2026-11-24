@@ -1,16 +1,12 @@
 export interface LocaleMessages {
   netWorthCharts: string;
-  netWorthChartsStart: string;
   netWorthChartsTotals: string;
   netWorthChartsGrowth: string;
   netWorthChartsAverage: string;
   netWorthChartsPortfolio: string;
   netWorthChartsHelp: string;
-  netWorthChartsGrowthHelp: string;
-  netWorthChartsPortfolioHelp: string;
   netWorthChartsIncomplete: string;
   netWorthChartsError: string;
-  netWorthChartsInspect: string;
   netWorthChartsData: string;
   netWorthAssets: string;
   netWorthLiabilities: string;

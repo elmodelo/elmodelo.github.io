@@ -1,61 +1,45 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { addMonthlyGrowth, buildMonthlyNetWorth, fetchNetWorthHistory, loadMonthlyExchangeRates } from '../src/lib/netWorthCharts.js';
+import { addMonthlyGrowth, buildMonthlyNetWorth, fetchMonthlyNetWorth, loadMonthlyExchangeRates, loadNetWorthCharts } from '../src/lib/netWorthCharts.js';
 
-const account = (id, name = id, currency = 'CAD') => ({ id, name, currency });
-const asset = (id, name = id, type = 'ASSET', currency = 'CAD') => ({ id, name, type, currency });
-const balance = (account, balance, posted_at) => ({ account, balance, posted_at });
-const count = (asset, count, posted_at) => ({ asset, count, posted_at });
-const price = (asset, value, posted_at) => ({ asset, value, posted_at });
-const empty = () => ({ accounts: [], assets: [], balances: [], counts: [], prices: [] });
+const row = (month, currency = 'CAD', overrides = {}) => ({ month, currency,
+  valuation_date: month === '2024-01' ? '2024-01-31' : '2024-02-29',
+  assets: 100, liabilities: -20, portfolio: 50, net_worth_complete: true, portfolio_complete: true, ...overrides });
+const envelope = (rows = [row('2024-01')]) => ({ version: 1, min_month: rows[0]?.month ?? null,
+  max_month: rows.at(-1)?.month ?? null, latest_date: rows.at(-1)?.valuation_date ?? null, rows });
+const clientFor = (data, error = null, inspect = () => {}) => ({ schema(schema) {
+  assert.equal(schema, 'finance');
+  return { rpc(name, args) {
+    assert.equal(name, 'net_worth_monthly'); inspect(args);
+    return { abortSignal: async () => ({ data, error }) };
+  } };
+} });
 
-test('monthly values select latest observations, carry forward gaps and independently carry quantity/price', () => {
-  const history = {
-    accounts: [account('cash'), account('debt'), account('resp', ' RESP ')],
-    assets: [asset('house', ' House '), asset('stock'), asset('loan', 'Loan', 'LIABILITY'), asset('future')],
-    balances: [balance('cash', 150, '2024-01-31T23:59:59.999Z'), balance('cash', 100, '2024-01-01'), balance('cash', 200, '2024-03-01'),
-      balance('debt', -20, '2024-01-01'), balance('resp', 50, '2024-01-01'), balance('untracked', 99999, '2020-01-01')],
-    counts: [count('house', 1, '2024-01-01'), count('stock', 2, '2024-01-01'), count('stock', 3, '2024-02-01'), count('loan', 1, '2024-01-01'), count('future', 1, '2024-03-01')],
-    prices: [price('house', 1000, '2024-01-01'), price('stock', 10, '2024-01-01'), price('stock', 20, '2024-03-01'), price('loan', -100, '2024-01-01'), price('future', 10, '2024-03-01')],
-  };
-  const rows = buildMonthlyNetWorth(history);
-  assert.deepEqual(rows.map(({ month, assets, liabilities, netWorth, portfolio }) => ({ month, assets, liabilities, netWorth, portfolio })), [
-    { month: '2024-01', assets: 1170, liabilities: -120, netWorth: 1050, portfolio: 170 },
-    { month: '2024-02', assets: 1180, liabilities: -120, netWorth: 1060, portfolio: 180 },
-    { month: '2024-03', assets: 1270, liabilities: -120, netWorth: 1150, portfolio: 270 },
-  ]);
-  assert.equal(rows[0].growth, null);
-  assert.equal(rows[1].growth, 10 / 1050);
-  const withResp = buildMonthlyNetWorth(history, {}, true);
-  assert.equal(withResp[0].netWorth, 1100);
-  assert.equal(withResp[0].portfolio, 170, 'RESP excluded from portfolio regardless of preference');
-  assert.equal(rows.at(-1).date, '2024-03-01');
-  assert.equal(rows[1].date, '2024-02-29');
+test('monthly currency totals convert to CAD before net worth and growth calculations', () => {
+  const rows = buildMonthlyNetWorth([
+    row('2024-01'), row('2024-01', 'USD'),
+    row('2024-02', 'CAD', { assets: 200 }), row('2024-02', 'USD'),
+  ], { '2024-01': { USD: 1.4 }, '2024-02': { USD: 1.5 } });
+  assert.equal(rows[0].assets, 240);
+  assert.equal(rows[0].liabilities, -48);
+  assert.equal(rows[0].netWorth, 192);
+  assert.equal(rows[0].portfolio, 120);
+  assert.equal(rows[1].netWorth, 300);
+  assert.equal(rows[1].growth, 108 / 192);
+  assert.deepEqual(buildMonthlyNetWorth([]), []);
 });
 
-test('missing prices and exchange rates create gaps; missing excluded holdings do not hide portfolio', () => {
-  const history = { ...empty(), accounts: [account('usd', 'USD', 'USD')], assets: [asset('house', 'House')],
-    balances: [balance('usd', 100, '2024-01-10'), balance('usd', 0, '2024-02-10')], counts: [count('house', 1, '2024-01-01')] };
-  const missing = buildMonthlyNetWorth(history);
-  assert.equal(missing[0].netWorth, null);
-  assert.equal(missing[0].portfolio, null);
-  assert.equal(missing[1].portfolio, 0, 'zero balances need no exchange rate');
-  const converted = buildMonthlyNetWorth(history, { '2024-01': { USD: 1.4 } });
-  assert.equal(converted[0].portfolio, 140);
-  assert.equal(converted[0].netWorth, null, 'partially observed asset is incomplete');
-  assert.deepEqual(buildMonthlyNetWorth(empty()), []);
-  assert.throws(() => buildMonthlyNetWorth({ ...empty(), accounts: [account('a')], balances: [balance('a', 'NaN', '2024-01-01')] }));
-});
-
-test('portfolio follows positive balances when an account crosses zero and excludes named RESP assets', () => {
-  const history = { ...empty(), accounts: [account('a')], assets: [asset('r', 'RESP')],
-    counts: [count('r', 1, '2024-01-01')], prices: [price('r', 100, '2024-01-01')],
-    balances: [balance('a', -20, '2024-01-01'), balance('a', 30, '2024-02-01')] };
-  const rows = buildMonthlyNetWorth(history);
-  assert.equal(rows[0].portfolio, 0);
-  assert.equal(rows[1].portfolio, 30);
-  assert.equal(rows[0].liabilities, -20);
-  assert.equal(rows[1].liabilities, 0);
+test('missing rates, incomplete sources, zero totals and overflow never fabricate values', () => {
+  const missingFx = buildMonthlyNetWorth([row('2024-01', 'USD')])[0];
+  assert.equal(missingFx.netWorth, null); assert.equal(missingFx.portfolio, null);
+  const noPortfolioFx = buildMonthlyNetWorth([row('2024-01', 'USD', { portfolio: 0 })])[0];
+  assert.equal(noPortfolioFx.netWorth, null); assert.equal(noPortfolioFx.portfolio, 0);
+  const incomplete = buildMonthlyNetWorth([row('2024-01', 'CAD', { net_worth_complete: false })])[0];
+  assert.equal(incomplete.netWorth, null); assert.equal(incomplete.portfolio, 50);
+  const portfolioGap = buildMonthlyNetWorth([row('2024-01', 'CAD', { portfolio_complete: false })])[0];
+  assert.equal(portfolioGap.netWorth, 80); assert.equal(portfolioGap.portfolio, null);
+  const overflow = buildMonthlyNetWorth([row('2024-01', 'USD', { assets: 1e308 })], { '2024-01': { USD: 100 } })[0];
+  assert.equal(overflow.netWorth, null);
 });
 
 test('growth requires positive baseline; full 12-month averages include history before a selected range', () => {
@@ -85,28 +69,35 @@ test('FX uses a single range request, closest rate, earlier tie, and no distant 
   await assert.rejects(() => loadMonthlyExchangeRates(rows, undefined, async () => ({ ok: false })));
 });
 
-test('history is paginated, selects only tracked accounts and handles empty selections/failure', async () => {
-  const calls = [];
-  const accounts = [account('tracked')];
-  const client = { schema(schema) {
-    assert.equal(schema, 'finance');
-    return { from(table) {
-      const call = { table }; calls.push(call);
-      const query = {
-        select() { return query; }, order(key) { assert.equal(key, 'id'); return query; },
-        range(start, end) { call.start = start; assert.equal(end, start + 499); return query; },
-        in(key, ids) { assert.equal(key, 'account'); assert.deepEqual(ids, ['tracked']); return query; },
-        abortSignal() { return Promise.resolve({ data: table === 'balance' ? Array.from({ length: call.start === 0 ? 500 : 2 }, (_, i) => ({ id: String(call.start + i) })) : [] }); },
-      };
-      return query;
-    } };
-  } };
-  const result = await fetchNetWorthHistory(client, accounts);
-  assert.equal(result.balances.length, 502);
-  assert.equal(calls.filter(({ table }) => table === 'balance').length, 2);
-  calls.length = 0;
-  await fetchNetWorthHistory(client, []);
-  assert.equal(calls.some(({ table }) => table === 'balance'), false);
+
+test('one RPC returns the complete range and forwards selection, RESP and cancellation', async () => {
+  let calls = 0;
+  const data = envelope([row('2024-01'), row('2024-01', 'USD'), row('2024-02'), row('2024-02', 'USD')]);
+  const client = clientFor(data, null, (args) => {
+    calls++; assert.deepEqual(args, { p_accounts: ['tracked'], p_include_resp: true });
+  });
+  assert.deepEqual(await fetchMonthlyNetWorth(client, [{ id: 'tracked' }], undefined, true), data.rows);
+  assert.equal(calls, 1);
+  assert.deepEqual(await fetchMonthlyNetWorth(clientFor(envelope([])), []), []);
   const aborted = new AbortController(); aborted.abort();
-  await assert.rejects(() => fetchNetWorthHistory(client, [], aborted.signal));
+  await assert.rejects(() => fetchMonthlyNetWorth(client, [{ id: 'tracked' }], aborted.signal, true), /Aborted/);
+  await assert.rejects(() => fetchMonthlyNetWorth(clientFor(null, { code: 'PGRST202' }), []), /unavailable/);
+  const cadOnly = await loadNetWorthCharts(clientFor(envelope()), []);
+  assert.equal(cadOnly.conversionError, false);
+  assert.equal(cadOnly.monthly.length, 1);
+});
+
+test('invalid or truncated RPC responses fail instead of rendering misleading totals', async () => {
+  const invalid = [null, {}, { ...envelope(), version: 2 },
+    envelope([row('2024-01'), row('2024-01')]),
+    envelope([row('2024-01', 'CAD', { assets: 'NaN' })]),
+    envelope([row('2024-01', 'CAD', { liabilities: 1 })]),
+    envelope([row('2024-01', 'CAD', { net_worth_complete: null })]),
+    envelope([row('2024-01', 'EUR')]),
+    { ...envelope(), latest_date: '2024-02-01' },
+    { ...envelope([]), min_month: '2024-01' },
+    { ...envelope(), min_month: '2023-12' },
+    envelope([row('2024-01'), row('2024-01', 'USD'), row('2024-02')]),
+  ];
+  for (const data of invalid) await assert.rejects(() => fetchMonthlyNetWorth(clientFor(data), []), /Invalid monthly/);
 });

@@ -12,8 +12,8 @@ test('database preferences validate fields, retain unknown keys, and preserve da
   try {
     const { parsePreferences } = await server.ssrLoadModule('/src/lib/preferences.ts');
     const { DEFAULT_TRANSACTION_PREFERENCES: defaults, isTransactionPreferences: validate, changeTransactionSort } = await server.ssrLoadModule('/src/lib/transactionPreferences.ts');
-    assert.deepEqual(parsePreferences(null), { theme: null, language: null, trackedAccounts: null, cashFlowAccounts: null, netWorthIncludeResp: false, netWorthChartsStartMonth: null, transactions: defaults, transaction_filters: [] });
-    const saved = { transaction_filters: [], theme: 'dark', language: 'es', trackedAccounts: [], cashFlowAccounts: ['cash-only'], netWorthIncludeResp: false, netWorthChartsStartMonth: null, transactions: { ...defaults, pageSize: 100 }, future: { enabled: true } };
+    assert.deepEqual(parsePreferences(null), { theme: null, language: null, trackedAccounts: null, cashFlowAccounts: null, netWorthIncludeResp: false, transactions: defaults, transaction_filters: [] });
+    const saved = { transaction_filters: [], theme: 'dark', language: 'es', trackedAccounts: [], cashFlowAccounts: ['cash-only'], netWorthIncludeResp: false, transactions: { ...defaults, pageSize: 100 }, future: { enabled: true } };
     assert.deepEqual(parsePreferences(saved), saved);
     assert.equal(parsePreferences({ ...saved, netWorthIncludeResp: true }).netWorthIncludeResp, true);
     for (const invalid of [undefined, null, 'true', 'false', 1, {}, []]) {
@@ -129,23 +129,15 @@ test('account preferences expose separate localized selections over all availabl
   } finally { await server.close(); }
 });
 
-test('chart start month persists through preference saves and reloads, with safe defaults for invalid values', async () => {
+test('retired chart start preference is discarded without losing unrelated preferences', async () => {
   const server = await makeServer();
   try {
-    const { parsePreferences, createPreferencesWriter } = await server.ssrLoadModule('/src/lib/preferences.ts');
-    assert.equal(parsePreferences({}).netWorthChartsStartMonth, null);
-    for (const invalid of [null, undefined, '', '2024-00', '2024-13', '2024-1', '2024-01-01', '0000-01', 202401, {}, []]) {
-      const parsed = parsePreferences({ netWorthChartsStartMonth: invalid, language: 'es' });
-      assert.equal(parsed.netWorthChartsStartMonth, null);
-      assert.equal(parsed.language, 'es');
-    }
-    let stored;
-    const write = createPreferencesWriter(async (preferences) => { stored = JSON.stringify(preferences); });
-    for (const month of ['2020-01', '2024-02', '2026-12']) {
-      await write({ ...parsePreferences({ theme: 'dark' }), netWorthChartsStartMonth: month });
-      const restored = parsePreferences(JSON.parse(stored));
-      assert.equal(restored.netWorthChartsStartMonth, month);
-      assert.equal(restored.theme, 'dark');
+    const { parsePreferences } = await server.ssrLoadModule('/src/lib/preferences.ts');
+    for (const value of ['2024-02', null, { invalid: true }]) {
+      const parsed = parsePreferences({ netWorthChartsStartMonth: value, theme: 'dark', future: 'preserved' });
+      assert.equal(Object.hasOwn(parsed, 'netWorthChartsStartMonth'), false);
+      assert.equal(parsed.theme, 'dark');
+      assert.equal(parsed.future, 'preserved');
     }
   } finally { await server.close(); }
 });

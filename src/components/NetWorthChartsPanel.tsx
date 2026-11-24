@@ -57,7 +57,7 @@ export default function NetWorthChartsPanel({ messages, accounts: allAccounts, t
 
 function Charts({ messages, rows }: { messages: LocaleMessages; rows: MonthlyRow[] }) {
   const [axisWidth, setAxisWidth] = useState(48);
-  const widestAxis = useRef(0);
+  const widestAxis = useRef(48);
   const measureAxis = useCallback((labelWidth: number) => {
     const required = Math.ceil(labelWidth) + 12;
     // Share the widest label across all charts; never shrink during a scroll.

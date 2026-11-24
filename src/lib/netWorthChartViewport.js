@@ -29,9 +29,12 @@ export function createChartScrollCoordinator(onChange, contentWidth,
   let pendingFrame = null;
   let source = null;
 
-  const publish = (scrollLeft, origin = null) => {
+  const measuredWidth = () => {
     const widths = [...elements.values()].map(({ width }) => width).filter((width) => width > 0);
-    const width = widths.length ? Math.min(...widths) : viewport.width;
+    return widths.length ? Math.min(...widths) : viewport.width;
+  };
+  const publish = (scrollLeft, origin = null) => {
+    const width = measuredWidth();
     scrollLeft = Math.max(0, Math.min(scrollLeft, Math.max(0, contentWidth - width)));
     viewport = { scrollLeft, width };
     for (const [element, entry] of elements) {
@@ -67,11 +70,13 @@ export function createChartScrollCoordinator(onChange, contentWidth,
       };
       const measure = () => {
         if (!elements.has(element)) return;
+        const atEnd = !source && Math.abs(viewport.scrollLeft - Math.max(0, contentWidth - viewport.width)) < 0.01;
         entry.width = element.clientWidth;
         if (!initialized && entry.width > 0) {
           initialized = true;
           publish(Math.max(0, contentWidth - entry.width));
-        } else publish(source?.scrollLeft ?? viewport.scrollLeft, source);
+        } else publish(atEnd ? Math.max(0, contentWidth - measuredWidth())
+          : source?.scrollLeft ?? viewport.scrollLeft, source);
       };
       const observer = observe(measure);
       element.addEventListener('scroll', onScroll, { passive: true });

@@ -118,3 +118,14 @@ test('initial end position waits for measurement and avoids blank months in a sh
   assert.deepEqual(short.positions(), [0, 0, 0]);
   short.cleanup.forEach((remove) => remove());
 });
+
+test('resizing the label gutter keeps charts pinned to the latest month when already at the end', () => {
+  const h = harness();
+  h.elements.forEach((element) => { element.width = 288; });
+  h.observers.forEach((observer) => observer.resize());
+  assert.deepEqual(h.positions(), [432, 432, 432]);
+  h.elements.forEach((element) => { element.width = 320; });
+  h.observers.forEach((observer) => observer.resize());
+  assert.deepEqual(h.positions(), [400, 400, 400]);
+  h.cleanup.forEach((remove) => remove());
+});

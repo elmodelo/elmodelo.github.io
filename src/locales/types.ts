@@ -5,8 +5,6 @@ export interface LocaleMessages {
   netWorthChartsAverage: string;
   netWorthChartsPortfolio: string;
   netWorthChartsHelp: string;
-  netWorthChartsGrowthHelp: string;
-  netWorthChartsPortfolioHelp: string;
   netWorthChartsIncomplete: string;
   netWorthChartsError: string;
   netWorthChartsData: string;

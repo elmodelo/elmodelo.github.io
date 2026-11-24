@@ -117,8 +117,8 @@ export default function MonthlyChart({ messages, title, description, rows, serie
     </div>
     <details className="net-worth-chart-data"><summary>{messages.netWorthChartsData}</summary>
       <div className="net-worth-chart-scroll" tabIndex={0} role="region" aria-label={title}>
-        <table className="net-worth-table"><caption>{title}</caption><thead><tr><th scope="col">{messages.netWorthHistoryMonth}</th>
-          {series.map((s) => <th scope="col" key={s.key}>{s.label}</th>)}</tr></thead>
+        <table className="net-worth-table" aria-labelledby={`${id}-title`}><thead><tr><th scope="col">{messages.netWorthHistoryMonth}</th>
+          {series.map((s) => <th scope="col" key={s.key}><span className={percent ? 'net-worth-chart-wrapped-header' : undefined}>{s.label}</span></th>)}</tr></thead>
           <tbody>{rows.map((row) => <tr key={row.month}><th scope="row">{month(row.month)}</th>
             {series.map((s) => <td key={s.key} className="net-worth-amount">{valueLabel(row[s.key])}</td>)}</tr>)}</tbody>
         </table>

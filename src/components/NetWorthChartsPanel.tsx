@@ -66,11 +66,11 @@ function Charts({ messages, rows }: { messages: LocaleMessages; rows: MonthlyRow
           { key: 'assets', label: messages.netWorthAssets, color: '#2878b5' },
           { key: 'netWorth', label: messages.netWorth, color: '#339875' },
         ]} />
-        <MonthlyChart messages={messages} title={messages.netWorthChartsGrowth} description={messages.netWorthChartsGrowthHelp} rows={rows} viewport={viewport} registerViewport={coordinator.register} percent series={[
+        <MonthlyChart messages={messages} title={messages.netWorthChartsGrowth} rows={rows} viewport={viewport} registerViewport={coordinator.register} percent series={[
           { key: 'growth', label: messages.netWorthChartsGrowth, color: '#2878b5' },
           { key: 'average', label: messages.netWorthChartsAverage, color: '#cf6b29' },
         ]} />
-        <MonthlyChart messages={messages} title={messages.netWorthChartsPortfolio} description={messages.netWorthChartsPortfolioHelp} rows={rows} viewport={viewport} registerViewport={coordinator.register} series={[
+        <MonthlyChart messages={messages} title={messages.netWorthChartsPortfolio} rows={rows} viewport={viewport} registerViewport={coordinator.register} series={[
           { key: 'portfolio', label: messages.netWorthChartsPortfolio, color: '#2878b5' },
         ]} />
       </div>

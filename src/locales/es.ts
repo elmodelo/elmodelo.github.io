@@ -7,8 +7,6 @@ const es: LocaleMessages = {
   netWorthChartsAverage: "Promedio móvil de 12 meses",
   netWorthChartsPortfolio: "Valor mensual de la cartera (CAD)",
   netWorthChartsHelp: "Cada mes usa los últimos valores conocidos, que se mantienen hasta su actualización. La conversión a CAD usa el tipo de cambio histórico del Banco de Canadá más cercano al cierre del mes, o a la última observación en el mes final.",
-  netWorthChartsGrowthHelp: "El crecimiento es el cambio respecto al mes anterior dividido por su patrimonio neto, incluidos aportes y retiros. No está disponible cuando el valor anterior es cero o negativo. El promedio móvil requiere 12 tasas mensuales válidas consecutivas.",
-  netWorthChartsPortfolioHelp: "Solo saldos positivos de cuentas seguidas y activos. Excluye pasivos, House y RESP.",
   netWorthChartsIncomplete: "Algunos valores mensuales no están disponibles porque faltan registros o conversiones de moneda. Se muestran huecos en lugar de totales estimados.",
   netWorthChartsError: "No se pudo cargar el historial de los gráficos. Inténtalo de nuevo.",
   netWorthChartsData: "Ver valores mensuales",

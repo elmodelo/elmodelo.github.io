@@ -20,7 +20,8 @@ test('monthly charts render accessible localized values and preserve gaps in gro
       assert.ok(markup.includes(messages.netWorthUnavailable));
       assert.doesNotMatch(markup, /net-worth-chart-readout|<title>/);
       assert.match(markup, /<table/);
-      assert.match(markup, /<caption>/);
+      assert.doesNotMatch(markup, /<caption>/);
+      assert.match(markup, /<table class="net-worth-table" aria-labelledby="[^"]+-title"/);
       assert.match(markup, /tabindex="0" role="img" aria-label=/);
       assert.match(markup, /<path d="M[^L"]+ M[^L"]+"/);
       assert.doesNotMatch(markup, /stroke-dasharray|dashed/);

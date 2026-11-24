@@ -22,7 +22,7 @@ test('monthly charts render accessible localized values and preserve gaps in gro
       assert.match(markup, /<caption>/);
       assert.match(markup, /tabindex="0" role="img" aria-label=/);
       assert.match(markup, /<path d="M[^L"]+ M[^L"]+"/);
-      assert.match(markup, /stroke-dasharray="7 5"/);
+      assert.doesNotMatch(markup, /stroke-dasharray|dashed/);
       assert.doesNotMatch(markup, /NaN|Infinity/);
       const columns = renderToStaticMarkup(createElement(MonthlyChart, {
         messages, title: messages.netWorthChartsTotals, rows,

@@ -37,8 +37,8 @@ export default function MonthlyChart({ messages, title, description, rows, serie
   return <section className="net-worth-card net-worth-monthly-card" aria-labelledby={`${id}-title`}>
     <h2 id={`${id}-title`}>{title}</h2>
     {description && <p className="net-worth-charts-help">{description}</p>}
-    <ul className="net-worth-chart-legend">{series.map((s, index) => <li key={s.key}>
-      <span className="net-worth-swatch" style={{ background: s.color, ...(percent && index === 1 ? { background: 'transparent', borderTop: `3px dashed ${s.color}`, borderRadius: 0 } : {}) }} aria-hidden="true" />{s.label}
+    <ul className="net-worth-chart-legend">{series.map((s) => <li key={s.key}>
+      <span className="net-worth-swatch" style={{ background: s.color }} aria-hidden="true" />{s.label}
     </li>)}</ul>
     <div className="net-worth-chart-viewport">
       <svg className="net-worth-chart-y-axis" width="88" height="330" aria-hidden="true">
@@ -55,7 +55,7 @@ export default function MonthlyChart({ messages, title, description, rows, serie
           return <line key={tick} className="net-worth-chart-grid" x1="0" x2={width} y1={y(value)} y2={y(value)} />;
         })}
         <line className="net-worth-chart-zero" x1="0" x2={width} y1={y(0)} y2={y(0)} />
-        {percent && series.map((s, index) => <path key={s.key} d={linePath(s.key)} clipPath={`url(#${id}-plot)`} fill="none" stroke={s.color} strokeWidth="2.5" strokeDasharray={index === 1 ? '7 5' : undefined} />)}
+        {percent && series.map((s) => <path key={s.key} d={linePath(s.key)} clipPath={`url(#${id}-plot)`} fill="none" stroke={s.color} strokeWidth="2.5" />)}
         {rows.map((row, index) => <g key={row.month} tabIndex={0} role="img" aria-label={label(row)}
           onPointerEnter={() => setActive(row.month)} onPointerLeave={() => setActive(null)}
           onFocus={() => setActive(row.month)} onBlur={() => setActive(null)} onClick={() => setActive(row.month)}>

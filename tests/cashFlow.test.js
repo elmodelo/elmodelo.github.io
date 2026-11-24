@@ -140,11 +140,13 @@ test('panel starts on the current year, with localized loading and empty-account
       const messages = getLocaleMessages(language);
       const markup = renderToStaticMarkup(createElement(CashFlowPanel, { messages, accounts: [], cashFlowAccountIds: ['cad'] }));
       assert.ok(markup.includes(messages.loadingCashFlow));
+      assert.match(markup, /class="LoadingDialog"/);
       assert.ok(markup.includes(messages.cashFlowLoadingYears));
       assert.ok(markup.includes(`value="${new Date().getFullYear()}"`));
       const empty = renderToStaticMarkup(createElement(CashFlowPanel, { messages, accounts: [], cashFlowAccountIds: [] }));
       assert.ok(empty.includes(messages.cashFlowNoAccounts));
       assert.ok(!empty.includes(messages.loadingCashFlow));
+      assert.doesNotMatch(empty, /class="LoadingDialog"/);
     }
   } finally { await server.close(); }
 });

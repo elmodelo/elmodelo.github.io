@@ -102,6 +102,7 @@ export default function CashFlowTable({ messages, rows, year, firstMonth, lastMo
             <th scope="row" className={columnClass(currency, 0)}>{row.row_kind === 'total' ? totalLabels[section] : row.category_name}</th>
             {row.monthly_amounts.map((amount, index) => <td key={months[index]} className={columnClass(currency, index + 1)}>
               {row.row_kind === 'category' ? <button type="button" className="cash-flow-cell" aria-haspopup="dialog"
+                disabled={busy}
                 data-category={row.category_id} data-currency={currency} data-month={months[index]}
                 aria-label={messages.cashFlowCellLabel.replace('{category}', () => row.category_name ?? '')
                   .replace('{month}', fullMonthFormatter.format(monthDate(months[index])))

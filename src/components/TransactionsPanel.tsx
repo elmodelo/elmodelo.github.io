@@ -115,7 +115,7 @@ export default function TransactionsPanel({ messages, accounts, trackedAccountId
   const currentResult = result;
   const matchingCount = result?.scopeKey === scopeKey && !result.error ? result.count : null;
   const isLoading = result?.key !== requestKey;
-  const showLoadingDialog = isLoading && (!result || result.search === search);
+  const showLoadingDialog = isLoading;
   const [selection, setSelection] = useState<{ key: string; ids: string[] }>({ key: requestKey, ids: [] });
   const selectedIds = canSelect && selection.key === requestKey ? selection.ids : [];
   if (selection.key !== requestKey) setSelection({ key: requestKey, ids: [] });

@@ -186,6 +186,20 @@ section totals, displayed-month averages, and annual totals. Currency has its ow
 column; amounts retain their numeric values without display rounding or conversion.
 The export uses localized column labels, YYYY-MM month columns, and a UTF-8 BOM.
 It uses the loaded report and is disabled while totals refresh after category edits.
+Changing the year retains the loaded table and its original month/year metadata
+beneath the shared spinner with a dimmed backdrop. The replacement rows and period
+appear together when ready. Export and drill-down cells are disabled while a
+report request is pending. Background category refreshes do not cover an already
+open Cash Flow transaction popup with a second report-level spinner.
+The year-selection handler opens an already-mounted loading dialog immediately,
+then lets the browser paint before starting report rendering and fetching. Pending
+animation frames are canceled when the account workspace closes or the selection
+changes again; there is no fixed minimum display time or artificial network delay.
+
+Transactions uses the same dimmed loading spinner whenever a new result set is
+requested, including pagination, sorting, filters, and debounced search. Previously
+loaded rows remain visible beneath it until the new results replace them. Canceled
+or obsolete requests cannot overwrite the active report or transaction query.
 
 Category/month amounts are keyboard-accessible buttons, including zero amounts.
 They open a modal `TransactionsPanel` with the category ID, Cash Flow accounts in

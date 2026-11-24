@@ -18,6 +18,7 @@ test('monthly charts render accessible localized values and preserve gaps in gro
       }));
       assert.ok(markup.includes(messages.netWorthChartsData));
       assert.ok(markup.includes(messages.netWorthUnavailable));
+      assert.doesNotMatch(markup, /net-worth-chart-readout|<title>/);
       assert.match(markup, /<table/);
       assert.match(markup, /<caption>/);
       assert.match(markup, /tabindex="0" role="img" aria-label=/);

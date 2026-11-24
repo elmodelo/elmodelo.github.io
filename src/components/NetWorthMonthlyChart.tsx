@@ -1,4 +1,4 @@
-import { useLayoutEffect, useId, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useId, useRef, useState } from 'react';
 import type { LocaleMessages } from '../locales/types';
 import { MONTH_WIDTH, visibleChartDomain } from '../lib/netWorthChartViewport';
 
@@ -9,7 +9,10 @@ export default function MonthlyChart({ messages, title, description, rows, serie
   viewport?: { scrollLeft: number; width: number }; registerViewport?: (element: HTMLDivElement) => () => void;
 }) {
   const id = useId();
-  const [active, setActive] = useState<string | null>(null);
+  const [active, setActive] = useState<{ month: string; x: number; y: number; keyboard: boolean } | null>(null);
+  const [popupPosition, setPopupPosition] = useState({ left: 0, top: 0 });
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     if (scrollRef.current && registerViewport) return registerViewport(scrollRef.current);
@@ -25,7 +28,34 @@ export default function MonthlyChart({ messages, title, description, rows, serie
   const month = (value: string) => new Intl.DateTimeFormat(messages.language, { year: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(`${value}-01T00:00:00Z`));
   const valueLabel = (value: number | null) => value === null ? messages.netWorthUnavailable : format.format(value);
   const label = (row: MonthlyRow) => `${month(row.month)}: ${series.map((s) => `${s.label}: ${valueLabel(row[s.key])}`).join(' · ')}`;
-  const activeRow = rows.find(({ month }) => month === active);
+  const activeRow = rows.find(({ month }) => month === active?.month);
+  const showMonth = (month: string, index: number, pointer?: { clientX: number; clientY: number }, keyboard = false) => {
+    const container = viewportRef.current;
+    const scroller = scrollRef.current;
+    if (!container || !scroller) return;
+    const bounds = container.getBoundingClientRect();
+    setActive({ month, keyboard,
+      x: pointer ? pointer.clientX - bounds.left : scroller.getBoundingClientRect().left - bounds.left + x(index) - scroller.scrollLeft,
+      y: pointer ? pointer.clientY - bounds.top : top + 40 });
+  };
+  useLayoutEffect(() => {
+    if (!active || !popupRef.current || !viewportRef.current) return;
+    const popup = popupRef.current.getBoundingClientRect();
+    const container = viewportRef.current.getBoundingClientRect();
+    const left = Math.max(8, Math.min(active.x + 12, container.width - popup.width - 8));
+    const below = active.y + 12;
+    const top = Math.max(8, Math.min(below + popup.height <= container.height - 8 ? below : active.y - popup.height - 12,
+      container.height - popup.height - 8));
+    setPopupPosition({ left, top });
+  }, [active, viewport.width]);
+  useEffect(() => {
+    if (!active) return;
+    const dismiss = (event: PointerEvent) => {
+      if (event.target instanceof Node && !viewportRef.current?.contains(event.target)) setActive(null);
+    };
+    document.addEventListener('pointerdown', dismiss);
+    return () => document.removeEventListener('pointerdown', dismiss);
+  }, [active]);
   const linePath = (key: Series['key']) => {
     let gap = true;
     return rows.map((row, index) => {
@@ -40,14 +70,18 @@ export default function MonthlyChart({ messages, title, description, rows, serie
     <ul className="net-worth-chart-legend">{series.map((s) => <li key={s.key}>
       <span className="net-worth-swatch" style={{ background: s.color }} aria-hidden="true" />{s.label}
     </li>)}</ul>
-    <div className="net-worth-chart-viewport">
+    <div ref={viewportRef} className="net-worth-chart-viewport" onPointerLeave={() => setActive(null)}
+      onKeyDown={(event) => { if (event.key === 'Escape') setActive(null); }}>
       <svg className="net-worth-chart-y-axis" width="88" height="330" aria-hidden="true">
         {[0, 1, 2, 3, 4].map((tick) => {
           const value = min + (max - min) * tick / 4;
           return <text className="net-worth-chart-axis-label" key={tick} x="78" y={y(value) + 4} textAnchor="end">{axis.format(value)}</text>;
         })}
       </svg>
-      <div ref={scrollRef} className="net-worth-chart-scroll" tabIndex={0} role="region" aria-labelledby={`${id}-title`}>
+      <div ref={scrollRef} onScroll={() => {
+        if (active?.keyboard) showMonth(active.month, rows.findIndex((row) => row.month === active.month), undefined, true);
+        else setActive(null);
+      }} className="net-worth-chart-scroll" tabIndex={0} role="region" aria-labelledby={`${id}-title`}>
       <svg width={width} height="330" viewBox={`0 0 ${width} 330`} role="img" aria-labelledby={`${id}-title`}>
         <defs><clipPath id={`${id}-plot`}><rect x="0" y={top} width={width} height={bottom - top} /></clipPath></defs>
         {[0, 1, 2, 3, 4].map((tick) => {
@@ -57,15 +91,15 @@ export default function MonthlyChart({ messages, title, description, rows, serie
         <line className="net-worth-chart-zero" x1="0" x2={width} y1={y(0)} y2={y(0)} />
         {percent && series.map((s) => <path key={s.key} d={linePath(s.key)} clipPath={`url(#${id}-plot)`} fill="none" stroke={s.color} strokeWidth="2.5" />)}
         {rows.map((row, index) => <g key={row.month} tabIndex={0} role="img" aria-label={label(row)}
-          onPointerEnter={() => setActive(row.month)} onPointerLeave={() => setActive(null)}
-          onFocus={() => setActive(row.month)} onBlur={() => setActive(null)} onClick={() => setActive(row.month)}>
-          <title>{label(row)}</title>
-          <rect x={x(index) - step / 2 + 2} y={top} width={step - 4} height={bottom - top} fill="currentColor" opacity={active === row.month ? 0.06 : 0} />
+          aria-describedby={active?.month === row.month ? `${id}-tooltip` : undefined}
+          onPointerEnter={(event) => showMonth(row.month, index, event)} onPointerMove={(event) => showMonth(row.month, index, event)}
+          onFocus={() => showMonth(row.month, index, undefined, true)} onBlur={() => setActive(null)} onClick={() => showMonth(row.month, index)}>
+          <rect x={x(index) - step / 2 + 2} y={top} width={step - 4} height={bottom - top} fill="currentColor" opacity={active?.month === row.month ? 0.06 : 0} />
           {series.map((s, seriesIndex) => {
             const value = row[s.key];
             if (value === null) return null;
             const barWidth = series.length === 1 ? step * 0.72 : Math.min(18, (step - 16) / series.length);
-            return percent ? <circle key={s.key} clipPath={`url(#${id}-plot)`} cx={x(index)} cy={y(value)} r={active === row.month ? 5 : 3} fill={s.color} />
+            return percent ? <circle key={s.key} clipPath={`url(#${id}-plot)`} cx={x(index)} cy={y(value)} r={active?.month === row.month ? 5 : 3} fill={s.color} />
               : <rect key={s.key} clipPath={`url(#${id}-plot)`} x={x(index) + (seriesIndex - series.length / 2) * barWidth + 1} y={Math.min(y(0), y(value))}
                 width={barWidth - 2} height={Math.max(1, Math.abs(y(value) - y(0)))} fill={s.color} />;
           })}
@@ -73,8 +107,14 @@ export default function MonthlyChart({ messages, title, description, rows, serie
         </g>)}
       </svg>
       </div>
+      {activeRow && <div ref={popupRef} id={`${id}-tooltip`} className="net-worth-chart-tooltip" role="tooltip" style={popupPosition}>
+        <strong>{month(activeRow.month)}</strong>
+        <dl>{series.map((s) => <div key={s.key}>
+          <dt><span className="net-worth-swatch" style={{ background: s.color }} aria-hidden="true" />{s.label}</dt>
+          <dd>{valueLabel(activeRow[s.key])}</dd>
+        </div>)}</dl>
+      </div>}
     </div>
-    <p className="net-worth-chart-readout" aria-live="polite">{activeRow ? label(activeRow) : ''}</p>
     <details className="net-worth-chart-data"><summary>{messages.netWorthChartsData}</summary>
       <div className="net-worth-chart-scroll" tabIndex={0} role="region" aria-label={title}>
         <table className="net-worth-table"><caption>{title}</caption><thead><tr><th scope="col">{messages.netWorthHistoryMonth}</th>

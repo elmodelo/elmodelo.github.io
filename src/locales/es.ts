@@ -2,7 +2,6 @@ import type { LocaleMessages } from './types';
 
 const es: LocaleMessages = {
   netWorthCharts: "Gráficos",
-  netWorthChartsStart: "Fecha de inicio",
   netWorthChartsTotals: "Activos, pasivos y patrimonio neto mensuales (CAD)",
   netWorthChartsGrowth: "Crecimiento mensual del patrimonio neto",
   netWorthChartsAverage: "Promedio móvil de 12 meses",
@@ -12,7 +11,6 @@ const es: LocaleMessages = {
   netWorthChartsPortfolioHelp: "Solo saldos positivos de cuentas seguidas y activos. Excluye pasivos, House y RESP.",
   netWorthChartsIncomplete: "Algunos valores mensuales no están disponibles porque faltan registros o conversiones de moneda. Se muestran huecos en lugar de totales estimados.",
   netWorthChartsError: "No se pudo cargar el historial de los gráficos. Inténtalo de nuevo.",
-  netWorthChartsInspect: "Pasa el cursor, toca o enfoca un mes para consultar sus valores. Desplázate horizontalmente para explorar todo el historial.",
   netWorthChartsData: "Ver valores mensuales",
   netWorthAssets: "Activos",
   netWorthLiabilities: "Pasivos",

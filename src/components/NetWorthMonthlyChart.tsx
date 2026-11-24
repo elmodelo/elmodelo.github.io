@@ -74,7 +74,7 @@ export default function MonthlyChart({ messages, title, description, rows, serie
       </svg>
       </div>
     </div>
-    <p className="net-worth-chart-readout" aria-live="polite">{activeRow ? label(activeRow) : messages.netWorthChartsInspect}</p>
+    <p className="net-worth-chart-readout" aria-live="polite">{activeRow ? label(activeRow) : ''}</p>
     <details className="net-worth-chart-data"><summary>{messages.netWorthChartsData}</summary>
       <div className="net-worth-chart-scroll" tabIndex={0} role="region" aria-label={title}>
         <table className="net-worth-table"><caption>{title}</caption><thead><tr><th scope="col">{messages.netWorthHistoryMonth}</th>

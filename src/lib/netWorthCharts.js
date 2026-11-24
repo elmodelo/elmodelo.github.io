@@ -1,108 +1,89 @@
 import { shiftHistoricalDate, validHistoricalDate } from './historicalDates.js';
 
-// Read flat histories with stable pagination; embedded relations are row-limited.
-async function history(client, table, columns, signal, ids = null) {
-  const result = [];
-  const batches = ids === null ? [null] : Array.from({ length: Math.ceil(ids.length / 100) }, (_, i) => ids.slice(i * 100, i * 100 + 100));
-  for (const batch of batches) {
-    for (let offset = 0; ; offset += 500) {
-      let query = client.schema('finance').from(table).select(columns).order('id').range(offset, offset + 499);
-      if (batch) query = query.in('account', batch);
-      const { data, error } = await query.abortSignal(signal);
-      if (error || !Array.isArray(data)) throw new Error('Chart history unavailable', { cause: error });
-      result.push(...data);
-      if (data.length < 500) break;
-    }
-  }
-  return result;
-}
-
-export async function fetchNetWorthHistory(client, accounts, signal) {
-  const [balances, assets, counts, prices] = await Promise.all([
-    history(client, 'balance', 'id,account,balance,posted_at', signal, accounts.map(({ id }) => id)),
-    history(client, 'asset', 'id,name,currency,type', signal),
-    history(client, 'asset_count', 'id,asset,count,posted_at', signal),
-    history(client, 'asset_value', 'id,asset,value,posted_at', signal),
-  ]);
+/** One read-only RPC returns every month, including zero/partial months. */
+export async function fetchMonthlyNetWorth(client, accounts, signal, includeResp = false) {
+  const { data, error } = await client.schema('finance').rpc('net_worth_monthly', {
+    p_accounts: accounts.map(({ id }) => id), p_include_resp: includeResp,
+  }).abortSignal(signal);
   if (signal?.aborted) throw new Error('Aborted');
-  return { accounts, balances, assets, counts, prices };
+  if (error) throw new Error('Chart history unavailable', { cause: error });
+  return validateMonthlyNetWorth(data);
 }
 
-const monthOf = (date) => new Date(date).toISOString().slice(0, 7);
-const nextMonth = (month) => new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5)), 1)).toISOString().slice(0, 7);
-const monthEnd = (month) => shiftHistoricalDate(`${nextMonth(month)}-01`, -1);
-const isResp = (row) => row.name.trim().toUpperCase() === 'RESP';
-
-function observations(rows, field, foreignKey, items) {
-  const ids = new Set(items.map(({ id }) => id));
-  const result = new Map();
+function validateMonthlyNetWorth(data) {
+  const invalid = () => { throw new Error('Invalid monthly chart data'); };
+  if (!data || data.version !== 1 || !Array.isArray(data.rows)) invalid();
+  if (!data.rows.length) {
+    if (data.min_month !== null || data.max_month !== null || data.latest_date !== null) invalid();
+    return [];
+  }
+  const validMonth = (month) => typeof month === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(month)
+    && validHistoricalDate(`${month}-01`);
+  if (!validMonth(data.min_month) || !validMonth(data.max_month) || data.min_month > data.max_month
+    || !validHistoricalDate(data.latest_date) || data.latest_date.slice(0, 7) !== data.max_month) invalid();
+  const rows = data.rows;
+  const currencies = new Set();
+  let previous = '';
   for (const row of rows) {
-    if (!ids.has(row[foreignKey])) continue;
-    if (typeof row.posted_at !== 'string' || !Number.isFinite(Date.parse(row.posted_at))
-      || !['number', 'string'].includes(typeof row[field]) || String(row[field]).trim() === '' || !Number.isFinite(Number(row[field]))) {
-      throw new Error('Invalid chart observation');
+    if (!row || !validMonth(row.month) || row.month < data.min_month || row.month > data.max_month
+      || !validHistoricalDate(row.valuation_date) || row.valuation_date.slice(0, 7) !== row.month
+      || !['CAD', 'USD'].includes(row.currency) || typeof row.net_worth_complete !== 'boolean'
+      || typeof row.portfolio_complete !== 'boolean') invalid();
+    for (const field of ['assets', 'liabilities', 'portfolio']) {
+      if (!['number', 'string'].includes(typeof row[field]) || String(row[field]).trim() === ''
+        || !Number.isFinite(Number(row[field])) || (field === 'liabilities' ? Number(row[field]) > 0 : Number(row[field]) < 0)) invalid();
     }
-    const list = result.get(row[foreignKey]) ?? [];
-    list.push({ date: new Date(row.posted_at).toISOString(), value: Number(row[field]) });
-    result.set(row[foreignKey], list);
+    const key = `${row.month}:${row.currency}`;
+    if (key <= previous) invalid();
+    previous = key;
+    currencies.add(row.currency);
+    const expectedDate = row.month === data.max_month ? data.latest_date
+      : shiftHistoricalDate(`${nextMonth(row.month)}-01`, -1);
+    if (row.valuation_date !== expectedDate) invalid();
   }
-  for (const list of result.values()) list.sort((a, b) => a.date.localeCompare(b.date));
-  return result;
+  // Detect omitted months/currencies rather than quietly rendering truncated totals.
+  let index = 0;
+  for (let month = data.min_month; month <= data.max_month; month = nextMonth(month)) {
+    for (const currency of [...currencies].sort()) {
+      if (rows[index]?.month !== month || rows[index]?.currency !== currency) invalid();
+      index++;
+    }
+  }
+  if (index !== rows.length) invalid();
+  return rows;
 }
 
-/** Select snapshots independently for quantities and prices and carry forward.
- * Undefined conversion returns a gap, never a fabricated zero. */
-export function buildMonthlyNetWorth(history, rates = {}, includeResp = false) {
-  const { accounts, assets } = history;
-  const balances = observations(history.balances, 'balance', 'account', accounts);
-  const counts = observations(history.counts, 'count', 'asset', assets);
-  const prices = observations(history.prices, 'value', 'asset', assets);
-  const dates = [balances, counts, prices].flatMap((map) => [...map.values()].flatMap((list) => list.map(({ date }) => date))).sort();
-  if (!dates.length) return [];
-  const first = monthOf(dates[0]);
-  const last = monthOf(dates.at(-1));
-  // Cursors make aggregation linear in observations plus months × items.
-  const cursors = new Map();
-  const latest = (map, id, cutoff) => {
-    const list = map.get(id) ?? [];
-    let index = cursors.get(list) ?? -1;
-    while (index + 1 < list.length && list[index + 1].date < cutoff) index++;
-    cursors.set(list, index);
-    return index < 0 ? null : list[index].value;
-  };
-  const rows = [];
-  for (let month = first; month <= last; month = nextMonth(month)) {
-    const cutoff = `${nextMonth(month)}-01T00:00:00.000Z`;
-    let assetsTotal = 0, liabilities = 0, portfolio = 0;
-    let complete = true, portfolioComplete = true;
-    for (const item of [...accounts.map((row) => ({ ...row, kind: 'account' })), ...assets.map((row) => ({ ...row, kind: 'asset' }))]) {
-      const asset = item.kind === 'asset';
-      const count = asset ? latest(counts, item.id, cutoff) : null;
-      const price = asset ? latest(prices, item.id, cutoff) : null;
-      const amount = asset ? count === null || price === null ? null : count * price : latest(balances, item.id, cutoff);
-      // Items with no observations yet did not exist in this month's history.
-      if (asset ? count === null && price === null : amount === null) continue;
-      const inNetWorth = includeResp || asset || !isResp(item);
-      const inPortfolio = !isResp(item) && (!asset || (item.type === 'ASSET' && item.name.trim().toLowerCase() !== 'house'))
-        && (amount === null || amount > 0);
-      const rate = item.currency === 'CAD' ? 1 : rates[month]?.[item.currency];
-      const cad = amount === 0 ? 0 : amount !== null && Number.isFinite(rate) && rate > 0 ? amount * rate : null;
-      if (cad === null || !Number.isFinite(cad)) {
-        if (inNetWorth) complete = false;
-        if (inPortfolio) portfolioComplete = false;
-        continue;
-      }
-      if (inNetWorth) {
-        if (asset ? item.type === 'LIABILITY' : cad < 0) liabilities += cad;
-        else assetsTotal += cad;
-      }
-      if (inPortfolio) portfolio += cad;
-    }
-    rows.push({ month, date: month === last ? dates.at(-1).slice(0, 10) : monthEnd(month),
-      assets: complete ? assetsTotal : null, liabilities: complete ? liabilities : null,
-      netWorth: complete ? assetsTotal + liabilities : null, portfolio: portfolioComplete ? portfolio : null });
+const nextMonth = (month) => {
+  const [year, number] = month.split('-').map(Number);
+  return `${String(year + (number === 12 ? 1 : 0)).padStart(4, '0')}-${String(number === 12 ? 1 : number + 1).padStart(2, '0')}`;
+};
+
+/** FX stays client-side; aggregate each currency before converting, with
+ * independent completeness for net worth and the positive-only portfolio. */
+export function buildMonthlyNetWorth(monthly, rates = {}) {
+  const grouped = new Map();
+  for (const row of monthly) {
+    const group = grouped.get(row.month) ?? { month: row.month, date: row.valuation_date,
+      assets: 0, liabilities: 0, portfolio: 0, complete: true, portfolioComplete: true };
+    const rate = row.currency === 'CAD' ? 1 : rates[row.month]?.[row.currency];
+    const convert = (value) => Number(value) === 0 ? 0
+      : Number.isFinite(rate) && rate > 0 ? Number(value) * rate : null;
+    const assets = convert(row.assets), liabilities = convert(row.liabilities), portfolio = convert(row.portfolio);
+    if (!row.net_worth_complete || assets === null || liabilities === null) group.complete = false;
+    if (!row.portfolio_complete || portfolio === null) group.portfolioComplete = false;
+    group.assets += assets ?? 0;
+    group.liabilities += liabilities ?? 0;
+    group.portfolio += portfolio ?? 0;
+    grouped.set(row.month, group);
   }
-  return addMonthlyGrowth(rows);
+  return addMonthlyGrowth([...grouped.values()].map((group) => {
+    const complete = group.complete && Number.isFinite(group.assets) && Number.isFinite(group.liabilities)
+      && Number.isFinite(group.assets + group.liabilities);
+    return { month: group.month, date: group.date,
+      assets: complete ? group.assets : null, liabilities: complete ? group.liabilities : null,
+      netWorth: complete ? group.assets + group.liabilities : null,
+      portfolio: group.portfolioComplete && Number.isFinite(group.portfolio) ? group.portfolio : null };
+  }));
 }
 
 export function addMonthlyGrowth(rows) {
@@ -136,13 +117,13 @@ export async function loadMonthlyExchangeRates(rows, signal, fetchRates = fetch)
   }));
 }
 
-export async function loadNetWorthCharts(client, accounts, signal) {
-  const history = await fetchNetWorthHistory(client, accounts, signal);
-  const preliminary = buildMonthlyNetWorth(history);
+export async function loadNetWorthCharts(client, accounts, signal, includeResp = false) {
+  const monthly = await fetchMonthlyNetWorth(client, accounts, signal, includeResp);
+  const preliminary = buildMonthlyNetWorth(monthly);
   let rates = {}, conversionError = false;
-  if ([...accounts, ...history.assets].some(({ currency }) => currency !== 'CAD') && preliminary.length) {
+  if (monthly.some((row) => row.currency !== 'CAD' && (Number(row.assets) || Number(row.liabilities) || Number(row.portfolio)))) {
     try { rates = await loadMonthlyExchangeRates(preliminary, signal); }
     catch (error) { if (signal?.aborted) throw error; conversionError = true; }
   }
-  return { history, rates, conversionError };
+  return { monthly, rates, conversionError };
 }

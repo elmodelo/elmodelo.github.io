@@ -2,7 +2,6 @@ import type { LocaleMessages } from './types';
 
 const en: LocaleMessages = {
   netWorthCharts: "Charts",
-  netWorthChartsStart: "Start date",
   netWorthChartsTotals: "Monthly assets, liabilities and net worth (CAD)",
   netWorthChartsGrowth: "Net worth month-over-month growth",
   netWorthChartsAverage: "12-month rolling average",
@@ -12,7 +11,6 @@ const en: LocaleMessages = {
   netWorthChartsPortfolioHelp: "Positive tracked account balances and assets only. Excludes liabilities, House and RESP.",
   netWorthChartsIncomplete: "Some monthly values are unavailable because snapshots or currency conversions are missing. Gaps are shown instead of estimated totals.",
   netWorthChartsError: "Could not load chart history. Please retry.",
-  netWorthChartsInspect: "Hover, tap or focus a month to inspect its values. Scroll horizontally to explore the full history.",
   netWorthChartsData: "View monthly values",
   netWorthAssets: "Assets",
   netWorthLiabilities: "Liabilities",

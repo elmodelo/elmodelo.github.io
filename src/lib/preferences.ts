@@ -7,7 +7,6 @@ export interface ApplicationPreferences extends Record<string, unknown> {
   trackedAccounts: string[] | null;
   cashFlowAccounts: string[] | null;
   netWorthIncludeResp: boolean;
-  netWorthChartsStartMonth: string | null;
   transactions: TransactionPreferences;
   transaction_filters: SavedTransactionFilter[];
 }
@@ -16,8 +15,10 @@ export interface ApplicationPreferences extends Record<string, unknown> {
 export function parsePreferences(value: unknown): ApplicationPreferences {
   const data = value && typeof value === 'object' && !Array.isArray(value)
     ? value as Record<string, unknown> : {};
+  const retained = { ...data };
+  delete retained.netWorthChartsStartMonth;
   return {
-    ...data,
+    ...retained,
     transaction_filters: parseSavedTransactionFilters(data.transaction_filters),
     theme: data.theme === 'light' || data.theme === 'dark' ? data.theme : null,
     language: data.language === 'en' || data.language === 'es' ? data.language : null,
@@ -26,8 +27,6 @@ export function parsePreferences(value: unknown): ApplicationPreferences {
     cashFlowAccounts: Array.isArray(data.cashFlowAccounts) && data.cashFlowAccounts.every((id) => typeof id === 'string')
       ? data.cashFlowAccounts : null,
     netWorthIncludeResp: data.netWorthIncludeResp === true,
-    netWorthChartsStartMonth: typeof data.netWorthChartsStartMonth === 'string'
-      && /^(?!0000)\d{4}-(0[1-9]|1[0-2])$/.test(data.netWorthChartsStartMonth) ? data.netWorthChartsStartMonth : null,
     transactions: isTransactionPreferences(data.transactions) ? data.transactions : DEFAULT_TRANSACTION_PREFERENCES,
   };
 }

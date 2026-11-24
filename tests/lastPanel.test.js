@@ -9,7 +9,7 @@ test('last panel restores per user, validates pinned filters and tolerates unava
     const values = new Map();
     const storage = { getItem: (key) => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) };
     assert.equal(restoreLastPanel('user-a', [], storage), 'transactions');
-    for (const section of ['transactions', 'net-worth', 'cash-flow', 'uncategorized', 'preferences', 'account']) {
+    for (const section of ['transactions', 'net-worth', 'net-worth-charts', 'cash-flow', 'uncategorized', 'preferences', 'account']) {
       rememberLastPanel('user-a', section, storage);
       assert.equal(restoreLastPanel('user-a', [], storage), section);
     }

@@ -31,6 +31,7 @@ const RegistrationForm = lazy(() => import('./components/RegistrationForm'));
 const PreferencesPanel = lazy(() => import('./components/PreferencesPanel'));
 const TransactionsPanel = lazy(() => import('./components/TransactionsPanel'));
 const NetWorthPanel = lazy(() => import('./components/NetWorthPanel'));
+const NetWorthChartsPanel = lazy(() => import('./components/NetWorthChartsPanel'));
 const CashFlowPanel = lazy(() => import('./components/CashFlowPanel'));
 
 function App() {
@@ -212,6 +213,11 @@ function Dashboard({
           ) : section === 'net-worth' ? (
             <FeatureBoundary messages={messages} loadingLabel={messages.loadingNetWorth}>
               <NetWorthPanel messages={messages} accounts={accounts} trackedAccountIds={trackedAccountIds}
+                accountsStatus={accountsStatus} onRetryAccounts={retryAccounts} />
+            </FeatureBoundary>
+          ) : section === 'net-worth-charts' ? (
+            <FeatureBoundary messages={messages} loadingLabel={messages.loadingNetWorth}>
+              <NetWorthChartsPanel messages={messages} accounts={accounts} trackedAccountIds={trackedAccountIds}
                 accountsStatus={accountsStatus} onRetryAccounts={retryAccounts} />
             </FeatureBoundary>
           ) : section === 'cash-flow' ? (

@@ -33,7 +33,14 @@ test('menu renders localized sections, their separator, and the active item', as
       assert.match(markup, /aria-current="page">(?:Transactions|Transacciones)<\/button>/);
       assert.match(markup, /menu-item-separated/);
       assert.match(markup, /id="[^"]+" class="menu-items" data-expanded="false"/);
-      assert.doesNotMatch(markup, /menu-subsection/);
+      assert.match(markup, /class="menu-button menu-subsection">(?:Charts|Gráficos)<\/button>/);
+      const chartsMarkup = renderToStaticMarkup(createElement(Menu, {
+        messages: getLocaleMessages(locale), section: 'net-worth-charts', onSelect() {}, toggleTarget: null,
+      }));
+      assert.match(chartsMarkup, /class="menu-button menu-subsection" aria-current="page">(?:Charts|Gráficos)<\/button>/);
+      const chartsLabel = locale === 'es' ? 'Gráficos' : 'Charts';
+      assert.ok(markup.indexOf(`>${labels[1]}</button>`) < markup.indexOf(`>${chartsLabel}</button>`));
+      assert.ok(markup.indexOf(`>${chartsLabel}</button>`) < markup.indexOf(`>${labels[2]}</button>`));
       const filteredMarkup = renderToStaticMarkup(createElement(Menu, {
         messages: getLocaleMessages(locale), section: 'uncategorized', onSelect() {}, toggleTarget: null,
         uncategorizedCount: 34,

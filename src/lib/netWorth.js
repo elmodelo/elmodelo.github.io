@@ -40,9 +40,7 @@ export async function loadNetWorth(client, accounts, signal, rateLoader = null, 
   const accountsError = sources[0].status === 'rejected';
   const assetsError = sources[1].status === 'rejected';
   const rows = [
-    ...(accountsError ? [] : sources[0].value.map((row) => ({ ...row,
-      excludedFromNetWorth: !includeResp && row.name.trim().toUpperCase() === 'RESP',
-    }))),
+    ...(accountsError ? [] : sources[0].value),
     ...(assetsError ? [] : sources[1].value),
   ].filter((row) => !historicalDate || (row.kind === 'asset' ? row.count || row.price : row.snapshot));
   let rates = null;
@@ -51,20 +49,32 @@ export async function loadNetWorth(client, accounts, signal, rateLoader = null, 
       ? loadHistoricalExchangeRates(historicalDate, signal) : loadExchangeRates(signal)); }
     catch (error) { if (signal?.aborted) throw error; }
   }
-  let conversionError = false;
   const converted = rows.map((row) => {
     const rate = row.currency === 'CAD' ? 1 : rates?.cadPerUnit[row.currency];
     const cad = row.snapshot && Number.isFinite(rate) && rate > 0 ? row.snapshot.amount * rate : null;
-    if (!row.excludedFromNetWorth && row.snapshot && (cad === null || !Number.isFinite(cad))) conversionError = true;
     return { ...row, cad: Number.isFinite(cad) ? cad : null };
   });
-  const total = converted.filter((row) => !row.excludedFromNetWorth).reduce((sum, { cad }) => sum + (cad ?? 0), 0);
-  if (!Number.isFinite(total)) conversionError = true;
   const exchangeRates = Object.fromEntries(rows.filter(({ currency, snapshot }) => snapshot && currency !== 'CAD'
     && Number.isFinite(rates?.cadPerUnit[currency]) && rates.cadPerUnit[currency] > 0)
     .map(({ currency }) => [currency, rates.cadPerUnit[currency]]));
-  return { rows: converted, total: conversionError || accountsError || assetsError ? null : total, conversionError, accountsError, assetsError,
-    incomplete: accountsError || assetsError || rows.some(({ snapshot, excludedFromNetWorth }) => !excludedFromNetWorth && !snapshot), rateDate: rates?.date ?? null, exchangeRates };
+  return recalculateNetWorth({ rows: converted, accountsError, assetsError, rateDate: rates?.date ?? null, exchangeRates }, includeResp);
+}
+
+/** Reuse every loaded snapshot and conversion when a display preference changes.
+ * Recompute error flags too: enabling RESP may expose a missing balance/rate. */
+export function recalculateNetWorth(result, includeResp = false) {
+  const rows = result.rows.map((row) => ({ ...row,
+    excludedFromNetWorth: !includeResp && row.kind !== 'asset' && row.name.trim().toUpperCase() === 'RESP',
+  }));
+  const included = rows.filter((row) => !row.excludedFromNetWorth);
+  const total = included.reduce((sum, { cad }) => sum + (cad ?? 0), 0);
+  const conversionError = !Number.isFinite(total)
+    || included.some((row) => row.snapshot && (row.cad === null || !Number.isFinite(row.cad)));
+  return { ...result, rows,
+    total: conversionError || result.accountsError || result.assetsError ? null : total,
+    conversionError,
+    incomplete: result.accountsError || result.assetsError || included.some((row) => !row.snapshot),
+  };
 }
 
 export function netWorthRateMessage(messages, result) {
@@ -87,11 +97,24 @@ export function netWorthAllocation(result) {
 }
 
 
-export function sortNetWorthAccounts(rows, language, column = 'cad', ascending = false) {
+/** Missing account balances stay visible under Assets without assuming a sign.
+ * Asset/liability identity comes from its immutable type, including at zero. */
+export function groupNetWorthRows(rows, showInactive = false) {
+  const groups = { assets: [], liabilities: [] };
+  for (const row of rows) {
+    if (row.snapshot?.amount === 0 && !showInactive) continue;
+    const liability = row.kind === 'asset' ? row.type === 'LIABILITY' : (row.snapshot?.amount ?? 0) < 0;
+    groups[liability ? 'liabilities' : 'assets'].push(row);
+  }
+  return groups;
+}
+
+export function sortNetWorthRows(rows, language, column = 'cad', ascending = false) {
   const value = (row) => column === 'name' ? row.name : column === 'postedAt'
-    ? (row.snapshot ? Date.parse(row.snapshot.postedAt) : null)
+    ? (row.kind === 'asset' ? (row.price ? Date.parse(row.price.postedAt) : null)
+      : row.snapshot ? Date.parse(row.snapshot.postedAt) : null)
     : column === 'balance' ? (row.snapshot?.amount ?? null) : row.cad;
-  return rows.filter((row) => row.kind !== 'asset').sort((a, b) => {
+  return [...rows].sort((a, b) => {
     const left = value(a);
     const right = value(b);
     // Missing balances and conversions always come last, in either direction.
@@ -100,6 +123,11 @@ export function sortNetWorthAccounts(rows, language, column = 'cad', ascending =
     const order = left == null || right == null ? 0 : column === 'name'
       ? left.localeCompare(right, language) : left < right ? -1 : left > right ? 1 : 0;
     return order * (ascending ? 1 : -1)
-      || a.name.localeCompare(b.name, language) || a.id.localeCompare(b.id);
+      || a.name.localeCompare(b.name, language) || a.id.localeCompare(b.id)
+      || (a.kind ?? 'account').localeCompare(b.kind ?? 'account');
   });
+}
+
+export function sortNetWorthAccounts(rows, language, column = 'cad', ascending = false) {
+  return sortNetWorthRows(rows.filter((row) => row.kind !== 'asset'), language, column, ascending);
 }

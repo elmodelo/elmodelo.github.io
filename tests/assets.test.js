@@ -165,7 +165,7 @@ test('localized cards show quantities only above one, price dates, and writer-on
   const server = await createServer({ envDir: false, server: { middlewareMode: true, ws: false }, appType: 'custom' });
   try {
     const { default: Card } = await server.ssrLoadModule('/src/components/AssetCard.tsx');
-    const { NetWorthTable } = await server.ssrLoadModule('/src/components/NetWorthPanel.tsx');
+    const { NetWorthTable } = await server.ssrLoadModule('/src/components/NetWorthTableCard.tsx');
     const { default: Allocation } = await server.ssrLoadModule('/src/components/NetWorthAllocationCard.tsx');
     const { default: Dialog } = await server.ssrLoadModule('/src/components/AssetSnapshotDialog.tsx');
     const { PermissionsProvider } = await server.ssrLoadModule('/src/hooks/usePermissions.tsx');
@@ -176,8 +176,8 @@ test('localized cards show quantities only above one, price dates, and writer-on
       const render = (role, count = 2.5) => renderToStaticMarkup(createElement(PermissionsProvider, { role },
         createElement(Card, { asset: { ...asset, count: { ...asset.count, amount: count } }, messages, onSaved() {} })));
       const result = await loadNetWorth(clientFor(() => ({ data: [holding] })), [], undefined, rates, true);
-      const table = renderToStaticMarkup(createElement(NetWorthTable, { result, messages, titleId: 'balances' }));
-      assert.ok(!table.includes('Fund'), 'Assets do not appear as account rows');
+      const table = renderToStaticMarkup(createElement(NetWorthTable, { rows: result.rows, messages, titleId: 'balances' }));
+      assert.ok(table.includes('Fund'), 'Shared table accepts asset rows');
       const allocation = renderToStaticMarkup(createElement(Allocation, { result, messages }));
       assert.ok(allocation.includes('Fund'), 'Assets appear in allocation');
       const converted = renderToStaticMarkup(createElement(Card, { asset: result.rows[0], messages, onSaved() {} }));
@@ -376,7 +376,7 @@ test('liability cues cover negative balances, paid-off cards, and debt-only allo
   try {
     const { default: Card } = await server.ssrLoadModule('/src/components/AssetCard.tsx');
     const { default: Allocation } = await server.ssrLoadModule('/src/components/NetWorthAllocationCard.tsx');
-    const { NetWorthTable } = await server.ssrLoadModule('/src/components/NetWorthPanel.tsx');
+    const { NetWorthTable } = await server.ssrLoadModule('/src/components/NetWorthTableCard.tsx');
     const { getLocaleMessages } = await server.ssrLoadModule('/src/locales/index.ts');
     const snapshot = { amount: -100, postedAt: '2026-11-23T00:00:00Z' };
     const loan = { id: 'loan', name: 'Loan', type: 'LIABILITY', kind: 'asset', currency: 'USD',
@@ -407,9 +407,9 @@ test('liability cues cover negative balances, paid-off cards, and debt-only allo
       assert.ok(debtOnly.includes(messages.netWorthAllocationEmpty));
       assert.ok(!debtOnly.includes('Credit card') && !debtOnly.includes('Loan'));
       assert.ok(!debtOnly.includes('<svg class="net-worth-pie"'), 'No positive holdings means no pie');
-      const table = renderToStaticMarkup(createElement(NetWorthTable, { result, messages, titleId: 'balances' }));
-      assert.equal((table.match(/data-negative="true"/g) ?? []).length, 6, 'Negative account names and both balance columns use the cue');
-      assert.ok(!table.includes('Loan'), 'Liabilities stay in their own cards');
+      const table = renderToStaticMarkup(createElement(NetWorthTable, { rows: result.rows, messages, titleId: 'balances' }));
+      assert.equal((table.match(/data-negative="true"/g) ?? []).length, 9, 'Negative accounts and liabilities use the cue on names and both amounts');
+      assert.ok(table.includes('Loan'), 'Shared table accepts liability rows');
     }
   } finally { await server.close(); }
 });

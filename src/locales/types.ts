@@ -1,7 +1,16 @@
 export interface LocaleMessages {
+  netWorthAssets: string;
+  netWorthLiabilities: string;
+  netWorthAssetsEmpty: string;
+  netWorthLiabilitiesEmpty: string;
+  netWorthTableDate: string;
+  netWorthTableName: string;
+  netWorthTableAmount: string;
+  netWorthTableCad: string;
+  netWorthTableTotal: string;
+  netWorthShowInactive: string;
   netWorthHistorical: string;
   netWorthHistoricalAsOf: string;
-  netWorthHistoricalDescription: string;
   netWorthHistoricalHelp: string;
   netWorthHistoryLoading: string;
   netWorthHistoryError: string;
@@ -56,7 +65,6 @@ export interface LocaleMessages {
   netWorthError: string;
   netWorthUnavailable: string;
   netWorthNoAccounts: string;
-  netWorthDescription: string;
   netWorthIncomplete: string;
   netWorthConversionError: string;
   netWorthNoConversion: string;

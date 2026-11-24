@@ -1,9 +1,18 @@
 import type { LocaleMessages } from './types';
 
 const es: LocaleMessages = {
+  netWorthAssets: "Activos",
+  netWorthLiabilities: "Pasivos",
+  netWorthAssetsEmpty: "No hay activos para mostrar.",
+  netWorthLiabilitiesEmpty: "No hay pasivos para mostrar.",
+  netWorthTableDate: "Fecha",
+  netWorthTableName: "Nombre",
+  netWorthTableAmount: "Importe",
+  netWorthTableCad: "Importe (CAD)",
+  netWorthTableTotal: "Total",
+  netWorthShowInactive: "Mostrar cuentas, activos y pasivos inactivos",
   netWorthHistorical: "Histórico",
   netWorthHistoricalAsOf: "Vista histórica: {date}",
-  netWorthHistoricalDescription: "Últimos saldos, cantidades y precios hasta la fecha seleccionada (UTC), en CAD. Las fechas de observación pueden variar. Esta vista es de solo lectura.",
   netWorthHistoricalHelp: "Elige una fecha dentro del historial disponible. Los valores se mantienen hasta la siguiente observación. La conversión de USD usa el tipo del Banco de Canadá más cercano a la fecha seleccionada.",
   netWorthHistoryLoading: "Cargando fechas disponibles…",
   netWorthHistoryError: "No se pudieron cargar las fechas disponibles. Inténtalo de nuevo.",
@@ -58,7 +67,6 @@ const es: LocaleMessages = {
   netWorthError: "No se pudieron cargar los saldos. Inténtalo de nuevo.",
   netWorthUnavailable: "Total no disponible",
   netWorthNoAccounts: "No hay cuentas seguidas seleccionadas. Los activos se muestran de forma independiente.",
-  netWorthDescription: "Últimos saldos de las cuentas seguidas y posiciones de activos, en CAD. Las fechas de observación pueden variar.",
   netWorthIncomplete: "Total incompleto: se excluyen las fuentes no disponibles y las posiciones sin registros.",
   netWorthConversionError: "Conversión de moneda no disponible. Se muestran los saldos originales; el total en CAD no está disponible.",
   netWorthNoConversion: "No fue necesario convertir los saldos y activos disponibles.",

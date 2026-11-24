@@ -40,18 +40,43 @@ holdings; legend percentages use the same positive CAD total as the pie slices,
 normalized to 100% before display rounding. Negative balances do not reduce this
 denominator, even when signed net worth is zero or negative.
 
-Each asset card shows its name, total valuation in CAD, and the latest
-unit price's UTC date. USD holdings show their original USD total just below the
-CAD valuation, in parentheses and a smaller font. The CAD value uses the same
-rate and conversion as net worth and allocation. If conversion
-fails, the USD value remains visible with a conversion-unavailable message. Counts greater than one also show count × unit price;
-displayed unit prices use whole currency amounts. Count dates appear separately
-when they differ. Count and price snapshots are independently selected by greatest
-`posted_at`, including future timestamps. Zero or incomplete holdings are hidden
-unless **Show inactive assets** is selected in the heading’s overflow menu; this toggle does not affect totals.
+The desktop layout has three columns: Net Worth above the **Liabilities** table,
+then the **Assets** table, then allocation. The first column's combined height
+matches the Assets card; whichever side has more content determines the height.
+Allocation's height does not stretch this pair. The liabilities card expands
+beneath Net Worth when the assets table is taller. On narrower panels allocation
+moves below the pair; on mobile the cards stack as Net Worth, Liabilities, Assets,
+and Allocation without forced equal heights.
 
-Writers can open **Update holding** from the overflow menu at the top right of a card to add a count, a unit price, or
-both in a modal dialog. The fields start with the latest count and unit price;
+Both tables use `NetWorthTableCard` with sortable **Date**, **Name**, **Amount**,
+and **Amount (CAD)** columns. Each table has a CAD total row, summed before
+display rounding and excluding rows excluded from net worth (such as disabled
+RESP). Mixed native currencies are not summed. Missing included amounts,
+conversion failures, or source errors show an unavailable total.
+Negative accounts and declared liabilities appear
+under Liabilities; positive accounts and declared assets appear under Assets.
+Zero rows are hidden unless **Show inactive accounts, assets and liabilities** is
+enabled. With that option enabled, zero accounts appear under Assets, while
+zero assets/liabilities retain their declared type. Current accounts with
+unavailable balances remain under Assets with an explicit missing-value label;
+partial asset/liability histories remain under their declared type. These display
+filters do not change net worth or allocation totals. Historical items without
+any observations by the selected date remain omitted, even with inactive rows shown.
+
+Asset/liability names append counts only when the actual count is greater than
+1, rounded to the nearest whole unit with no decimal places, such as `INTU N (x245)`.
+Stored counts, calculations and edit inputs retain their original precision. Amount is the full count × unit-price value in
+the item's native currency; the final column converts it to CAD. Date shows
+account balance dates or asset/liability unit-price dates in UTC. A differing
+count date appears as secondary text in the same cell. Counts and prices are
+selected independently. In current mode the latest snapshots may be future-dated;
+historical mode applies its selected-day cutoff. USD conversion failures retain
+native amounts and show an unavailable CAD amount. `AssetCard.tsx` is retained
+but no longer used by this panel.
+
+Writers can press the ellipsis button inside an asset or liability row's Name
+cell to open the holding dialog directly and add a count, a unit price, or both.
+These actions are hidden in historical mode. The fields start with the latest count and unit price;
 a missing snapshot leaves its field blank. Blank or numerically unchanged fields are skipped and zero is
 valid. Saving without changes to count or price closes the dialog without a
 request or new snapshots; changing only the date also saves nothing. Observation date/time defaults to now in local time and may be backdated;
@@ -73,10 +98,10 @@ unit price, and observation date/time (defaulting to now). The writer-checked
 `finance.create_asset` RPC creates all three rows atomically. Duplicate names are
 reported without creating partial holdings. On success, cards, totals, and
 allocation refresh; creating a zero holding also enables **Show inactive assets**
-so the new card remains visible. Apply migrations through `0042` before using this action. Both asset write RPCs
+so the new row remains visible. Apply migrations through `0042` before using this action. Both asset write RPCs
 use caller permissions and RLS with a read-only writer-check bridge, without
 granting clients access to the private schema.
-Readers and writers can toggle **Show inactive assets** in the overflow menu;
+Readers and writers can toggle **Show inactive accounts, assets and liabilities** in the overflow menu;
 only writers see **Add asset**. The menu supports keyboard navigation, Escape, and dismissal outside the menu;
 there is no separate empty-state action.
 The Net Worth overflow menu includes **Include RESP**, off by default. The
@@ -86,6 +111,11 @@ is needed. The tracked account named `RESP` (case-insensitive, trimmed) stays in
 the balances table with an exclusion note when disabled, but contributes neither
 to net worth nor allocation. Enabling the option includes its balance in both.
 Tracked-account selections still apply, and asset valuations are unaffected.
+Toggling Include RESP recalculates totals, allocation, exclusion labels and error
+flags from the loaded rows and conversions, without refetching balances, assets
+or exchange rates. Only the existing debounced preference save writes to the
+database. It works the same way in current and historical views; enabling RESP
+with a missing balance or rate exposes that problem until a data retry succeeds.
 
 Readers and writers can choose **Historical** from the Net Worth overflow menu.
 Its year, month and day choices are bounded by the earliest and latest available
@@ -101,6 +131,10 @@ tracked accounts, RESP inclusion and inactive-holding visibility still apply;
 historical account names and tracked-account preferences are not reconstructed.
 The selected date is held in panel state only. Historical mode hides create/update
 actions and displays the selected date with **Return to current**.
+Changing dates, returning to current, or retrying keeps the existing cards mounted
+beneath a loading-spinner dialog. Values and their displayed date update together
+when the request completes. A failed request removes the spinner, retains the
+previous view, and offers retry; obsolete responses cannot replace newer results.
 
 Historical USD conversion uses BoC `FXUSDCAD` observations within ±3 days of the
 selected date, widening to ±7 and ±14 days when no valid rate is present. The
@@ -121,17 +155,22 @@ amounts, and overall net worth are rounded to whole currency amounts. Stored
 values, calculations, and snapshot inputs retain precision; fractional counts
 and one-decimal allocation percentages are unchanged.
 
-The account balances table defaults to descending CAD balance. Every column
+The Assets table defaults to descending CAD amount; Liabilities defaults to ascending CAD amount (largest debts first). Each table maintains its own sort selection. Every column
 heading is a sort button; selecting the active heading reverses its direction.
 Account names initially sort ascending; dates and balances initially sort descending.
 Missing values sort last in either direction. Sorting is local to the loaded rows.
 
-Asset cards automatically stack from highest to lowest total holding value in
-CAD, independently of allocation’s legend height. The order updates when holdings
-reload after a save. Unavailable CAD valuations sort last; equal values sort by
-localized name, then ID. The desktop grid keeps net worth/account balances in the first column, assets
-in the second, and allocation in the third. On narrower panels, the first column
-spans the top row with assets and allocation below; mobile uses a single column. All strings support English and Spanish.
+Table names may wrap and wide tables scroll within their own cards. Card heights
+remain based on their full contents, with no fixed row limit or vertical table
+clipping. All strings support English and Spanish.
+
+When the panel stacks in one column (640px or narrower), tables use **Date**,
+**Name**, and one **Amount** column containing CAD values with a currency symbol.
+Dates use localized numeric month/day and a two-digit year; the full UTC date
+remains available to assistive technology and in the date tooltip. Liability
+icons are hidden, while negative-value colors remain. Native-amount sorting maps
+to CAD sorting in this view. The compact layout follows the panel's actual width,
+and wider layouts retain both amount columns and full dates.
 
 Cash Flow is a top-level main menu item. `CashFlowPanel` defaults to the current
 calendar year, showing January through the current month. Historical years show
@@ -147,6 +186,20 @@ section totals, displayed-month averages, and annual totals. Currency has its ow
 column; amounts retain their numeric values without display rounding or conversion.
 The export uses localized column labels, YYYY-MM month columns, and a UTF-8 BOM.
 It uses the loaded report and is disabled while totals refresh after category edits.
+Changing the year retains the loaded table and its original month/year metadata
+beneath the shared spinner with a dimmed backdrop. The replacement rows and period
+appear together when ready. Export and drill-down cells are disabled while a
+report request is pending. Background category refreshes do not cover an already
+open Cash Flow transaction popup with a second report-level spinner.
+The year-selection handler opens an already-mounted loading dialog immediately,
+then lets the browser paint before starting report rendering and fetching. Pending
+animation frames are canceled when the account workspace closes or the selection
+changes again; there is no fixed minimum display time or artificial network delay.
+
+Transactions uses the same dimmed loading spinner whenever a new result set is
+requested, including pagination, sorting, filters, and debounced search. Previously
+loaded rows remain visible beneath it until the new results replace them. Canceled
+or obsolete requests cannot overwrite the active report or transaction query.
 
 Category/month amounts are keyboard-accessible buttons, including zero amounts.
 They open a modal `TransactionsPanel` with the category ID, Cash Flow accounts in

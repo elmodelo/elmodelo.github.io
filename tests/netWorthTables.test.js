@@ -36,7 +36,7 @@ test('shared sorting includes both kinds, keeps unavailable values last and uses
   assert.equal(rows[0].id, 'cash', 'Sorting does not mutate input');
 });
 
-test('table cards share four sortable headers, rounded counts, date details, and writer-only dialog buttons', async () => {
+test('table cards share four sortable headers, rounded counts, value dates, and writer-only dialog buttons', async () => {
   env.VITE_SUPABASE_URL = 'http://127.0.0.1:54321';
   env.VITE_SUPABASE_ANON_KEY = 'test-key';
   const server = await createServer({ envDir: false, server: { middlewareMode: true, ws: false }, appType: 'custom' });
@@ -63,8 +63,9 @@ test('table cards share four sortable headers, rounded counts, date details, and
       assert.match(rounding, /\(x245\)/);
       assert.match(rounding, /\(x246\)/);
       assert.doesNotMatch(rounding, /\(x\d+[.,]/);
-      assert.ok(writer.includes(messages.assetCountDate));
-      assert.match(writer, /dateTime="2026-11-20T17:00:00Z"/);
+      assert.ok(!writer.includes(messages.assetCountDate));
+      assert.doesNotMatch(writer, /dateTime="2026-11-20T17:00:00Z"/);
+      assert.match(writer, /dateTime="2026-11-23T17:00:00Z"/);
       const format = (value, currency) => new Intl.NumberFormat(language, { style: 'currency', currency, currencyDisplay: 'code', maximumFractionDigits: 0 }).format(value);
       assert.ok(writer.includes(format(490, 'USD')), 'Amount is count times price, not the unit price');
       assert.ok(writer.includes(format(686, 'CAD')));

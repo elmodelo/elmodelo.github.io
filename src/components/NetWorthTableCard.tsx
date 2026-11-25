@@ -106,9 +106,6 @@ export function NetWorthTable({ messages, rows: input, titleId, readOnly = false
           return <tr key={`${row.kind ?? 'account'}:${row.id}`}>
             <td className={columnClass(0)}>
               {observed ? date(observed.postedAt) : '—'}
-              {asset && row.count && row.count.postedAt !== row.price?.postedAt && <small className="net-worth-count-date">
-                {messages.assetCountDate}: {date(row.count.postedAt)}
-              </small>}
             </td>
             <th scope="row" className={columnClass(1)}>
               <div className="net-worth-row-heading">

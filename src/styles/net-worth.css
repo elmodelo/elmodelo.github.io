@@ -45,7 +45,6 @@
 .net-worth-summary-card .net-worth-total { overflow-wrap: anywhere; text-align: center; }
 /* Let vertical scrolling continue into the dashboard at either table edge. */
 .net-worth-table-card .panel-scroll { flex: 0 0 auto; max-height: none; overscroll-behavior-y: auto; }
-.net-worth-count-date { display: block; margin-top: 4px; color: var(--text-muted); font-size: 0.875rem; white-space: normal; }
 .net-worth-row-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .net-worth-row-heading .net-worth-overflow { flex-shrink: 0; min-width: 32px; min-height: 32px; width: 32px; height: 32px; }
 .net-worth-row-count { white-space: nowrap; }

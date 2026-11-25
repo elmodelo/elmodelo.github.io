@@ -1,6 +1,7 @@
 import type { LocaleMessages } from '../locales/types';
 import type { PreferencesStatus as Status } from '../hooks/usePreferences';
 import { useStatusMessage } from '../hooks/useStatusMessages';
+import LoadingDialog from './LoadingDialog';
 
 interface PreferencesStatusProps {
   messages: LocaleMessages;
@@ -13,7 +14,7 @@ export function preferencesStatusMessage({ messages, status, onRetry }: Preferen
   const error = status === 'load-error' || status === 'save-error';
   const message = {
     idle: null,
-    loading: messages.loadingPreferences,
+    loading: null,
     saving: messages.savingPreferences,
     saved: messages.preferencesSaved,
     'load-error': messages.preferencesLoadError,
@@ -30,5 +31,5 @@ export function preferencesStatusMessage({ messages, status, onRetry }: Preferen
 
 export default function PreferencesStatus(props: PreferencesStatusProps) {
   useStatusMessage(preferencesStatusMessage(props));
-  return null;
+  return <LoadingDialog label={props.messages.loadingPreferences} open={props.status === 'loading'} priority={90} />;
 }

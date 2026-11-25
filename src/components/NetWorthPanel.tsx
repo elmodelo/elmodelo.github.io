@@ -61,7 +61,7 @@ export default function NetWorthPanel({ messages, accounts: allAccounts, tracked
   };
 
   const groups = groupNetWorthRows(result?.rows ?? [], showInactive);
-  const tableNotice = accountsStatus === 'loading' ? <p role="status">{messages.loadingAccounts}</p>
+  const tableNotice = accountsStatus === 'loading' ? undefined
     : accountsStatus === 'error' ? <p role="alert">{messages.accountsError}</p>
       : result?.accountsError ? <p role="alert">{messages.netWorthError}</p>
         : result?.assetsError ? <p role="alert">{messages.assetLoadError}</p> : undefined;

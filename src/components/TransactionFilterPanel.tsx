@@ -1,3 +1,4 @@
+import LoadingDialog from './LoadingDialog';
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { fetchCategories } from '../lib/transactionCategorization';
@@ -153,7 +154,7 @@ export default function TransactionFilterPanel({ messages, trackedAccountIds, va
       {loadStatus === 'error' ? <div role="alert">
         <p>{messages.filterOptionsError}</p>
         <button type="button" className="button button-secondary" onClick={() => { setLoadStatus('loading'); setAttempt((value) => value + 1); }}>{messages.retry}</button>
-      </div> : loadStatus === 'loading' ? <p role="status">{messages.loadingAccounts}</p> :
+      </div> : loadStatus === 'loading' ? <LoadingDialog label={messages.loadingFilters} /> :
         <div className="transaction-filter-grid">
           {options('accounts', messages.transactionAccount, accounts.filter((account) => trackedAccountIds.includes(account.id)))}
           {options('categories', messages.transactionCategory, categories)}

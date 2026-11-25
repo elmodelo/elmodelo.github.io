@@ -1,3 +1,4 @@
+import LoadingDialog from './LoadingDialog';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { Language } from '../hooks/useLanguage';
 import type { Theme } from '../hooks/useTheme';
@@ -113,7 +114,7 @@ function AccountSelection({ messages, label, name, accounts, selectedIds, onChan
         onToggle={(event) => setAccountsOpen(event.newState === 'open')}
       >
         {accountsStatus === 'loading' ? (
-          <p role="status">{messages.loadingAccounts}</p>
+          <LoadingDialog label={messages.loadingAccounts} priority={80} />
         ) : accountsStatus === 'error' ? (
           <div role="alert">
             <p className="form-message form-message-error">{messages.accountsError}</p>

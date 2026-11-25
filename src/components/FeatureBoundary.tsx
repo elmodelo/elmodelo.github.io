@@ -1,9 +1,9 @@
 import { Component, Suspense, type ReactNode } from 'react';
 import type { LocaleMessages } from '../locales/types';
+import LoadingDialog from './LoadingDialog';
 
 interface Props {
   messages: LocaleMessages;
-  loadingLabel: string;
   fallbackClassName?: string;
   children: ReactNode;
 }
@@ -16,7 +16,7 @@ export default class FeatureBoundary extends Component<Props, { failed: boolean 
   }
 
   render() {
-    const { children, messages, loadingLabel, fallbackClassName = 'dashboard-panel' } = this.props;
+    const { children, messages, fallbackClassName = 'dashboard-panel' } = this.props;
     if (this.state.failed) {
       return (
         <div className={fallbackClassName} role="alert">
@@ -27,6 +27,6 @@ export default class FeatureBoundary extends Component<Props, { failed: boolean 
         </div>
       );
     }
-    return <Suspense fallback={<div className={fallbackClassName} role="status">{loadingLabel}</div>}>{children}</Suspense>;
+    return <Suspense fallback={<LoadingDialog label={messages.loadingComponents} priority={70} />}>{children}</Suspense>;
   }
 }

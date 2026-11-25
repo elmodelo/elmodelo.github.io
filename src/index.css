@@ -29,7 +29,8 @@
   background: var(--page);
 }
 
-.app-shell[data-theme='light'] {
+.app-shell[data-theme='light'],
+#root:has(.app-shell[data-theme='light']) .LoadingDialog {
   color-scheme: light;
   --page: #f7f4fc;
   --surface: #fff;

@@ -1,3 +1,4 @@
+import LoadingDialog from './LoadingDialog';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { LocaleMessages } from '../locales/types';
 import type { Account } from '../hooks/useTrackedAccounts';
@@ -38,7 +39,7 @@ export default function HistoricalNetWorthDialog({ messages, accounts, selectedD
     {error ? <div role="alert">
       <p>{messages.netWorthHistoryError}</p>
       <button type="button" className="button button-secondary" onClick={() => setAttempt((value) => value + 1)}>{messages.retry}</button>
-    </div> : !result ? <p role="status">{messages.netWorthHistoryLoading}</p>
+    </div> : !result ? <LoadingDialog label={messages.netWorthHistoryLoading} />
       : result.bounds ? <HistoricalDateForm key={`${result.bounds.min}:${result.bounds.max}`}
         bounds={result.bounds} selectedDate={selectedDate} messages={messages} onSelect={onSelect} onClose={onClose} />
         : <p role="status">{messages.netWorthHistoryEmpty}</p>}

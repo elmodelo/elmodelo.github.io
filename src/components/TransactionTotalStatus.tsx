@@ -39,7 +39,7 @@ export default function TransactionTotalStatus({ messages, trackedAccountIds, fi
   const error = hasMatches && !!current && ('error' in current || current.total.conversionError);
   useStatusMessage({
     message: !hasMatches ? transactionTotalMessage(messages, { cad: 0 })
-      : !current ? messages.loadingTransactionTotal
+      : !current ? null
         : 'total' in current ? transactionTotalMessage(messages, current.total)
           : transactionTotalFailureMessage(messages, current.error, JSON.parse(filtersKey) as TransactionFilters),
     tone: error ? 'error' : 'info',

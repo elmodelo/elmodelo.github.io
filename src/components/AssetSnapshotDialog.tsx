@@ -1,3 +1,4 @@
+import LoadingDialog from './LoadingDialog';
 import { useEffect, useId, useRef, useState } from 'react';
 import type { LocaleMessages } from '../locales/types';
 import { changedAssetSnapshotInput, saveAssetSnapshot, newAssetInput, createAsset } from '../lib/assets';
@@ -43,6 +44,7 @@ export default function AssetSnapshotDialog({ asset, messages, onClose, onSaved,
     aria-describedby={`${id}-help`} onCancel={(event) => {
       if (pending.current) event.preventDefault();
     }} onClose={(event) => { if (!event.currentTarget.open && !pending.current) onClose(); }}>
+    <LoadingDialog label={messages.assetSaving} open={saving} />
     <h2 id={`${id}-title`}>{asset ? `${messages.assetUpdate}: ${asset.name}` : addLabel}</h2>
     <p id={`${id}-help`} className="asset-dialog-help">{asset ? (liability ? messages.liabilitySnapshotHelp : messages.assetSnapshotHelp) : liability ? messages.liabilityCreateHelp : messages.assetCreateHelp}</p>
     <form aria-busy={saving} onSubmit={async (event) => {

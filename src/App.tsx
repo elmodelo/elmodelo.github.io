@@ -6,7 +6,7 @@ import Menu, { savedFilterSection, type AppSection } from './components/Menu';
 import PreferencesStatus from './components/PreferencesStatus';
 import StatusBar from './components/StatusBar';
 import { StatusMessagesProvider } from './hooks/useStatusMessages';
-import LoadingDialog from './components/LoadingDialog';
+import LoadingDialog, { LoadingDialogProvider } from './components/LoadingDialog';
 import { useAuth } from './hooks/useAuth';
 import { PreferencesProvider, usePreferences } from './hooks/usePreferences';
 import { PermissionsProvider } from './hooks/usePermissions';
@@ -37,7 +37,7 @@ const CashFlowPanel = lazy(() => import('./components/CashFlowPanel'));
 function App() {
   const auth = useAuth();
   const userId = auth.status === 'ready' ? auth.user?.id : undefined;
-  return <StatusMessagesProvider key={userId ?? 'guest'}><PreferencesProvider userId={userId}><Application auth={auth} /></PreferencesProvider></StatusMessagesProvider>;
+  return <LoadingDialogProvider><StatusMessagesProvider key={userId ?? 'guest'}><PreferencesProvider userId={userId}><Application auth={auth} /></PreferencesProvider></StatusMessagesProvider></LoadingDialogProvider>;
 }
 
 function Application({ auth }: { auth: ReturnType<typeof useAuth> }) {
@@ -70,7 +70,7 @@ function Application({ auth }: { auth: ReturnType<typeof useAuth> }) {
 
         <section className={user && authStatus === 'ready' ? 'dashboard-layout' : 'auth-layout'}>
           {authStatus === 'loading' ? (
-            <LoadingDialog label={messages.checkingSession} />
+            <LoadingDialog label={messages.checkingSession} priority={100} />
           ) : authStatus === 'error' ? (
             <div className="auth-card status-card" role="alert">
               <h1>{messages.authErrorTitle}</h1>
@@ -102,7 +102,7 @@ function Application({ auth }: { auth: ReturnType<typeof useAuth> }) {
               onLanguageChange={setLanguage}
             />
           ) : showRegistration ? (
-            <FeatureBoundary messages={messages} loadingLabel={messages.loadingRegistration} fallbackClassName="auth-card status-card">
+            <FeatureBoundary messages={messages} fallbackClassName="auth-card status-card">
               <RegistrationForm messages={messages} onSignIn={() => setShowRegistration(false)} />
             </FeatureBoundary>
           ) : (
@@ -188,9 +188,10 @@ function Dashboard({
         uncategorizedCount={uncategorizedCount} pinnedFilters={pinnedFilters}
       />
       <div className="dashboard-main">
+        <LoadingDialog label={messages.loadingAccounts} open={accountsStatus === 'loading'} priority={80} />
         <div className="dashboard-content">
           {section === 'transactions' || section === 'uncategorized' || pinnedPreset ? (
-            accountsStatus === 'loading' ? <LoadingDialog label={messages.loadingAccounts} />
+            accountsStatus === 'loading' ? null
               : accountsStatus === 'error' ? (
                 <section className="dashboard-panel" role="alert">
                   <h1>{messages.transactions}</h1>
@@ -199,7 +200,7 @@ function Dashboard({
                     {messages.retry}
                   </button>
                 </section>
-              ) : <FeatureBoundary key={section} messages={messages} loadingLabel={messages.loadingTransactions}>
+              ) : <FeatureBoundary key={section} messages={messages}>
                 <TransactionsPanel
                   messages={messages}
                   accounts={accounts}
@@ -211,17 +212,17 @@ function Dashboard({
                 />
               </FeatureBoundary>
           ) : section === 'net-worth' ? (
-            <FeatureBoundary messages={messages} loadingLabel={messages.loadingNetWorth}>
+            <FeatureBoundary messages={messages}>
               <NetWorthPanel messages={messages} accounts={accounts} trackedAccountIds={trackedAccountIds}
                 accountsStatus={accountsStatus} onRetryAccounts={retryAccounts} />
             </FeatureBoundary>
           ) : section === 'net-worth-charts' ? (
-            <FeatureBoundary messages={messages} loadingLabel={messages.loadingNetWorth}>
+            <FeatureBoundary messages={messages}>
               <NetWorthChartsPanel messages={messages} accounts={accounts} trackedAccountIds={trackedAccountIds}
                 accountsStatus={accountsStatus} onRetryAccounts={retryAccounts} />
             </FeatureBoundary>
           ) : section === 'cash-flow' ? (
-            accountsStatus === 'loading' ? <LoadingDialog label={messages.loadingAccounts} />
+            accountsStatus === 'loading' ? null
               : accountsStatus === 'error' ? (
                 <section className="dashboard-panel" role="alert">
                   <h1>{messages.cashFlow}</h1>
@@ -230,12 +231,12 @@ function Dashboard({
                     {messages.retry}
                   </button>
                 </section>
-              ) : <FeatureBoundary messages={messages} loadingLabel={messages.loadingCashFlow}>
+              ) : <FeatureBoundary messages={messages}>
                 <CashFlowPanel messages={messages} accounts={accounts} cashFlowAccountIds={cashFlowAccountIds}
                   onCategoriesChanged={() => setCategoryRevision((previous) => previous + 1)} />
               </FeatureBoundary>
           ) : section === 'preferences' ? (
-            <FeatureBoundary messages={messages} loadingLabel={messages.loadingPreferences}>
+            <FeatureBoundary messages={messages}>
               <PreferencesPanel
                 messages={messages}
                 theme={theme}

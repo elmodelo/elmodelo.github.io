@@ -88,7 +88,7 @@ test('preferences maps activity to localized messages, retries, and timed succes
     for (const language of ['en', 'es']) {
       const messages = getLocaleMessages(language);
       for (const [status, text] of [
-        ['loading', messages.loadingPreferences], ['saving', messages.savingPreferences],
+        ['saving', messages.savingPreferences],
         ['saved', messages.preferencesSaved], ['save-error', messages.preferencesSaveError],
         ['load-error', messages.preferencesLoadError],
       ]) {
@@ -97,6 +97,7 @@ test('preferences maps activity to localized messages, retries, and timed succes
         if (status.endsWith('error')) assert.ok(markup.includes(messages.retry));
         else assert.ok(!markup.includes('<button'));
       }
+      assert.equal(preferencesStatusMessage({ messages, status: 'loading', onRetry() {} }).message, null);
       const idle = renderToStaticMarkup(createElement(StatusMessage, preferencesStatusMessage({ messages, status: 'idle', onRetry() {} })));
       assert.match(idle, /><\/div>$/);
       assert.ok(!idle.includes(messages.preferencesSaved));

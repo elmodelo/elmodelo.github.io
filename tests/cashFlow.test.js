@@ -129,7 +129,7 @@ test('localized table has separate currencies, three sections, and only category
   } finally { await server.close(); }
 });
 
-test('panel starts on the current year, with localized loading and empty-account states', async () => {
+test('panel starts on the current year without inline loading or its own dialog', async () => {
   env.VITE_SUPABASE_URL = 'http://127.0.0.1:54321';
   env.VITE_SUPABASE_ANON_KEY = 'test-key';
   const server = await createServer({ server: { middlewareMode: true, ws: false }, appType: 'custom' });
@@ -139,9 +139,9 @@ test('panel starts on the current year, with localized loading and empty-account
     for (const language of ['en', 'es']) {
       const messages = getLocaleMessages(language);
       const markup = renderToStaticMarkup(createElement(CashFlowPanel, { messages, accounts: [], cashFlowAccountIds: ['cad'] }));
-      assert.ok(markup.includes(messages.loadingCashFlow));
-      assert.match(markup, /class="LoadingDialog"/);
-      assert.ok(markup.includes(messages.cashFlowLoadingYears));
+      assert.ok(!markup.includes(messages.loadingCashFlow));
+      assert.doesNotMatch(markup, /class="LoadingDialog"/);
+      assert.ok(!markup.includes(messages.cashFlowLoadingYears));
       assert.ok(markup.includes(`value="${new Date().getFullYear()}"`));
       const empty = renderToStaticMarkup(createElement(CashFlowPanel, { messages, accounts: [], cashFlowAccountIds: [] }));
       assert.ok(empty.includes(messages.cashFlowNoAccounts));

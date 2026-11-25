@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type RefObject } from 'react';
+import { useEffect, useId, useState } from 'react';
 import type { LocaleMessages } from '../locales/types';
 import type { Account } from '../hooks/useTrackedAccounts';
 import { supabase } from '../lib/supabaseClient';
@@ -30,37 +30,14 @@ function CashFlowWorkspace({ messages, accounts, cashFlowAccountIds, onCategorie
   const [revision, setRevision] = useState(0);
   const [returnFocus, setReturnFocus] = useState<CashFlowFocusTarget | null>(null);
   const [cell, setCell] = useState<{ row: CashFlowRow; month: number } | null>(null);
-  const loadingDialogRef = useRef<HTMLDialogElement>(null);
-  const yearFrame = useRef<number | null>(null);
   const years = cashFlowYearOptions(yearsResult?.years ?? [], currentYear);
   const year = years.includes(selectedYear) ? selectedYear : currentYear;
   const { firstMonth, lastMonth } = cashFlowPeriod(year);
 
-  useEffect(() => () => {
-    if (yearFrame.current !== null) cancelAnimationFrame(yearFrame.current);
-  }, []);
-
   function selectYear(nextYear: number) {
-    if (nextYear === year) {
-      if (yearFrame.current !== null) {
-        cancelAnimationFrame(yearFrame.current);
-        yearFrame.current = null;
-        loadingDialogRef.current?.close();
-      }
-      return;
-    }
-    if (yearFrame.current !== null) cancelAnimationFrame(yearFrame.current);
-    const dialog = loadingDialogRef.current;
-    if (dialog && !dialog.open) dialog.showModal();
-    // The first frame paints the spinner. Begin report rendering/fetching on
-    // the next frame, so even expensive renders or cached responses cannot
-    // postpone all visible feedback until the request is nearly finished.
-    yearFrame.current = requestAnimationFrame(() => {
-      yearFrame.current = requestAnimationFrame(() => {
-        yearFrame.current = null;
-        setSelectedYear(nextYear); setCell(null); setReturnFocus(null);
-      });
-    });
+    setSelectedYear(nextYear);
+    setCell(null);
+    setReturnFocus(null);
   }
 
   useEffect(() => {
@@ -92,14 +69,14 @@ function CashFlowWorkspace({ messages, accounts, cashFlowAccountIds, onCategorie
       </div>
     </div>
     {!cashFlowAccountIds.length ? <p>{messages.cashFlowNoAccounts}</p> : <>
-      {!yearsResult && <p role="status">{messages.cashFlowLoadingYears}</p>}
+      <LoadingDialog label={messages.cashFlowLoadingYears} open={!yearsResult} priority={10} />
       {yearsResult?.error && <div role="alert" className="cash-flow-error">
         <p className="form-message form-message-error">{messages.cashFlowYearsError}</p>
         <button type="button" className="button button-secondary" onClick={() => {
           setYearsResult(null); setYearsAttempt((previous) => previous + 1);
         }}>{messages.retry}</button>
       </div>}
-      <CashFlowReport messages={messages} cashFlowAccountIds={cashFlowAccountIds} showLoadingDialog={!cell} loadingDialogRef={loadingDialogRef}
+      <CashFlowReport messages={messages} cashFlowAccountIds={cashFlowAccountIds} showLoadingDialog={!cell}
         year={year} firstMonth={firstMonth} lastMonth={lastMonth} revision={revision} exportTarget={exportTarget} returnFocus={returnFocus} onCellClick={(row, month) => { setReturnFocus(null); setCell({ row, month }); }} />
     </>}
     {cell && <CashFlowTransactionsPanel messages={messages} accounts={accounts}
@@ -126,10 +103,9 @@ interface ReportProps {
   exportTarget: HTMLDivElement | null;
   returnFocus: CashFlowFocusTarget | null;
   showLoadingDialog: boolean;
-  loadingDialogRef: RefObject<HTMLDialogElement | null>;
 }
 
-function CashFlowReport({ messages, cashFlowAccountIds, year, firstMonth, lastMonth, onCellClick, revision, exportTarget, returnFocus, showLoadingDialog, loadingDialogRef }: ReportProps) {
+function CashFlowReport({ messages, cashFlowAccountIds, year, firstMonth, lastMonth, onCellClick, revision, exportTarget, returnFocus, showLoadingDialog }: ReportProps) {
   const [result, setResult] = useState<{
     rows: CashFlowRow[]; error: boolean; key: string; year: number; firstMonth: number; lastMonth: number;
   } | null>(null);
@@ -153,7 +129,7 @@ function CashFlowReport({ messages, cashFlowAccountIds, year, firstMonth, lastMo
   }, [cashFlowAccountIds, year, firstMonth, lastMonth, requestKey]);
 
   return <>
-    <LoadingDialog label={messages.loadingCashFlow} open={busy && showLoadingDialog} dialogRef={loadingDialogRef} />
+    <LoadingDialog label={messages.loadingCashFlow} open={busy && showLoadingDialog} />
     {result && (result.error ? <div role="alert">
       <p className="form-message form-message-error">{messages.cashFlowError}</p>
       <button className="button button-secondary" type="button" onClick={() => setAttempt((previous) => previous + 1)}>{messages.retry}</button>

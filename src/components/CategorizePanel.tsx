@@ -1,3 +1,4 @@
+import LoadingDialog from './LoadingDialog';
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { categorizeTransactions, fetchCategories } from '../lib/transactionCategorization';
@@ -152,13 +153,14 @@ export default function CategorizePanel({ messages, transactionIds, isSelection,
       <h2 id="categorize-title">{isSelection
         ? messages.categorizeSelected.replace('{count}', String(transactionIds.length))
         : messages.categorizeTransaction}</h2>
+      <LoadingDialog label={messages.savingCategory} open={saving} />
       <form onSubmit={(event) => { event.preventDefault(); void applyCategory(); }}>
         {loadError ? (
           <div role="alert">
             <p className="form-message form-message-error">{messages.categoriesError}</p>
             <button type="button" className="button button-secondary" onClick={() => { setLoadError(false); setRetry((value) => value + 1); }}>{messages.retry}</button>
           </div>
-        ) : categories === null ? <p role="status">{messages.loadingCategories}</p>
+        ) : categories === null ? <LoadingDialog label={messages.loadingCategories} />
           : categories.length === 0 ? <p>{messages.noCategories}</p> : (
             <>
               <label htmlFor="categorize-category">{messages.transactionCategory}</label>

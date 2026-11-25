@@ -91,7 +91,7 @@ test('saved-filter preferences show pin state and default older filters to unche
   }
 });
 
-test('transaction panel initially renders a localized loading state', async () => {
+test('transaction panel delegates loading to the shared dialog', async () => {
   env.VITE_SUPABASE_URL = 'http://127.0.0.1:54321';
   env.VITE_SUPABASE_ANON_KEY = 'test-key';
   const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' });
@@ -107,8 +107,8 @@ test('transaction panel initially renders a localized loading state', async () =
       trackedAccountIds: ['account-a'],
     }));
     assert.match(markup, /Transacciones/);
-    assert.match(markup, /role="status"/);
-    assert.match(markup, /Cargando transacciones/);
+    assert.doesNotMatch(markup, /role="status"/);
+    assert.doesNotMatch(markup, /Cargando transacciones/);
     const filteredMarkup = renderToStaticMarkup(createElement(TransactionsPanel, {
       messages: getLocaleMessages('es'), accounts: [], trackedAccountIds: ['account-a'],
       filters: [{ field: 'category', operator: 'is', value: null }], title: 'Sin categoría',

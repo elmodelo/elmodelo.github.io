@@ -1,4 +1,6 @@
 export interface LocaleMessages {
+  loadingComponents: string;
+  loadingFilters: string;
   netWorthCharts: string;
   netWorthChartsTotals: string;
   netWorthChartsGrowth: string;

@@ -161,6 +161,9 @@
 .net-worth-chart-legend { display: flex; flex-wrap: wrap; gap: 12px 24px; list-style: none; margin: 0 0 12px; padding: 0; font-size: 0.875rem; }
 .net-worth-chart-legend li { display: flex; align-items: center; gap: 8px; }
 .net-worth-chart-scroll { overflow-x: auto; max-width: 100%; overscroll-behavior-x: contain; }
+/* Keep chart history scrollable without showing a scrollbar, including on load. */
+.net-worth-chart-viewport > .net-worth-chart-scroll { scrollbar-width: none; }
+.net-worth-chart-viewport > .net-worth-chart-scroll::-webkit-scrollbar { display: none; }
 .net-worth-chart-scroll svg { display: block; color: var(--text); }
 .net-worth-chart-axis line { stroke: var(--border); }
 .net-worth-chart-axis text, .net-worth-chart-month { fill: var(--text-muted); font: 11px system-ui, sans-serif; }

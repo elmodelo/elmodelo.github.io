@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabaseClient';
+import { useIdleSession } from './useIdleSession';
 import { hasMfaSession } from '../lib/mfa';
 import { getSessionAppRole } from '../lib/permissions';
 
@@ -14,10 +15,20 @@ export function useAuth() {
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [signOutFailed, setSignOutFailed] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     let active = true;
+    const rejectSession = async () => {
+      if (!active) return;
+      setStatus('error');
+      try {
+        const { error } = await supabase.auth.signOut({ scope: 'local' });
+        if (active && !error) {
+          setSession(null);
+          setStatus('ready');
+        }
+      } catch { /* Keep access blocked if local sign-out also fails. */ }
+    };
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -33,21 +44,23 @@ export function useAuth() {
       .then(({ data, error }) => {
         if (!active) return;
         if (error) {
-          setStatus('error');
+          void rejectSession();
           return;
         }
         setSession(data.session);
         setStatus('ready');
       })
       .catch(() => {
-        if (active) setStatus('error');
+        void rejectSession();
       });
 
     return () => {
       active = false;
       subscription.unsubscribe();
     };
-  }, [retryCount]);
+  }, []);
+
+  const idle = useIdleSession(session, status === 'ready' && mfaVerified);
 
   const signOut = useCallback(async () => {
     setSigningOut(true);
@@ -62,10 +75,5 @@ export function useAuth() {
     }
   }, []);
 
-  const retrySessionCheck = useCallback(() => {
-    setStatus('loading');
-    setRetryCount((count) => count + 1);
-  }, []);
-
-  return { user, appRole, mfaVerified, status, signOutFailed, signingOut, signOut, retrySessionCheck };
+  return { user, idle, appRole, mfaVerified, status, signOutFailed, signingOut, signOut };
 }

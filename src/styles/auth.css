@@ -46,6 +46,35 @@
   text-align: center;
 }
 
+.idle-warning-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+[data-idle-warning]::backdrop {
+  background-color: rgb(0 0 0 / var(--idle-backdrop-opacity, 1));
+  -webkit-backdrop-filter: blur(var(--idle-backdrop-blur, 12px));
+  backdrop-filter: blur(var(--idle-backdrop-blur, 12px));
+  transition: background-color 1s linear, backdrop-filter 1s linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-idle-warning]::backdrop {
+    transition: none;
+  }
+}
+
+.idle-warning-actions .button {
+  margin-top: 0;
+}
+
+.idle-warning-actions .button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: -4px;
+}
+
 .status-card .eyebrow {
   margin-bottom: 12px;
 }

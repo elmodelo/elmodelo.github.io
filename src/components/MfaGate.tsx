@@ -24,7 +24,21 @@ export default function MfaGate({ messages, onSignOut, signOutFailed }: {
   const digitInputs = useRef<Array<HTMLInputElement | null>>([]);
 
   useEffect(() => {
-    if (loaded && factorId && !loading && !code) digitInputs.current[0]?.focus();
+    if (!loaded || !factorId || loading || code) return;
+    let frame: number;
+    const focusFirstDigit = () => {
+      const input = digitInputs.current[0];
+      if (!input) return;
+      // LoadingDialog releases ancestor inertness in a separate render. Focus
+      // only after that completes, including after enrollment or a failed code.
+      if (input.closest('[inert]')) {
+        frame = requestAnimationFrame(focusFirstDigit);
+      } else {
+        input.focus({ preventScroll: true });
+      }
+    };
+    frame = requestAnimationFrame(focusFirstDigit);
+    return () => cancelAnimationFrame(frame);
   }, [loaded, factorId, loading, code]);
 
   useEffect(() => {

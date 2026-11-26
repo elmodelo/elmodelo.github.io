@@ -68,3 +68,13 @@
     border-radius: 16px;
   }
 }
+
+.mfa-qr {
+  display: block;
+  width: min(100%, 240px);
+  height: auto;
+  margin-inline: auto;
+  background: white;
+  padding: 8px;
+  box-sizing: border-box;
+}

@@ -2,6 +2,7 @@ import { lazy, useEffect, useState } from 'react';
 import type { LocaleMessages } from './locales/types';
 import FeatureBoundary from './components/FeatureBoundary';
 import SignIn from './components/SignIn';
+import MfaGate from './components/MfaGate';
 import Menu, { savedFilterSection, type AppSection } from './components/Menu';
 import PreferencesStatus from './components/PreferencesStatus';
 import StatusBar from './components/StatusBar';
@@ -36,12 +37,12 @@ const CashFlowPanel = lazy(() => import('./components/CashFlowPanel'));
 
 function App() {
   const auth = useAuth();
-  const userId = auth.status === 'ready' ? auth.user?.id : undefined;
+  const userId = auth.status === 'ready' && auth.mfaVerified ? auth.user?.id : undefined;
   return <LoadingDialogProvider><StatusMessagesProvider key={userId ?? 'guest'}><PreferencesProvider userId={userId}><Application auth={auth} /></PreferencesProvider></StatusMessagesProvider></LoadingDialogProvider>;
 }
 
 function Application({ auth }: { auth: ReturnType<typeof useAuth> }) {
-  const { user, appRole, status: authStatus, signOutFailed, signingOut, signOut, retrySessionCheck } = auth;
+  const { user, appRole, mfaVerified, status: authStatus, signOutFailed, signingOut, signOut, retrySessionCheck } = auth;
   const { status: preferencesStatus, retry: retryPreferences } = usePreferences();
   const { messages, setLanguage } = useLanguage();
   const [showRegistration, setShowRegistration] = useState(false);
@@ -56,7 +57,7 @@ function Application({ auth }: { auth: ReturnType<typeof useAuth> }) {
     <PermissionsProvider role={authStatus === 'ready' ? appRole : null}>
       <PreferencesStatus messages={messages} status={preferencesStatus} onRetry={retryPreferences} />
       <main className="app-shell" data-theme={theme}>
-        {(user && authStatus === 'ready') && (
+        {(user && mfaVerified && authStatus === 'ready') && (
           <header className="app-header">
             <div className='header-brand has-menu'>
               <div className="header-menu" ref={setHeaderMenuTarget} />
@@ -68,7 +69,7 @@ function Application({ auth }: { auth: ReturnType<typeof useAuth> }) {
           </header>
         )}
 
-        <section className={user && authStatus === 'ready' ? 'dashboard-layout' : 'auth-layout'}>
+        <section className={user && mfaVerified && authStatus === 'ready' ? 'dashboard-layout' : 'auth-layout'}>
           {authStatus === 'loading' ? (
             <LoadingDialog label={messages.checkingSession} priority={100} />
           ) : authStatus === 'error' ? (
@@ -83,6 +84,8 @@ function Application({ auth }: { auth: ReturnType<typeof useAuth> }) {
                 {messages.retry}
               </button>
             </div>
+          ) : user && !mfaVerified ? (
+            <MfaGate key={user.id} messages={messages} onSignOut={signOut} signOutFailed={signOutFailed} />
           ) : user && (preferencesStatus === 'loading' || preferencesStatus === 'load-error') ? (
             <div className="dashboard-main">
               <div className="dashboard-content" aria-busy={preferencesStatus === 'loading'} />

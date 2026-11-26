@@ -1,6 +1,20 @@
 import type { LocaleMessages } from './types';
 
 const en: LocaleMessages = {
+  mfaTitle: "Two-step verification",
+  mfaSetupHelp: "An authenticator app is required to access elModelo. Set it up to continue.",
+  mfaVerifyHelp: "Enter the six-digit code from your authenticator app.",
+  mfaEnroll: "Set up authenticator",
+  mfaScan: "Scan this QR code with your authenticator app, or enter the setup key manually. Then enter the code it generates.",
+  mfaQrAlt: "Authenticator setup QR code",
+  mfaSecret: "Setup key",
+  mfaCode: "Authentication code",
+  mfaVerify: "Verify and continue",
+  mfaWorking: "Checking verification…",
+  mfaError: "Could not load or set up verification. Please retry.",
+  mfaCodeError: "Verification failed. Enter a fresh code and try again.",
+  mfaFactor: "Authenticator",
+  mfaRecovery: "Lost access to your authenticator? Contact the app administrator to reset it after verifying your identity.",
   loadingComponents: 'Loading components…',
   loadingFilters: 'Loading filters…',
   netWorthCharts: "Charts",

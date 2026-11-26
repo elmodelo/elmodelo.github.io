@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "test": "node --test tests/*.test.js",
+    "test:idle-browser": "node tests/browser/idleSession.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

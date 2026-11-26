@@ -3,6 +3,7 @@ import type { LocaleMessages } from './locales/types';
 import FeatureBoundary from './components/FeatureBoundary';
 import SignIn from './components/SignIn';
 import MfaGate from './components/MfaGate';
+import IdleWarning from './components/IdleWarning';
 import Menu, { savedFilterSection, type AppSection } from './components/Menu';
 import PreferencesStatus from './components/PreferencesStatus';
 import StatusBar from './components/StatusBar';
@@ -37,12 +38,12 @@ const CashFlowPanel = lazy(() => import('./components/CashFlowPanel'));
 
 function App() {
   const auth = useAuth();
-  const userId = auth.status === 'ready' && auth.mfaVerified ? auth.user?.id : undefined;
+  const userId = auth.status === 'ready' && auth.mfaVerified && auth.idle.hasAccess ? auth.user?.id : undefined;
   return <LoadingDialogProvider><StatusMessagesProvider key={userId ?? 'guest'}><PreferencesProvider userId={userId}><Application auth={auth} /></PreferencesProvider></StatusMessagesProvider></LoadingDialogProvider>;
 }
 
 function Application({ auth }: { auth: ReturnType<typeof useAuth> }) {
-  const { user, appRole, mfaVerified, status: authStatus, signOutFailed, signingOut, signOut, retrySessionCheck } = auth;
+  const { user, idle, appRole, mfaVerified, status: authStatus, signOutFailed, signingOut, signOut } = auth;
   const { status: preferencesStatus, retry: retryPreferences } = usePreferences();
   const { messages, setLanguage } = useLanguage();
   const [showRegistration, setShowRegistration] = useState(false);
@@ -54,10 +55,10 @@ function Application({ auth }: { auth: ReturnType<typeof useAuth> }) {
   }, [messages.language]);
 
   return (
-    <PermissionsProvider role={authStatus === 'ready' ? appRole : null}>
+    <PermissionsProvider role={authStatus === 'ready' && idle.hasAccess ? appRole : null}>
       <PreferencesStatus messages={messages} status={preferencesStatus} onRetry={retryPreferences} />
       <main className="app-shell" data-theme={theme}>
-        {(user && mfaVerified && authStatus === 'ready') && (
+        {(user && mfaVerified && idle.hasAccess && authStatus === 'ready') && (
           <header className="app-header">
             <div className='header-brand has-menu'>
               <div className="header-menu" ref={setHeaderMenuTarget} />
@@ -69,7 +70,8 @@ function Application({ auth }: { auth: ReturnType<typeof useAuth> }) {
           </header>
         )}
 
-        <section className={user && mfaVerified && authStatus === 'ready' ? 'dashboard-layout' : 'auth-layout'}>
+        <section className={user && mfaVerified && idle.hasAccess && authStatus === 'ready' ? 'dashboard-layout' : 'auth-layout'}
+          style={user && mfaVerified && idle.status === 'checking' ? { visibility: 'hidden' } : undefined}>
           {authStatus === 'loading' ? (
             <LoadingDialog label={messages.checkingSession} priority={100} />
           ) : authStatus === 'error' ? (
@@ -79,14 +81,21 @@ function Application({ auth }: { auth: ReturnType<typeof useAuth> }) {
               <button
                 className="button button-primary"
                 type="button"
-                onClick={retrySessionCheck}
+                onClick={signOut}
               >
-                {messages.retry}
+                {messages.signOut}
               </button>
             </div>
           ) : user && !mfaVerified ? (
             <MfaGate key={user.id} messages={messages} onSignOut={signOut} signOutFailed={signOutFailed} />
-          ) : user && (preferencesStatus === 'loading' || preferencesStatus === 'load-error') ? (
+          ) : user && (idle.status === 'expired' || idle.status === 'error') ? (
+            <div className="auth-card status-card" role="alert">
+              <h1>{idle.status === 'expired' ? messages.idleExpiredTitle : messages.authErrorTitle}</h1>
+              <p>{idle.status === 'expired' ? messages.idleExpired : messages.idleCheckError}</p>
+              <button className="button button-secondary" type="button" onClick={signOut}>{messages.signOut}</button>
+              {signOutFailed && <p>{messages.signOutError}</p>}
+            </div>
+          ) : user && !idle.hasAccess ? null : user && (preferencesStatus === 'loading' || preferencesStatus === 'load-error') ? (
             <div className="dashboard-main">
               <div className="dashboard-content" aria-busy={preferencesStatus === 'loading'} />
               <StatusBar />
@@ -116,6 +125,8 @@ function Application({ auth }: { auth: ReturnType<typeof useAuth> }) {
           )}
         </section>
 
+        {user && mfaVerified && idle.status === 'checking' && <LoadingDialog label={messages.checkingSession} priority={100} />}
+        {user && idle.status === 'warning' && <IdleWarning seconds={idle.seconds} messages={messages} onStay={idle.stay} onSignOut={signOut} />}
         {signingOut && <LoadingDialog label={messages.signingOut} />}
 
         <footer className="app-footer">

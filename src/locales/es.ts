@@ -1,6 +1,13 @@
 import type { LocaleMessages } from './types';
 
 const es: LocaleMessages = {
+  idleWarningTitle: "¿Sigues ahí?",
+  idleWarning: "Se cerrará tu sesión en {seconds} segundos por inactividad.",
+  idleStay: "Mantener la sesión",
+  idleExpiredTitle: "Sesión caducada",
+  idleExpired: "Tu sesión terminó por inactividad.",
+  idleCheckError: "No se pudo verificar tu sesión.",
+
   mfaTitle: "Verificación en dos pasos",
   mfaSetupHelp: "Se requiere una aplicación de autenticación para acceder a elModelo. Configúrala para continuar.",
   mfaVerifyHelp: "Introduce el código de seis dígitos de tu aplicación de autenticación.",
@@ -179,7 +186,7 @@ const es: LocaleMessages = {
   reloadPage: 'Volver a cargar la página',
   checkingSession: 'Cargando sesión…',
   authErrorTitle: 'No pudimos comprobar tu sesión',
-  authCheckError: 'Hubo un problema al comprobar tu inicio de sesión. Inténtalo de nuevo.',
+  authCheckError: 'Hubo un problema al comprobar tu inicio de sesión. Cierra la sesión y vuelve a iniciarla para continuar.',
   retry: 'Intentar de nuevo',
   signedInEyebrow: 'CUENTA ELMODELO',
   welcomeBack: 'Te damos la bienvenida',

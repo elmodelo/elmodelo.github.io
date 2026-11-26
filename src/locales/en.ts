@@ -9,7 +9,6 @@ const en: LocaleMessages = {
   mfaQrAlt: "Authenticator setup QR code",
   mfaSecret: "Setup key",
   mfaCode: "Authentication code",
-  mfaVerify: "Verify and continue",
   mfaWorking: "Checking verification…",
   mfaError: "Could not load or set up verification. Please retry.",
   mfaCodeError: "Verification failed. Enter a fresh code and try again.",

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { enrollAuthenticator, loadMfaFactors, verifyAuthenticator } from '../lib/mfa';
 import type { LocaleMessages } from '../locales/types';
@@ -21,6 +21,11 @@ export default function MfaGate({ messages, onSignOut, signOutFailed }: {
   const [error, setError] = useState<'load' | 'code' | null>(null);
   const [attempt, setAttempt] = useState(0);
   const busy = useRef(false);
+  const digitInputs = useRef<Array<HTMLInputElement | null>>([]);
+
+  useEffect(() => {
+    if (loaded && factorId && !loading && !code) digitInputs.current[0]?.focus();
+  }, [loaded, factorId, loading, code]);
 
   useEffect(() => {
     let active = true;
@@ -56,14 +61,13 @@ export default function MfaGate({ messages, onSignOut, signOutFailed }: {
     }
   }
 
-  async function verify(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (busy.current || !factorId || !/^\d{6}$/.test(code)) return;
+  async function verify(codeToVerify: string) {
+    if (busy.current || !factorId || !/^\d{6}$/.test(codeToVerify)) return;
     busy.current = true;
     setLoading(true);
     setError(null);
     try {
-      await verifyAuthenticator(supabase, factorId, code);
+      await verifyAuthenticator(supabase, factorId, codeToVerify);
     } catch {
       setCode('');
       setError('code');
@@ -71,6 +75,24 @@ export default function MfaGate({ messages, onSignOut, signOutFailed }: {
       busy.current = false;
       setLoading(false);
     }
+  }
+
+  function changeCode(index: number, value: string) {
+    if (busy.current) return;
+    const digits = value.replace(/\D/g, '').slice(0, 6);
+    if (value && !digits) return;
+    // A full pasted/autofilled code always replaces all six digits, even when
+    // a later box has focus. Shorter sequences fill from the focused box.
+    const start = digits.length === 6 ? 0 : index;
+    const nextDigits = code.padEnd(6, ' ').split('');
+    if (!digits) nextDigits[index] = ' ';
+    for (let offset = 0; offset < digits.length && start + offset < 6; offset++) {
+      nextDigits[start + offset] = digits[offset];
+    }
+    const nextCode = nextDigits.join('').trimEnd();
+    setCode(nextCode);
+    if (digits) digitInputs.current[Math.min(start + digits.length, 5)]?.focus();
+    if (/^\d{6}$/.test(nextCode) && nextCode !== code) void verify(nextCode);
   }
 
   const settingUp = factors.length === 0;
@@ -87,7 +109,7 @@ export default function MfaGate({ messages, onSignOut, signOutFailed }: {
             <input id="mfa-secret" readOnly value={enrollment.totp.secret} onFocus={(event) => event.target.select()} />
           </div>
         </>}
-        {loaded && factorId && <form className="auth-form" onSubmit={verify}>
+        {loaded && factorId && <form className="auth-form" onSubmit={(event) => { event.preventDefault(); void verify(code); }}>
           {factors.length > 1 && <div className="form-field">
             <label htmlFor="mfa-factor">{messages.mfaFactor}</label>
             <select id="mfa-factor" value={factorId} disabled={loading} onChange={(event) => { setFactorId(event.target.value); setCode(''); }}>
@@ -95,18 +117,45 @@ export default function MfaGate({ messages, onSignOut, signOutFailed }: {
             </select>
           </div>}
           <div className="form-field">
-            <label htmlFor="mfa-code">{messages.mfaCode}</label>
-            <input id="mfa-code" name="code" type="text" inputMode="numeric" autoComplete="one-time-code"
-              pattern="[0-9]{6}" maxLength={6} required value={code} disabled={loading}
-              onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))} />
+            <div className="mfa-code-digits" role="group" aria-label={messages.mfaCode}>
+              {Array.from({ length: 6 }, (_, index) => (
+                <div className="mfa-code-slot" key={index}>
+                  {index === 3 && <span className="mfa-code-dash" aria-hidden="true">–</span>}
+                  <input
+                    ref={(input) => { digitInputs.current[index] = input; }}
+                    id={index === 0 ? 'mfa-code' : `mfa-code-${index + 1}`}
+                    name={`code-${index + 1}`} type="text" inputMode="numeric"
+                    autoComplete={index === 0 ? 'one-time-code' : 'off'}
+                    aria-label={`${messages.mfaCode} (${index + 1}/6)`}
+                    pattern="[0-9]" maxLength={6} required
+                    value={code[index]?.trim() ?? ''} disabled={loading}
+                    onFocus={(event) => event.target.select()}
+                    onChange={(event) => changeCode(index, event.target.value)}
+                    onPaste={(event) => {
+                      event.preventDefault();
+                      changeCode(index, event.clipboardData.getData('text'));
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+                        event.preventDefault();
+                        digitInputs.current[Math.max(0, Math.min(5, index + (event.key === 'ArrowLeft' ? -1 : 1)))]?.focus();
+                      } else if (event.key === 'Backspace' && !code[index]?.trim() && index > 0) {
+                        event.preventDefault();
+                        changeCode(index - 1, '');
+                        digitInputs.current[index - 1]?.focus();
+                      }
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
-          <button className="button button-primary" type="submit" disabled={loading || code.length !== 6}>{messages.mfaVerify}</button>
         </form>}
         {loaded && settingUp && !enrollment && <button className="button button-primary" type="button" disabled={loading} onClick={enroll}>{messages.mfaEnroll}</button>}
         {error && <p className="form-message form-message-error" role="alert">{error === 'code' ? messages.mfaCodeError : messages.mfaError}</p>}
         {!loaded && !loading && <button className="button button-secondary" type="button" onClick={() => { setLoading(true); setAttempt((value) => value + 1); }}>{messages.retry}</button>}
         {signOutFailed && <p className="form-message form-message-error" role="alert">{messages.signOutError}</p>}
-        <button className="button button-secondary" type="button" disabled={loading} onClick={onSignOut}>{messages.signOut}</button>
+        <button className="button button-secondary mfa-sign-out" type="button" disabled={loading} onClick={onSignOut}>{messages.signOut}</button>
       </div>
       {loading && <LoadingDialog label={messages.mfaWorking} />}
     </section>

@@ -1,7 +1,7 @@
 import type { AppSection } from '../components/Menu';
 
 type PanelStorage = Pick<Storage, 'getItem' | 'setItem'>;
-const panels = new Set(['transactions', 'net-worth', 'net-worth-charts', 'cash-flow', 'uncategorized', 'preferences', 'account']);
+const panels = new Set(['transactions', 'net-worth', 'net-worth-charts', 'cash-flow', 'uncategorized']);
 const key = (userId: string) => `elmodelo:last-panel:${userId}`;
 
 export function restoreLastPanel(userId: string, pinnedFilterIds: string[], storage?: PanelStorage): AppSection {
@@ -18,6 +18,7 @@ export function restoreLastPanel(userId: string, pinnedFilterIds: string[], stor
 }
 
 export function rememberLastPanel(userId: string, section: AppSection, storage?: PanelStorage) {
+  if (section === 'preferences' || section === 'account') return;
   try {
     const target = storage ?? (typeof window !== 'undefined' ? window.localStorage : undefined);
     target?.setItem(key(userId), section);

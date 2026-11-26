@@ -7,12 +7,10 @@ export interface LocaleMessages {
   mfaQrAlt: string;
   mfaSecret: string;
   mfaCode: string;
-  mfaVerify: string;
   mfaWorking: string;
   mfaError: string;
   mfaCodeError: string;
   mfaFactor: string;
-  mfaRecovery: string;
 
   loadingComponents: string;
   loadingFilters: string;

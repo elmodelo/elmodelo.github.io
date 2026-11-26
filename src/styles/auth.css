@@ -78,3 +78,33 @@
   padding: 8px;
   box-sizing: border-box;
 }
+
+.mfa-code-digits {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mfa-code-slot {
+  display: contents;
+}
+
+.mfa-code-digits input {
+  flex: 1;
+  width: 0;
+  min-width: 0;
+  padding: 12px 0;
+  text-align: center;
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+}
+
+.mfa-code-dash {
+  color: var(--text-muted);
+}
+
+.mfa-sign-out {
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+}

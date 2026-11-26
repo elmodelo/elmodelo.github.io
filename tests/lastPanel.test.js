@@ -9,7 +9,7 @@ test('last panel restores per user, validates pinned filters and tolerates unava
     const values = new Map();
     const storage = { getItem: (key) => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) };
     assert.equal(restoreLastPanel('user-a', [], storage), 'transactions');
-    for (const section of ['transactions', 'net-worth', 'net-worth-charts', 'cash-flow', 'uncategorized', 'preferences', 'account']) {
+    for (const section of ['transactions', 'net-worth', 'net-worth-charts', 'cash-flow', 'uncategorized']) {
       rememberLastPanel('user-a', section, storage);
       assert.equal(restoreLastPanel('user-a', [], storage), section);
     }
@@ -19,6 +19,14 @@ test('last panel restores per user, validates pinned filters and tolerates unava
     assert.equal(restoreLastPanel('user-b', [], storage), 'cash-flow');
     rememberLastPanel('user-a', 'saved-filter:favorite', storage);
     assert.equal(restoreLastPanel('user-a', ['favorite'], storage), 'saved-filter:favorite');
+    for (const section of ['preferences', 'account']) {
+      rememberLastPanel('user-a', section, storage);
+      assert.equal(restoreLastPanel('user-a', ['favorite'], storage), 'saved-filter:favorite', 'Utility panels preserve the last data panel');
+      rememberLastPanel('new-user', section, storage);
+      assert.equal(values.has('elmodelo:last-panel:new-user'), false, 'Utility panels do not create storage entries');
+      values.set('elmodelo:last-panel:legacy-user', section);
+      assert.equal(restoreLastPanel('legacy-user', [], storage), 'transactions', 'Previously saved utility panels fall back');
+    }
     assert.equal(restoreLastPanel('user-a', [], storage), 'transactions', 'Deleted or unpinned filters fall back');
     for (const value of ['', 'invalid-panel', 'saved-filter:', '{"section":"cash-flow"}']) {
       rememberLastPanel('user-a', value, storage);

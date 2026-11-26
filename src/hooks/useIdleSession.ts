@@ -3,8 +3,8 @@ import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabaseClient';
 import { createIdleSession, getSessionId } from '../lib/idleSession';
 
-type IdleState = { status: 'checking' | 'active' | 'warning' | 'error' | 'expired'; hasAccess: boolean; seconds: number };
-const initial: IdleState = { status: 'checking', hasAccess: false, seconds: 0 };
+type IdleState = { status: 'checking' | 'active' | 'warning' | 'error' | 'expired'; hasAccess: boolean; seconds: number; warning: boolean };
+const initial: IdleState = { status: 'checking', hasAccess: false, seconds: 0, warning: false };
 
 export function useIdleSession(session: Session | null, enabled: boolean) {
   const id = getSessionId(session);
@@ -13,6 +13,7 @@ export function useIdleSession(session: Session | null, enabled: boolean) {
   currentKey.current = key;
   const controller = useRef<ReturnType<typeof createIdleSession> | null>(null);
   const [state, setState] = useState<IdleState & { key: string }>({ ...initial, key: '' });
+  const [exit, setExit] = useState({ key: '', failed: false, pending: false });
 
   useEffect(() => {
     if (!key) return;
@@ -27,9 +28,15 @@ export function useIdleSession(session: Session | null, enabled: boolean) {
       },
       onExpire: async () => {
         if (currentKey.current !== key) return;
+        setExit({ key, failed: false, pending: true });
         try { await supabase.schema('app').rpc('end_session'); } catch { /* expiry is already enforced by RLS */ }
         if (currentKey.current !== key) return;
-        try { await supabase.auth.signOut({ scope: 'local' }); } catch { /* keep the expired screen locked */ }
+        try {
+          const { error } = await supabase.auth.signOut({ scope: 'local' });
+          if (active && currentKey.current === key) setExit({ key, failed: Boolean(error), pending: false });
+        } catch {
+          if (active && currentKey.current === key) setExit({ key, failed: true, pending: false });
+        }
       },
     });
     controller.current = idle;
@@ -59,5 +66,8 @@ export function useIdleSession(session: Session | null, enabled: boolean) {
   return {
     ...(key && state.key === key ? state : initial),
     stay: () => controller.current?.stay(),
+    signOut: () => controller.current?.signOut(),
+    signOutFailed: exit.key === key && exit.failed,
+    signingOut: exit.key === key && exit.pending,
   };
 }

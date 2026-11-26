@@ -1,4 +1,8 @@
 :root {
+  --sign-in-page: #100d1c;
+  --sign-in-accent: #b66bff;
+  --sign-in-glow: 15%;
+  --sign-in-background: radial-gradient(ellipse at 50% 40%, color-mix(in srgb, var(--sign-in-accent) var(--sign-in-glow), transparent), transparent 48%), var(--sign-in-page);
   --tap-target-min: 44px;
   color-scheme: dark;
   --page: #100d1c;
@@ -27,6 +31,14 @@
   -moz-osx-font-smoothing: grayscale;
   font-optical-sizing: auto;
   background: var(--page);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --sign-in-page: #f7f4fc;
+    --sign-in-accent: #7438d8;
+    --sign-in-glow: 12%;
+  }
 }
 
 .app-shell[data-theme='light'],

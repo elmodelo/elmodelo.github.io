@@ -57,7 +57,7 @@ function Application({ auth }: { auth: ReturnType<typeof useAuth> }) {
   return (
     <PermissionsProvider role={authStatus === 'ready' && idle.hasAccess ? appRole : null}>
       <PreferencesStatus messages={messages} status={preferencesStatus} onRetry={retryPreferences} />
-      <main className="app-shell" data-theme={theme}>
+      <main className="app-shell" data-theme={theme} data-auth-background={!user || !idle.hasAccess || undefined}>
         {(user && mfaVerified && idle.hasAccess && authStatus === 'ready') && (
           <header className="app-header">
             <div className='header-brand has-menu'>
@@ -89,12 +89,10 @@ function Application({ auth }: { auth: ReturnType<typeof useAuth> }) {
           ) : user && !mfaVerified ? (
             <MfaGate key={user.id} messages={messages} onSignOut={signOut} signOutFailed={signOutFailed} />
           ) : user && (idle.status === 'expired' || idle.status === 'error') ? (
-            <div className="auth-card status-card" role="alert">
-              <h1>{idle.status === 'expired' ? messages.idleExpiredTitle : messages.authErrorTitle}</h1>
-              <p>{idle.status === 'expired' ? messages.idleExpired : messages.idleCheckError}</p>
-              <button className="button button-secondary" type="button" onClick={signOut}>{messages.signOut}</button>
-              {signOutFailed && <p>{messages.signOutError}</p>}
-            </div>
+            idle.signOutFailed ? <div className="idle-sign-out-error" role="alert">
+              <p>{messages.signOutError}</p>
+              <button className="button button-secondary" type="button" disabled={idle.signingOut} onClick={idle.signOut}>{messages.signOut}</button>
+            </div> : null
           ) : user && !idle.hasAccess ? null : user && (preferencesStatus === 'loading' || preferencesStatus === 'load-error') ? (
             <div className="dashboard-main">
               <div className="dashboard-content" aria-busy={preferencesStatus === 'loading'} />
@@ -125,8 +123,8 @@ function Application({ auth }: { auth: ReturnType<typeof useAuth> }) {
           )}
         </section>
 
-        {user && mfaVerified && idle.status === 'checking' && <LoadingDialog label={messages.checkingSession} priority={100} />}
-        {user && idle.status === 'warning' && <IdleWarning seconds={idle.seconds} messages={messages} onStay={idle.stay} onSignOut={signOut} />}
+        {user && mfaVerified && idle.status === 'checking' && !idle.warning && <LoadingDialog label={messages.checkingSession} priority={100} />}
+        {user && mfaVerified && <IdleWarning open={idle.warning} checking={idle.status === 'checking'} seconds={idle.seconds} messages={messages} onStay={idle.stay} onSignOut={idle.signOut} />}
         {signingOut && <LoadingDialog label={messages.signingOut} />}
 
         <footer className="app-footer">

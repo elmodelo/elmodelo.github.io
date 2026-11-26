@@ -20,12 +20,14 @@ export function createIdleSession({ client, onChange, onExpire, onActivityRecord
   let pendingActivity = false;
   let lastInteraction = -Infinity;
   let request = null;
-  let snapshot = { status: 'checking', hasAccess: false, seconds: 0 };
+  let snapshot = { status: 'checking', hasAccess: false, seconds: 0, warning: false };
 
   function emit(status, seconds = 0) {
+    const warning = status === 'warning' || (status === 'checking' && snapshot.warning);
+    if (status === 'checking' && warning) seconds = Math.max(0, Math.ceil((deadline - now()) / 1000));
     const hasAccess = status === 'active' || status === 'warning' || (status === 'checking' && snapshot.hasAccess);
-    if (snapshot.status === status && snapshot.hasAccess === hasAccess && snapshot.seconds === seconds) return;
-    snapshot = { status, hasAccess, seconds };
+    if (snapshot.status === status && snapshot.hasAccess === hasAccess && snapshot.seconds === seconds && snapshot.warning === warning) return;
+    snapshot = { status, hasAccess, seconds, warning };
     if (!disposed) onChange(snapshot);
   }
   function expire(status = 'expired') {
@@ -91,6 +93,7 @@ export function createIdleSession({ client, onChange, onExpire, onActivityRecord
       }
     },
     stay() { lastInteraction = now(); return sync(true); },
+    signOut() { if (expired) void onExpire(); else expire(); },
     tick() {
       if (disposed || expired || request) return;
       // A suspended tab must not send an old queued interaction on wake.

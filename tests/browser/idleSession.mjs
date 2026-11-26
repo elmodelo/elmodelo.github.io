@@ -1,7 +1,7 @@
 import { createServer } from 'vite';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, writeFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 const root = fileURLToPath(new URL('../..', import.meta.url));
 const html = `<!doctype html><html><body><div id="root"></div><script type="module">
@@ -9,8 +9,10 @@ import React,{StrictMode} from 'react';import {createRoot} from 'react-dom/clien
 import '/src/index.css';
 window.qaRequests=[];window.qaOffset=0;window.qaFail=false;window.qaScope=null;
 window.qaTouches=0;window.qaCallbacks=[];window.qaHold=false;window.qaRelease=null;
+window.qaHoldEnd=false;window.qaEndRelease=null;window.qaHoldSignOut=false;window.qaSignOutRelease=null;
 const realNow=Date.now;Date.now=()=>realNow()+qaOffset;
 const mode=new URLSearchParams(location.search).get('mode');
+window.qaSignOutFail=mode.includes('signout-failure');
 window.qaExpires=Date.now()+(mode==='expired'?-1:2*60*60*1000);
 window.fetch=async(url)=>{
  const path=new URL(url,location.origin).pathname;qaRequests.push(path);
@@ -23,7 +25,12 @@ window.fetch=async(url)=>{
    if(path.endsWith('/touch_session')&&state==='active'){qaTouches++;qaExpires=Date.now()+2*60*60*1000;}
    data={state,expires_at:new Date(qaExpires).toISOString(),server_time:new Date(Date.now()).toISOString()};
   }
- }else if(path.endsWith('/rpc/end_session')){data=null;}
+ }else if(path.endsWith('/rpc/end_session')){
+  if(qaHoldEnd)await new Promise(resolve=>{qaEndRelease=resolve});
+  data=null;
+ }else if(path.endsWith('/preferences')&&mode==='delayed-transition'){
+  data={preferences:{theme:matchMedia('(prefers-color-scheme: dark)').matches?'light':'dark'},transaction_filters:[]};
+ }
  return new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json','Content-Range':'0-0/0'}});
 };
 const {supabase}=await import('/src/lib/supabaseClient.js');
@@ -33,7 +40,7 @@ supabase.auth.getSession=async()=>({data:{session},error:mode.startsWith('auth-e
 supabase.auth.onAuthStateChange=cb=>{qaCallbacks.push(cb);return {data:{subscription:{unsubscribe(){qaCallbacks=qaCallbacks.filter(value=>value!==cb)}}}}};
 supabase.auth.mfa.listFactors=async()=>({data:{totp:[{id:'working',status:'verified'}],all:[]},error:null});
 supabase.auth.mfa.challengeAndVerify=async()=>{session=makeSession('aal2');qaCallbacks.forEach(cb=>cb('MFA_CHALLENGE_VERIFIED',session));return {data:{},error:null}};
-supabase.auth.signOut=async options=>{qaScope=options?.scope;if(mode.includes('signout-failure'))return {error:new Error('Offline')};session=null;qaCallbacks.forEach(cb=>cb('SIGNED_OUT',null));return {error:null}};
+supabase.auth.signOut=async options=>{qaScope=options?.scope;if(qaHoldSignOut)await new Promise(resolve=>{qaSignOutRelease=resolve});if(qaSignOutFail)return {error:new Error('Offline')};session=null;qaCallbacks.forEach(cb=>cb('SIGNED_OUT',null));return {error:null}};
 const {default:App}=await import('/src/App.tsx');
 createRoot(document.getElementById('root')).render(React.createElement(StrictMode,{},React.createElement(App)));
 </script></body></html>`;
@@ -79,13 +86,19 @@ try {
  // Test warning and explicit continuation without waiting two real hours.
  await evaluate('qaOffset+=2*60*60*1000-55000');
  await until("document.querySelector('[data-idle-warning]')?.open");
- // Backdrop starts translucent and becomes opaque by ten seconds remaining.
- await until("getComputedStyle(document.querySelector('[data-idle-warning]'),'::backdrop').backgroundColor.startsWith('rgba(')");
+ // Dim using a translucent background, keeping the filter fully visible.
+ assert.equal(await evaluate("getComputedStyle(document.querySelector('[data-idle-warning]'),'::backdrop').animationName"),'idle-warning-dim-in');
+ await until("getComputedStyle(document.querySelector('[data-idle-warning]'),'::backdrop').opacity==='1'");
+ assert.ok(await evaluate("getComputedStyle(document.querySelector('[data-idle-warning]'),'::backdrop').backgroundImage.startsWith('linear-gradient(rgba(0, 0, 0,')"),'Initial dimming must use a dark overlay in either theme');
  await evaluate('qaOffset+=45000');
- await until("getComputedStyle(document.querySelector('[data-idle-warning]'),'::backdrop').backgroundColor==='rgb(0, 0, 0)'");
- assert.equal(await evaluate("getComputedStyle(document.querySelector('[data-idle-warning]'),'::backdrop').backdropFilter"),'blur(12px)');
+ await until("getComputedStyle(document.querySelector('[data-idle-warning]'),'::backdrop').backdropFilter==='blur(16px)'");
+ assert.ok(await evaluate("getComputedStyle(document.querySelector('[data-idle-warning]'),'::backdrop').backgroundImage.startsWith('linear-gradient(')"),'Blur must remain visible through a translucent tint before expiry');
+ if (process.env.IDLE_SCREENSHOT_PATH) {
+  const screenshot = await cdp('Page.captureScreenshot',{format:'png'});
+  writeFileSync(process.env.IDLE_SCREENSHOT_PATH,Buffer.from(screenshot.data,'base64'));
+ }
  await click('Stay signed in');
- await until("!document.querySelector('[data-idle-warning]')");
+ await until("!document.querySelector('[data-idle-warning]')?.open");
  assert.equal(await evaluate('qaTouches'),2);
  // Another tab's storage notification rechecks server state without renewal.
  await evaluate('qaOffset+=2*60*60*1000-55000');
@@ -93,7 +106,7 @@ try {
  await evaluate(`qaExpires=Date.now()+2*60*60*1000;
    const frame=document.createElement('iframe');document.body.append(frame);
    frame.contentWindow.eval("localStorage.setItem('elmodelo:session-activity:00000000-0000-0000-0000-000000000003','other-tab')");`);
- await until("!document.querySelector('[data-idle-warning]')");
+ await until("!document.querySelector('[data-idle-warning]')?.open");
  assert.equal(await evaluate('qaTouches'),2,'Other-tab notification cannot extend server time');
  // No data appears while checking on resume; an existing dashboard is retained.
  await evaluate("qaHold=true;window.dispatchEvent(new Event('focus'))");
@@ -122,15 +135,46 @@ try {
  await navigate('signout-failure');
  await until("document.querySelector('.dashboard-layout') && !document.querySelector('.LoadingDialog')?.open");
  await evaluate("qaFail=true;window.dispatchEvent(new Event('focus'))");
- await until("document.querySelector('.status-card')?.textContent.includes('Could not verify your session')");
- assert.equal(await evaluate("[...document.querySelector('.status-card').querySelectorAll('button')].map(b=>b.textContent.trim()).join(',')"),'Sign out');
+ await until("document.querySelector('.idle-sign-out-error')");
+ assert.equal(await evaluate("[...document.querySelector('.idle-sign-out-error').querySelectorAll('button')].map(b=>b.textContent.trim()).join(',')"),'Sign out');
  await evaluate("qaFail=false;window.dispatchEvent(new Event('focus'))");
  assert.equal(await evaluate("document.querySelector('.dashboard-layout')"),null);
  await navigate('signout-failure');
  await until("document.querySelector('.dashboard-layout') && !document.querySelector('.LoadingDialog')?.open");
  await evaluate("qaOffset+=2*60*60*1000+1000;window.dispatchEvent(new Event('focus'))");
- await until("document.querySelector('.status-card h1')?.textContent==='Session expired'");
+ await until("document.querySelector('.idle-sign-out-error')");
  assert.equal(await evaluate("document.querySelector('.dashboard-layout')"),null);
+ assert.equal(await evaluate("document.querySelector('.status-card')"),null);
+ await evaluate('qaSignOutFail=false');await click('Sign out');
+ await until("document.querySelector('#sign-in-email')");
+ assert.equal(await evaluate('qaScope'),'local');
+ // Hold each expiry request separately: no spinner/expired card or data flash,
+ // and the backdrop must exactly match SignIn even with a different user theme.
+ for (const theme of ['light','dark']) {
+  await cdp('Emulation.setEmulatedMedia',{features:[{name:'prefers-color-scheme',value:theme}]});
+  await navigate('delayed-transition');
+  await until("document.querySelector('.dashboard-layout') && !document.querySelector('.LoadingDialog')?.open");
+  assert.equal(await evaluate("document.querySelector('.app-shell').dataset.theme"),theme==='light'?'dark':'light');
+  await evaluate('qaOffset+=2*60*60*1000-55000');
+  await until("document.querySelector('[data-idle-warning]')?.open");
+  await evaluate('qaOffset+=45000');
+  await until("getComputedStyle(document.querySelector('[data-idle-warning]'),'::backdrop').opacity==='1'");
+  await evaluate("qaHold=true;qaHoldEnd=true;qaHoldSignOut=true;qaOffset+=11000");
+  await until("qaRelease!==null && document.querySelector('[data-idle-warning]')?.hasAttribute('data-verifying')");
+  await delay(1100); // Allow the final background-color transition to settle.
+  const background = await evaluate("getComputedStyle(document.querySelector('[data-idle-warning]'),'::backdrop').background");
+  assert.equal(await evaluate("document.querySelector('.LoadingDialog')?.open"),false);
+  await evaluate('qaHold=false;qaRelease();qaRelease=null');
+  await until('qaEndRelease!==null');
+  assert.equal(await evaluate("document.querySelector('.dashboard-layout, .status-card, #sign-in-email')"),null);
+  assert.equal(await evaluate("getComputedStyle(document.querySelector('.app-shell')).background"),background);
+  await evaluate('qaHoldEnd=false;qaEndRelease();qaEndRelease=null');
+  await until('qaSignOutRelease!==null');
+  assert.equal(await evaluate("document.querySelector('.LoadingDialog')?.open"),false);
+  await evaluate('qaHoldSignOut=false;qaSignOutRelease();qaSignOutRelease=null');
+  await until("document.querySelector('#sign-in-email')");
+  assert.equal(await evaluate("getComputedStyle(document.querySelector('.app-shell')).background"),background);
+ }
  assert.deepEqual(errors,[]);
  console.log('Idle browser checks passed: MFA boundary, activity, warning/continue, resume gate, failure/sign-out, sleep/expiry, local sign-out.');
 } finally {socket?.close();chrome?.kill();await server.close();}

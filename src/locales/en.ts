@@ -2,11 +2,8 @@ import type { LocaleMessages } from './types';
 
 const en: LocaleMessages = {
   idleWarningTitle: "Still there?",
-  idleWarning: "You will be signed out in {seconds} seconds due to inactivity.",
+  idleWarning: "You will be signed out in {seconds} seconds.",
   idleStay: "Stay signed in",
-  idleExpiredTitle: "Session expired",
-  idleExpired: "Your session ended due to inactivity.",
-  idleCheckError: "Could not verify your session.",
 
   mfaTitle: "Two-step verification",
   mfaSetupHelp: "An authenticator app is required to access elModelo. Set it up to continue.",

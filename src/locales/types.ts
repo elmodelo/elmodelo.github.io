@@ -2,9 +2,6 @@ export interface LocaleMessages {
   idleWarningTitle: string;
   idleWarning: string;
   idleStay: string;
-  idleExpiredTitle: string;
-  idleExpired: string;
-  idleCheckError: string;
 
   mfaTitle: string;
   mfaSetupHelp: string;

@@ -8,6 +8,8 @@ function setup({ initial = 'active', timeout = IDLE_TIMEOUT_MS } = {}) {
   let serverExpiry = clock + timeout;
   let serverState = initial;
   let fail = false;
+  let hold = false;
+  let release;
   const calls = [];
   const states = [];
   let expired = 0;
@@ -16,6 +18,7 @@ function setup({ initial = 'active', timeout = IDLE_TIMEOUT_MS } = {}) {
     assert.equal(schema, 'app');
     return { rpc: async (name) => {
       calls.push(name);
+      if (hold) await new Promise((resolve) => { release = resolve; });
       if (fail) return { error: new Error('offline') };
       if (serverState === 'active' && clock >= serverExpiry) serverState = 'expired';
       if (name === 'touch_session' && serverState !== 'expired') {
@@ -28,10 +31,36 @@ function setup({ initial = 'active', timeout = IDLE_TIMEOUT_MS } = {}) {
     onExpire: () => { expired++; }, onActivityRecorded: () => { broadcast++; } });
   return { idle, calls, states, advance: (ms) => { clock += ms; }, expiry: () => serverExpiry,
     expired: () => expired, broadcast: () => broadcast, fail: (value) => { fail = value; },
+    hold: () => { hold = true; }, release: () => { hold = false; release?.(); },
     configureTimeout: (value) => { serverExpiry += value - timeout; timeout = value; },
     serverActivity: () => { serverExpiry = clock + timeout; } };
 }
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+test('warning stays visible at zero while the server confirms expiry', async () => {
+  const s = setup(); await s.idle.start();
+  s.advance(IDLE_TIMEOUT_MS - 30000); s.idle.tick(); await settle();
+  assert.equal(s.states.at(-1).warning, true);
+  s.hold(); s.advance(30000); s.idle.tick();
+  assert.equal(s.states.at(-1).status, 'checking');
+  assert.equal(s.states.at(-1).warning, true);
+  assert.equal(s.states.at(-1).seconds, 0);
+  assert.equal(s.expired(), 0);
+  s.release(); await settle();
+  assert.equal(s.states.at(-1).hasAccess, false);
+  assert.equal(s.expired(), 1);
+});
+
+test('explicit sign-out closes access immediately and permits a failed sign-out retry', async () => {
+  const s = setup(); await s.idle.start();
+  s.idle.signOut();
+  assert.equal(s.states.at(-1).hasAccess, false);
+  assert.equal(s.expired(), 1);
+  s.idle.signOut();
+  assert.equal(s.expired(), 2);
+  await s.idle.stay();
+  assert.equal(s.states.at(-1).hasAccess, false);
+});
 
 test('server configuration controls shorter and longer deadlines without a client timeout limit', async () => {
   const s = setup({ timeout: 4 * 60 * 60 * 1000 });

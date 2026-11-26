@@ -2,11 +2,8 @@ import type { LocaleMessages } from './types';
 
 const es: LocaleMessages = {
   idleWarningTitle: "¿Sigues ahí?",
-  idleWarning: "Se cerrará tu sesión en {seconds} segundos por inactividad.",
+  idleWarning: "Se cerrará tu sesión en {seconds} segundos.",
   idleStay: "Mantener la sesión",
-  idleExpiredTitle: "Sesión caducada",
-  idleExpired: "Tu sesión terminó por inactividad.",
-  idleCheckError: "No se pudo verificar tu sesión.",
 
   mfaTitle: "Verificación en dos pasos",
   mfaSetupHelp: "Se requiere una aplicación de autenticación para acceder a elModelo. Configúrala para continuar.",

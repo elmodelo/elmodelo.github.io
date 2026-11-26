@@ -12,7 +12,6 @@ export interface LocaleMessages {
   mfaError: string;
   mfaCodeError: string;
   mfaFactor: string;
-  mfaRecovery: string;
 
   loadingComponents: string;
   loadingFilters: string;

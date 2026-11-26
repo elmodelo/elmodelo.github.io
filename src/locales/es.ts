@@ -14,7 +14,6 @@ const es: LocaleMessages = {
   mfaError: "No se pudo cargar o configurar la verificación. Inténtalo de nuevo.",
   mfaCodeError: "La verificación falló. Introduce un código nuevo e inténtalo de nuevo.",
   mfaFactor: "Autenticador",
-  mfaRecovery: "¿Perdiste acceso a tu autenticador? Contacta al administrador de la aplicación para restablecerlo tras verificar tu identidad.",
   loadingComponents: 'Cargando componentes…',
   loadingFilters: 'Cargando filtros…',
   netWorthCharts: "Gráficos",

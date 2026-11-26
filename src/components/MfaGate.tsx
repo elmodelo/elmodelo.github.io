@@ -105,7 +105,6 @@ export default function MfaGate({ messages, onSignOut, signOutFailed }: {
         {loaded && settingUp && !enrollment && <button className="button button-primary" type="button" disabled={loading} onClick={enroll}>{messages.mfaEnroll}</button>}
         {error && <p className="form-message form-message-error" role="alert">{error === 'code' ? messages.mfaCodeError : messages.mfaError}</p>}
         {!loaded && !loading && <button className="button button-secondary" type="button" onClick={() => { setLoading(true); setAttempt((value) => value + 1); }}>{messages.retry}</button>}
-        <p>{messages.mfaRecovery}</p>
         {signOutFailed && <p className="form-message form-message-error" role="alert">{messages.signOutError}</p>}
         <button className="button button-secondary" type="button" disabled={loading} onClick={onSignOut}>{messages.signOut}</button>
       </div>

@@ -14,7 +14,6 @@ const en: LocaleMessages = {
   mfaError: "Could not load or set up verification. Please retry.",
   mfaCodeError: "Verification failed. Enter a fresh code and try again.",
   mfaFactor: "Authenticator",
-  mfaRecovery: "Lost access to your authenticator? Contact the app administrator to reset it after verifying your identity.",
   loadingComponents: 'Loading components…',
   loadingFilters: 'Loading filters…',
   netWorthCharts: "Charts",

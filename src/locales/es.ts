@@ -1,6 +1,20 @@
 import type { LocaleMessages } from './types';
 
 const es: LocaleMessages = {
+  mfaTitle: "Verificación en dos pasos",
+  mfaSetupHelp: "Se requiere una aplicación de autenticación para acceder a elModelo. Configúrala para continuar.",
+  mfaVerifyHelp: "Introduce el código de seis dígitos de tu aplicación de autenticación.",
+  mfaEnroll: "Configurar autenticador",
+  mfaScan: "Escanea este código QR con tu aplicación de autenticación o introduce la clave de configuración manualmente. Luego introduce el código que genere.",
+  mfaQrAlt: "Código QR para configurar el autenticador",
+  mfaSecret: "Clave de configuración",
+  mfaCode: "Código de autenticación",
+  mfaVerify: "Verificar y continuar",
+  mfaWorking: "Comprobando verificación…",
+  mfaError: "No se pudo cargar o configurar la verificación. Inténtalo de nuevo.",
+  mfaCodeError: "La verificación falló. Introduce un código nuevo e inténtalo de nuevo.",
+  mfaFactor: "Autenticador",
+  mfaRecovery: "¿Perdiste acceso a tu autenticador? Contacta al administrador de la aplicación para restablecerlo tras verificar tu identidad.",
   loadingComponents: 'Cargando componentes…',
   loadingFilters: 'Cargando filtros…',
   netWorthCharts: "Gráficos",

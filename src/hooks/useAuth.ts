@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabaseClient';
+import { hasMfaSession } from '../lib/mfa';
 import { getSessionAppRole } from '../lib/permissions';
 
 export type AuthStatus = 'loading' | 'ready' | 'error';
@@ -8,7 +9,8 @@ export type AuthStatus = 'loading' | 'ready' | 'error';
 export function useAuth() {
   const [session, setSession] = useState<Session | null>(null);
   const user = session?.user ?? null;
-  const appRole = getSessionAppRole(session);
+  const mfaVerified = hasMfaSession(session);
+  const appRole = mfaVerified ? getSessionAppRole(session) : null;
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [signOutFailed, setSignOutFailed] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
@@ -65,5 +67,5 @@ export function useAuth() {
     setRetryCount((count) => count + 1);
   }, []);
 
-  return { user, appRole, status, signOutFailed, signingOut, signOut, retrySessionCheck };
+  return { user, appRole, mfaVerified, status, signOutFailed, signingOut, signOut, retrySessionCheck };
 }

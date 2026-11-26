@@ -1,4 +1,19 @@
 export interface LocaleMessages {
+  mfaTitle: string;
+  mfaSetupHelp: string;
+  mfaVerifyHelp: string;
+  mfaEnroll: string;
+  mfaScan: string;
+  mfaQrAlt: string;
+  mfaSecret: string;
+  mfaCode: string;
+  mfaVerify: string;
+  mfaWorking: string;
+  mfaError: string;
+  mfaCodeError: string;
+  mfaFactor: string;
+  mfaRecovery: string;
+
   loadingComponents: string;
   loadingFilters: string;
   netWorthCharts: string;

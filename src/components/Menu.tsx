@@ -53,7 +53,7 @@ export default function Menu({ messages, section, onSelect, toggleTarget, uncate
           toggleRef.current?.focus();
         }}
       />
-      <nav className="main-menu" aria-label={messages.mainMenu}>
+      <nav className="main-menu" data-expanded={expanded} aria-label={messages.mainMenu}>
         {toggleTarget && createPortal(<button
           ref={toggleRef}
           type="button"

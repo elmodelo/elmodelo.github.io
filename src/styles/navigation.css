@@ -85,6 +85,14 @@
     width: min(240px, 100%);
     z-index: 21;
     pointer-events: none;
+    /* Hide the scroll container too, so its scrollbar cannot outlive the menu. */
+    visibility: hidden;
+    transition: visibility 0s linear 200ms;
+  }
+
+  .main-menu[data-expanded='true'] {
+    visibility: visible;
+    transition-delay: 0s;
   }
 
   .menu-toggle {

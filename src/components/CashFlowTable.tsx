@@ -94,9 +94,9 @@ export default function CashFlowTable({ messages, rows, year, firstMonth, lastMo
         <th scope="col" className={columnClass(currency, months.length + 2, true)} title={messages.cashFlowAnnualHelp}>{messages.cashFlowAnnual}</th>
       </tr></thead>
       {(['INCOME', 'INVESTMENT', 'EXPENSE'] as const).map((section) => <tbody key={section} aria-labelledby={`${id}-${currency}-${section}`}>
-        <tr className="cash-flow-section"><th id={`${id}-${currency}-${section}`} scope="rowgroup" colSpan={months.length + 3}>
+        <tr className="cash-flow-section"><th id={`${id}-${currency}-${section}`} scope="rowgroup">
           {sectionLabels[section]}
-        </th></tr>
+        </th><td colSpan={months.length + 2} /></tr>
         {orderedRows.filter((row) => row.currency === currency && row.section === section)
           .map((row) => <tr key={row.category_id ?? 'total'} className={row.row_kind === 'total' ? 'cash-flow-total' : undefined}>
             <th scope="row" className={columnClass(currency, 0)}>{row.row_kind === 'total' ? totalLabels[section] : row.category_name}</th>

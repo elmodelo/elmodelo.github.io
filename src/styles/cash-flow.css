@@ -31,6 +31,7 @@
 .cash-flow-table thead th { white-space: nowrap; }
 .cash-flow-table th:first-child { text-align: left; }
 .cash-flow-table thead th:first-child,
+.cash-flow-table tbody th[scope='rowgroup'],
 .cash-flow-table tbody th[scope='row'] {
   position: sticky;
   left: 0;
@@ -41,6 +42,7 @@
   box-shadow: 1px 0 var(--border);
 }
 .cash-flow-table thead th:first-child { z-index: 3; }
+.cash-flow-table tbody th[scope='rowgroup'] { z-index: 2; }
 .cash-flow-table tbody th[scope='row'] { z-index: 2; font-weight: 500; }
 .cash-flow-table td { min-width: 110px; white-space: nowrap; }
 .cash-flow-table td:has(.cash-flow-cell) { padding: 0; }
@@ -103,6 +105,7 @@
   .cash-flow-heading { gap: 12px; flex-wrap: wrap; }
   .cash-flow-year { gap: 6px; }
   .cash-flow-table thead th:first-child,
+  .cash-flow-table tbody th[scope='rowgroup'],
   .cash-flow-table tbody th[scope='row'] { min-width: 130px; max-width: 160px; }
   .cash-flow-transactions-dialog { max-width: calc(100% - 16px); max-height: calc(100dvh - 16px); padding: 12px; }
 }
